@@ -10,6 +10,13 @@ enum BuffableStats {
 	MAX_HEALTH,
 	DEFENSE,
 	ATTACK,
+	ATTACK_SPEED,
+	CRIT_CHANCE,
+	CRIT_DAMAGE,
+	MOVEMENT_SPEED,
+	HP_REGEN,            # HP regeneration per second
+	LIFESTEAL_CHANCE,    # Chance to heal on hit (as a float 0.0 to 1.0)
+	LIFESTEAL_VALUE,     # Amount of damage converted to health (e.g., 0.2 means 20%)
 }
 
 
