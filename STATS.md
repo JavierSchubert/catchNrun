@@ -168,24 +168,6 @@ critical_damage = 20 * 1.50
 critical_damage = 30
 ```
 
-A multiplier can itself be modified through the standard stat system.
-
-For example:
-
-```text
-critical_damage_multiplier.base_value = 1.50
-critical_damage_multiplier.flat_modifier = 0.50
-critical_damage_multiplier.percentage_modifier = 0.20
-```
-
-The final multiplier is:
-
-```text
-(1.50 + 0.50) * (1 + 0.20) = 2.40
-```
-
-The resulting critical hit therefore deals `240%` of the regular damage.
-
 #### General Constraints
 
 Unless explicitly supported by a mechanic:
