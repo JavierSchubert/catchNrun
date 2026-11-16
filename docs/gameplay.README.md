@@ -33,10 +33,14 @@ Hunter Team
 Runners can:
 
 - Move and explore.
-- Generate Crystals through Crystal Mines.
-- Construct Walls, Towers, and Crystal Mines.
-- Upgrade structures.
+- Generate Crystals through a Crystal Mine.
+- Construct **one Crystal Mine per Runner**.
+- Construct Walls and Towers.
+- Upgrade Walls to increase their defensive strength and health.
+- Upgrade Towers to improve their defensive capabilities.
 - Reposition when defenses are breached.
+
+Each Runner may own a maximum of one Crystal Mine at a time. The existing Crystal Mine must be upgraded to increase Crystal generation instead of constructing additional Crystal Mines.
 
 ### 2.2. Hunter Team
 
@@ -48,6 +52,8 @@ The Hunter can:
 - Earn Crystals by dealing damage.
 - Receive lower passive Crystal income from the central Hunter Shop / base.
 - Spend Crystals on items and stat improvements.
+- Take damage from Runner Towers.
+- Be eliminated if their health reaches zero.
 
 ### 2.3. Runner Head Start
 
@@ -69,26 +75,33 @@ Runner Head Start Ends
 
 ## 3. Runner Gameplay Loop
 
+Build Crystal Mine
+
 ```text
-Generate Crystals
--> Invest in Economy or Defenses
--> Build / Upgrade Structures
--> Delay the Hunter
+-> Generate Crystals
+-> Upgrade Crystal Mine or Invest in Defenses
+-> Build / Upgrade Walls and Towers
+-> Delay and Damage the Hunter
 -> Generate More Crystals
 -> Strengthen Defenses
+-> Survive
 ```
 
 Runners must balance long-term economy against immediate defensive strength.
 
+Each Runner can build a maximum of **one Crystal Mine**. Further investment into Crystal generation is performed by upgrading the existing Crystal Mine.
+
 Initial Runner structures are:
 
-| Structure | Primary Purpose |
-| --- | --- |
-| Crystal Mine | Crystal generation |
-| Wall | Path blocking and defense |
-| Tower | Defensive offense |
+| Structure | Primary Purpose | Upgrade Purpose |
+| --- | --- | --- |
+| Crystal Mine | Crystal generation | Increase Crystal generation |
+| Wall | Path blocking and defense | Increase survivability |
+| Tower | Defensive offense | Increase defensive combat strength |
 
-Structures have health and can be attacked and destroyed by the Hunter.
+All Runner structures have health and can be attacked and destroyed by the Hunter.
+
+Walls and Towers can be upgraded by their owning Runner using Crystals.
 
 ## 4. Hunter Gameplay Loop
 
@@ -106,7 +119,7 @@ The Hunter becomes stronger through active combat and purchases made with earned
 
 ## 5. Health and Destruction
 
-Runners and destructible structures have health.
+Runners, the Hunter, and destructible structures have health.
 
 ```text
 current_health -= damage
@@ -116,11 +129,35 @@ When health reaches zero:
 
 ```text
 current_health <= 0
--> Runner is eliminated
--> Structure is destroyed
 ```
 
-Detailed stat and damage calculation belongs to the Stats and Combat systems.
+the affected entity is defeated or destroyed:
+
+```text
+Runner Health <= 0
+-> Runner is eliminated
+
+Hunter Health <= 0
+-> Hunter is eliminated
+
+Structure Health <= 0
+-> Structure is destroyed
+-> Structure functionality is removed
+```
+
+Runner Towers can damage the Hunter and therefore contribute directly to eliminating the Hunter.
+
+This means that Runner defenses serve two purposes:
+
+```text
+Walls
+-> Delay and block the Hunter
+
+Towers
+-> Damage and potentially eliminate the Hunter
+```
+
+Detailed stat and damage calculations belong to the Stats and Combat systems.
 
 ## 6. Vision and Information
 
@@ -204,5 +241,3 @@ UI
 ├── Hunter Shop
 └── Minimap
 ```
-
-# TODO: add that only one crystal mine can be build. Runners can upgrade their walls and towers. Hunter can also die through the damage of towers
