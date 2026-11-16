@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://data/items/item_data.gd" id="1_item"]
+[ext_resource type="Script" path="res://data/stats/stat_modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_armor"]
+script = ExtResource("2_mod")
+stat = 3
+kind = 0
+value = 20.0
+
+[sub_resource type="Resource" id="Resource_hp"]
+script = ExtResource("2_mod")
+stat = 0
+kind = 0
+value = 25.0
+
+[resource]
+script = ExtResource("1_item")
+id = "armor_vest"
+display_name = "Armor Vest"
+description = "+20 armor, +25 max health"
+price = 100
+usable_by = 3
+max_stack = 1
+modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_armor"), SubResource("Resource_hp")])

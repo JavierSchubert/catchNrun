@@ -1,0 +1,117 @@
+extends Control
+## Lobby screen: host or join, see who is connected, and (host only) start the match.
+## Built in code to keep the skeleton small.
+
+var _name_edit := LineEdit.new()
+var _address_edit := LineEdit.new()
+var _status := Label.new()
+var _player_list := ItemList.new()
+var _connect_box := VBoxContainer.new()
+var _lobby_box := VBoxContainer.new()
+var _invite_button := Button.new()
+var _start_button := Button.new()
+
+
+func _ready() -> void:
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(center)
+	var root := VBoxContainer.new()
+	root.custom_minimum_size = Vector2(420, 0)
+	root.add_theme_constant_override("separation", 10)
+	center.add_child(root)
+
+	var title := Label.new()
+	title.text = "HUNTER GAME"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 36)
+	root.add_child(title)
+	root.add_child(_status)
+
+	# Connect screen
+	_name_edit.placeholder_text = "Your name"
+	_name_edit.text = GameManager.local_player_name
+	if NetworkManager.steam_enabled:
+		_name_edit.text = Steam.getPersonaName()
+	_connect_box.add_child(_name_edit)
+	var steam_button := _add_button(_connect_box, "Host with Steam (invite friends)", _on_host_steam)
+	steam_button.disabled = not NetworkManager.steam_enabled
+	_add_button(_connect_box, "Host local (testing)", _on_host_local)
+	_address_edit.text = "127.0.0.1"
+	_connect_box.add_child(_address_edit)
+	_add_button(_connect_box, "Join local", _on_join_local)
+	root.add_child(_connect_box)
+
+	# Lobby screen
+	_player_list.custom_minimum_size = Vector2(0, 180)
+	_lobby_box.add_child(_player_list)
+	_invite_button.text = "Invite Steam friends"
+	_invite_button.pressed.connect(NetworkManager.invite_friends)
+	_lobby_box.add_child(_invite_button)
+	_start_button.text = "Start match"
+	_start_button.pressed.connect(GameManager.start_match)
+	_lobby_box.add_child(_start_button)
+	_add_button(_lobby_box, "Leave", NetworkManager.leave)
+	root.add_child(_lobby_box)
+
+	GameManager.players_changed.connect(_refresh)
+	NetworkManager.hosting_started.connect(_refresh)
+	NetworkManager.joined_server.connect(_refresh)
+	NetworkManager.connection_failed.connect(_on_connection_failed)
+	NetworkManager.disconnected.connect(_refresh)
+	_status.text = "" if NetworkManager.steam_enabled else "Steam not running: local mode only."
+	_refresh()
+
+
+func _add_button(parent: Node, text: String, callback: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.pressed.connect(callback)
+	parent.add_child(button)
+	return button
+
+
+func _apply_name() -> void:
+	var player_name := _name_edit.text.strip_edges()
+	GameManager.local_player_name = player_name if not player_name.is_empty() else "Player"
+
+
+func _on_host_steam() -> void:
+	_apply_name()
+	_status.text = "Creating Steam lobby..."
+	NetworkManager.host_steam()
+
+
+func _on_host_local() -> void:
+	_apply_name()
+	var err := NetworkManager.host_enet()
+	_status.text = "" if err == OK else "Could not host (port in use?): %s" % error_string(err)
+
+
+func _on_join_local() -> void:
+	_apply_name()
+	var err := NetworkManager.join_enet(_address_edit.text.strip_edges())
+	_status.text = "Connecting..." if err == OK else "Could not join: %s" % error_string(err)
+
+
+func _on_connection_failed() -> void:
+	_status.text = "Connection failed."
+	_refresh()
+
+
+func _refresh() -> void:
+	var online := NetworkManager.is_online()
+	_connect_box.visible = not online
+	_lobby_box.visible = online
+	_player_list.clear()
+	for id: int in GameManager.players:
+		var tag := " (host)" if id == 1 else ""
+		_player_list.add_item(GameManager.players[id].name + tag)
+	var is_host := online and multiplayer.is_server()
+	_invite_button.visible = is_host and NetworkManager.lobby_id != 0
+	_start_button.visible = is_host
+	_start_button.disabled = not GameManager.can_start_match()
+	_start_button.text = "Start match" if not _start_button.disabled \
+		else "Start match (need %d+ players)" % GameManager.MIN_PLAYERS
+	if online and not _status.text.begins_with("Steam not"):
+		_status.text = "Hosting" if is_host else "Connected"

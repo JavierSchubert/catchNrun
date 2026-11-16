@@ -3,12 +3,11 @@
 importer="font_data_dynamic"
 type="FontFile"
 uid="uid://kfh6ooeul77g"
-path="res://.godot/imported/Bake Soda.otf-67efc852d110561bc03b480b4cee5804.fontdata"
+valid=false
 
 [deps]
 
 source_file="res://assets/font/Bake Soda.otf"
-dest_files=["res://.godot/imported/Bake Soda.otf-67efc852d110561bc03b480b4cee5804.fontdata"]
 
 [params]
 
@@ -21,6 +20,7 @@ msdf_pixel_range=8
 msdf_size=48
 allow_system_fallback=true
 force_autohinter=false
+modulate_color_glyphs=false
 hinting=1
 subpixel_positioning=2
 keep_rounding_remainders=true

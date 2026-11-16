@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="RoleData" format=3 uid="uid://cjytk6g6rlw71"]
+
+[ext_resource type="Script" uid="uid://c2cfwgf8b81ix" path="res://data/roles/role_data.gd" id="1_role"]
+[ext_resource type="Script" uid="uid://fpj62p4ttyfj" path="res://data/stats/stat_block.gd" id="2_stats"]
+
+[sub_resource type="Resource" id="Resource_stats"]
+script = ExtResource("2_stats")
+max_health = 200.0
+move_speed = 230.0
+damage = 25.0
+armor = 10.0
+attack_cooldown = 0.8
+attack_range = 64.0
+
+[resource]
+script = ExtResource("1_role")
+role = 0
+display_name = "Hunter"
+color = Color(0.9, 0.2, 0.2, 1)
+base_stats = SubResource("Resource_stats")
+starting_gold = 60
+gold_per_second = 3

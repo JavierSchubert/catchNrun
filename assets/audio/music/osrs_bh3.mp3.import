@@ -3,12 +3,11 @@
 importer="mp3"
 type="AudioStreamMP3"
 uid="uid://dapm6ms73ggaq"
-path="res://.godot/imported/osrs_bh3.mp3-d826c69042c8de1f2109425b4d5affe8.mp3str"
+valid=false
 
 [deps]
 
 source_file="res://assets/audio/music/osrs_bh3.mp3"
-dest_files=["res://.godot/imported/osrs_bh3.mp3-d826c69042c8de1f2109425b4d5affe8.mp3str"]
 
 [params]
 
