@@ -21,9 +21,11 @@ config/icon="res://assets/textures/icon.svg"
 
 [autoload]
 
-NetworkManager="*uid://cy6tsj0nq4qej"
-ItemDatabase="*uid://dr4riryl1p6uc"
-GameManager="*uid://rcw173ce3upi"
+LaunchOptions="*res://autoloads/launch_options.gd"
+NetworkManager="*res://autoloads/network_manager.gd"
+GameManager="*res://autoloads/game_manager.gd"
+BotClient="*res://tests/bots/bot_client.gd"
+Sandbox="*res://game/sandbox/sandbox_panel.gd"
 
 [display]
 

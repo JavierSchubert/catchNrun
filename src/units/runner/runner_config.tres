@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="RoleConfig" format=3]
+
+[ext_resource type="Script" path="res://src/units/role_config.gd" id="1_role"]
+
+[resource]
+script = ExtResource("1_role")
+role = 1
+display_name = "Runner"
+color = Color(0.2, 0.5, 1, 1)
+move_speed = 220.0
