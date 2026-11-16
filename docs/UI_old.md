@@ -461,16 +461,19 @@ The Selection Panel must be designed as a reusable HUD system.
 
 Adding a new entity should generally require defining the entity's data and capabilities rather than modifying the Selection Panel itself.
 
-Avoid entity\-specific UI logic such as:
+Avoid entity-specific UI logic such as:
 
-if selected\_entity == barracks
+```python
+if selected_entity == barracks
 
-if selected\_entity == worker
+if selected_entity == worker
 
-if selected\_entity == swordsman
+if selected_entity == swordsman
+```
 
-Prefer capability\-based behavior such as:
+Prefer capability-based behavior such as:
 
+```python
 if entity is movable
 
     show movement commands
@@ -488,6 +491,6 @@ if entity can produce units
     show production menu
 
     show production queue
+```
 
 This separation should be preserved as the number of units, buildings, abilities, and production options increases.
-
