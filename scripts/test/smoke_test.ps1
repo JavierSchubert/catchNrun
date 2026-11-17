@@ -104,6 +104,7 @@ try {
 
 $phases = As-Array $hostResult.phases
 if ($hostResult.kind -ne "host") { $failures += "Host report kind is '$($hostResult.kind)'." }
+if ($phases -notcontains "ROLE_SELECTION") { $failures += "Host never opened role selection." }
 if ($phases -notcontains "RUNNER_PREPARATION") { $failures += "Host never entered runner preparation." }
 if ($phases -notcontains "HUNTER_ACTIVE") { $failures += "Host never entered the hunter phase." }
 if ($hostResult.hunter_spawned -ne $true) { $failures += "Hunter did not spawn." }

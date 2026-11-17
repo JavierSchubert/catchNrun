@@ -31,7 +31,9 @@ func _on_phase_changed(_phase: GameManager.Phase) -> void:
 func _spawn_pending() -> void:
 	if not multiplayer.is_server() or not GameManager.everyone_loaded():
 		return
-	if GameManager.phase == GameManager.Phase.LOBBY or GameManager.phase == GameManager.Phase.ENDED:
+	if GameManager.phase == GameManager.Phase.LOBBY \
+			or GameManager.phase == GameManager.Phase.ROLE_SELECTION \
+			or GameManager.phase == GameManager.Phase.ENDED:
 		return
 	for key in GameManager.players.keys():
 		var id := int(key)

@@ -30,7 +30,7 @@ func _refresh() -> void:
 		timer = " | preparation %d:%02d" % [secs / 60, secs % 60]
 	elif GameManager.phase == GameManager.Phase.HUNTER_ACTIVE:
 		timer = " | hunter is in the match"
-	_status.text = "%s%s\n%s\nWASD to move" % [GameManager.phase_label(), timer, _local_unit_text()]
+	_status.text = "%s%s\n%s\nRight click to move" % [GameManager.phase_label(), timer, _local_unit_text()]
 
 
 func _local_unit_text() -> String:

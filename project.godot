@@ -24,6 +24,7 @@ config/icon="res://assets/textures/icon.svg"
 LaunchOptions="*res://autoloads/launch_options.gd"
 NetworkManager="*res://autoloads/network_manager.gd"
 GameManager="*res://autoloads/game_manager.gd"
+SceneTransitionManager="*res://autoloads/scene_transition_manager.gd"
 BotClient="*res://tests/bots/bot_client.gd"
 Sandbox="*res://game/sandbox/sandbox_panel.gd"
 

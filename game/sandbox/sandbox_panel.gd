@@ -50,11 +50,14 @@ func _ready() -> void:
 	_headless.text = "Launch bots headless"
 	box.add_child(_headless)
 
+	_add_button(box, "Test lobby", _test_lobby)
+	_add_button(box, "Test role selection", _test_selection)
+	_add_button(box, "Test game", _test_game)
 	_add_button(box, "Start local host", _host)
 	_add_button(box, "Start host + 1 Hunter bot + 2 Runner bots", _quick_start)
 	_add_button(box, "Add Runner bot", _add_runner)
 	_add_button(box, "Add Hunter bot", _add_hunter)
-	_add_button(box, "Start match", _start_match)
+	_add_button(box, "Continue to role selection", _continue_to_selection)
 	_add_button(box, "Skip preparation", _skip_preparation)
 	_add_button(box, "Reset match", _reset_match)
 	_refresh()
@@ -86,8 +89,6 @@ func _quick_start() -> void:
 	if GameManager.phase != GameManager.Phase.LOBBY:
 		_status.text = "Reset the match before starting a new scenario."
 		return
-	# The host stays a Runner so the Hunter bot receives the hunter role.
-	GameManager.set_preferred_role(RoleConfig.Role.RUNNER)
 	if not NetworkManager.is_online():
 		var err: Error = NetworkManager.host_enet()
 		if err != OK:
@@ -101,7 +102,7 @@ func _quick_start() -> void:
 		return
 	_hunter_count = 1
 	_runner_count = 2
-	_status.text = "Hosting with 1 Hunter bot and 2 Runner bots. Start the match when they appear."
+	_status.text = "Hosting with 1 Hunter bot and 2 Runner bots. Continue to role selection when they appear."
 
 
 func _add_runner() -> void:
@@ -116,15 +117,46 @@ func _add_hunter() -> void:
 		_hunter_count -= 1
 
 
-func _start_match() -> void:
-	if not NetworkManager.is_online() or not multiplayer.is_server():
-		_status.text = "Only the host can start the match."
+func _test_lobby() -> void:
+	if not _can_open_scene_directly():
 		return
-	GameManager.start_match()
+	GameManager.prepare_lobby_test()
+	SceneTransitionManager.transition("", SceneTransitionManager.LOBBY)
+	_status.text = "Lobby opened on its own."
+
+
+func _test_selection() -> void:
+	if not _can_open_scene_directly():
+		return
+	GameManager.prepare_selection_test()
+	SceneTransitionManager.transition("", SceneTransitionManager.ROLE_SELECTION)
+	_status.text = "Role selection opened on its own. Add test players, then resolve the vote."
+
+
+func _test_game() -> void:
+	if not _can_open_scene_directly():
+		return
+	GameManager.prepare_game_test()
+	SceneTransitionManager.transition("", SceneTransitionManager.GAME)
+	_status.text = "Game opened on its own as a Runner. Use --test-role=hunter to open it as the Hunter."
+
+
+func _can_open_scene_directly() -> bool:
+	if NetworkManager.is_online():
+		_status.text = "Leave the session before opening a scene on its own."
+		return false
+	return true
+
+
+func _continue_to_selection() -> void:
+	if not NetworkManager.is_online() or not multiplayer.is_server():
+		_status.text = "Only the host can open role selection."
+		return
+	GameManager.continue_to_selection()
 	if GameManager.phase == GameManager.Phase.LOBBY:
 		_status.text = "Need %d players in the lobby." % GameManager.required_players()
 	else:
-		_status.text = "Match started."
+		_status.text = "Role selection opened."
 
 
 func _skip_preparation() -> void:
@@ -192,9 +224,11 @@ func _peer_block() -> String:
 		var entry: Dictionary = GameManager.players[id]
 		var who := "host" if id == 1 else "client"
 		var player_name := str(entry.get("name", "Player"))
-		if GameManager.phase == GameManager.Phase.LOBBY:
+		if GameManager.phase == GameManager.Phase.ROLE_SELECTION:
 			var preference := GameManager.role_label(int(entry.get("preferred_role", GameManager.ANY_ROLE)))
 			lines.append("%d %s %s — prefers %s" % [id, who, player_name, preference])
+		elif GameManager.phase == GameManager.Phase.LOBBY:
+			lines.append("%d %s %s" % [id, who, player_name])
 		else:
 			var role_name := GameManager.role_label(int(entry.get("role", GameManager.ANY_ROLE)))
 			lines.append("%d %s %s — %s" % [id, who, player_name, role_name])

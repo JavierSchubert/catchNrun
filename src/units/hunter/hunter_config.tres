@@ -1,6 +1,11 @@
-[gd_resource type="Resource" script_class="RoleConfig" format=3]
+[gd_resource type="Resource" script_class="RoleConfig" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://src/units/role_config.gd" id="1_role"]
+[ext_resource type="Script" path="res://src/stats/stat_block.gd" id="2_stats"]
+
+[sub_resource type="Resource" id="Resource_stats"]
+script = ExtResource("2_stats")
+movement_speed = 230.0
 
 [resource]
 script = ExtResource("1_role")
@@ -8,3 +13,4 @@ role = 0
 display_name = "Hunter"
 color = Color(0.9, 0.2, 0.2, 1)
 move_speed = 230.0
+base_stats = SubResource("Resource_stats")

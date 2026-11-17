@@ -106,7 +106,9 @@ func _retry(reason: String) -> void:
 
 
 func _remember_role() -> void:
-	if LaunchOptions.bot_role.is_empty() or GameManager.phase == GameManager.Phase.LOBBY:
+	if LaunchOptions.bot_role.is_empty():
+		return
+	if GameManager.phase == GameManager.Phase.LOBBY or GameManager.phase == GameManager.Phase.ROLE_SELECTION:
 		return
 	var id := multiplayer.get_unique_id()
 	if id <= 0 or not GameManager.players.has(id):
@@ -175,7 +177,8 @@ func _succeeded(report: Dictionary) -> bool:
 		var needed_runners := 1
 		if LaunchOptions.auto_start_players > 1:
 			needed_runners = LaunchOptions.auto_start_players - 1
-		return phases.has("RUNNER_PREPARATION") \
+		return phases.has("ROLE_SELECTION") \
+			and phases.has("RUNNER_PREPARATION") \
 			and phases.has("HUNTER_ACTIVE") \
 			and bool(report.get("hunter_spawned", false)) \
 			and not bool(report.get("hunter_spawned_during_preparation", true)) \

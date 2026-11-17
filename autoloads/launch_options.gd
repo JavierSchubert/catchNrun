@@ -14,6 +14,8 @@ var bot_role := "" ## --bot=runner|hunter: run as a bot client. Empty = normal p
 var bot_name := "Bot" ## --bot-name=NAME
 var bot_lifetime := 0.0 ## --bot-lifetime=SECONDS: the bot leaves after this long (0 = never).
 var report_path := "" ## --report=PATH: write a JSON report of what this process observed.
+var open_scene := "" ## --scene=lobby|selection|game. Opens that screen directly.
+var test_role := "runner" ## --test-role=runner|hunter. Role used by --scene=game.
 
 
 func _ready() -> void:
@@ -27,9 +29,14 @@ func _ready() -> void:
 	bot_name = str(options.get("bot-name", "Bot"))
 	bot_lifetime = float(options.get("bot-lifetime", 0.0))
 	report_path = str(options.get("report", ""))
+	open_scene = str(options.get("scene", ""))
+	test_role = str(options.get("test-role", "runner"))
 	if not bot_role.is_empty() and bot_role not in ["runner", "hunter"]:
 		push_error("Unknown --bot role '%s' (use runner or hunter)." % bot_role)
 		bot_role = ""
+	if test_role not in ["runner", "hunter"]:
+		push_error("Unknown --test-role '%s' (use runner or hunter)." % test_role)
+		test_role = "runner"
 	var headless := DisplayServer.get_name() == "headless"
 	sandbox_enabled = (OS.is_debug_build() or options.has("sandbox")) and bot_role.is_empty() and not headless
 

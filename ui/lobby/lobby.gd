@@ -1,9 +1,8 @@
 extends Control
-## Lobby screen: host or join, see who is connected, and (host only) start the match.
+## Lobby screen: host or join, see who is connected, and (host only) continue to role selection.
 ## Built in code to keep the skeleton small.
 
 var _name_edit := LineEdit.new()
-var _role_picker := OptionButton.new()
 var _address_edit := LineEdit.new()
 var _status := Label.new()
 var _player_list := ItemList.new()
@@ -34,10 +33,6 @@ func _ready() -> void:
 	if NetworkManager.steam_enabled:
 		_name_edit.text = Steam.getPersonaName()
 	_connect_box.add_child(_name_edit)
-	_role_picker.add_item("Prefer: any", GameManager.ANY_ROLE)
-	_role_picker.add_item("Prefer: Hunter", RoleConfig.Role.HUNTER)
-	_role_picker.add_item("Prefer: Runner", RoleConfig.Role.RUNNER)
-	_connect_box.add_child(_role_picker)
 	var steam_button := _add_button(_connect_box, "Host with Steam (invite friends)", _on_host_steam)
 	steam_button.disabled = not NetworkManager.steam_enabled
 	_add_button(_connect_box, "Host local", _on_host_local)
@@ -51,8 +46,8 @@ func _ready() -> void:
 	_invite_button.text = "Invite Steam friends"
 	_invite_button.pressed.connect(NetworkManager.invite_friends)
 	_lobby_box.add_child(_invite_button)
-	_start_button.text = "Start match"
-	_start_button.pressed.connect(GameManager.start_match)
+	_start_button.text = "Continue to role selection"
+	_start_button.pressed.connect(GameManager.continue_to_selection)
 	_lobby_box.add_child(_start_button)
 	_add_button(_lobby_box, "Leave", NetworkManager.leave)
 	root.add_child(_lobby_box)
@@ -78,7 +73,6 @@ func _add_button(parent: Node, text: String, callback: Callable) -> Button:
 func _apply_name() -> void:
 	var player_name := _name_edit.text.strip_edges()
 	GameManager.local_player_name = player_name if not player_name.is_empty() else "Player"
-	GameManager.local_preferred_role = _role_picker.get_selected_id()
 
 
 func _on_host_steam() -> void:
@@ -124,16 +118,15 @@ func _refresh() -> void:
 		var id := int(key)
 		var entry: Dictionary = GameManager.players[id]
 		var host_tag := " (host)" if id == 1 else ""
-		var preference := GameManager.role_label(int(entry.get("preferred_role", GameManager.ANY_ROLE)))
-		_player_list.add_item("%s%s — prefers %s" % [entry.get("name", "Player"), host_tag, preference])
+		_player_list.add_item("%s%s" % [entry.get("name", "Player"), host_tag])
 	var is_host: bool = online and multiplayer.is_server()
 	_invite_button.visible = is_host and NetworkManager.lobby_id != 0
 	_start_button.visible = is_host
-	_start_button.disabled = not GameManager.can_start_match()
+	_start_button.disabled = not GameManager.can_continue_to_selection()
 	if _start_button.disabled:
-		_start_button.text = "Start match (need %d players)" % GameManager.required_players()
+		_start_button.text = "Continue (need %d players)" % GameManager.required_players()
 	else:
-		_start_button.text = "Start match"
+		_start_button.text = "Continue to role selection"
 	if online and not _status.text.begins_with("Could not") and not _status.text.begins_with("Connection"):
 		if is_host and NetworkManager.lobby_id == 0:
 			_status.text = "Hosting on port %d" % NetworkManager.ENET_PORT

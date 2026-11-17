@@ -1,10 +1,9 @@
 extends Node
 ## MATCH RULES. The host is the only peer that changes shared state.
 ##
-## Clients send requests (register, movement intent, skip, reset). The host checks the
-## request, updates the phase / roster, and replicates the result. A match goes
-## Lobby -> Runner preparation -> Hunter active. Runners spawn immediately. The Hunter
-## spawns only after the preparation timer ends or the host skips it.
+## Clients send requests (register, side vote, movement intent, skip, reset). The host
+## checks the request and replicates the result. A session goes Lobby -> Role selection
+## -> Runner preparation -> Hunter active. Scene changes go through SceneTransitionManager.
 
 signal players_changed
 signal phase_changed(phase: Phase)
@@ -12,11 +11,13 @@ signal player_removed(peer_id: int)
 signal all_players_loaded
 signal auto_host_failed(error_code: Error)
 
-enum Phase { LOBBY, RUNNER_PREPARATION, HUNTER_ACTIVE, ENDED }
+enum Phase { LOBBY, ROLE_SELECTION, RUNNER_PREPARATION, HUNTER_ACTIVE, ENDED }
 
-const LOBBY_SCENE := "res://ui/lobby/lobby.tscn"
-const MATCH_SCENE := "res://game/match/match.tscn"
 const ANY_ROLE := -1
+const TEST_PLAYER_ID := 1000
+
+var resolved_hunter_id := -1
+var _next_test_player_id := TEST_PLAYER_ID
 
 var config: MatchConfig
 var phase := Phase.LOBBY
@@ -99,7 +100,7 @@ func role_label(role: int) -> String:
 			return "Any"
 
 
-func can_start_match() -> bool:
+func can_continue_to_selection() -> bool:
 	return multiplayer.is_server() and phase == Phase.LOBBY and players.size() >= required_players()
 
 
@@ -136,7 +137,7 @@ func note_unit_spawned(role: int) -> void:
 
 func _on_hosting_started() -> void:
 	_reset_state()
-	players[1] = _new_player(local_player_name, _preferred_role())
+	players[1] = _new_player(local_player_name, ANY_ROLE)
 	GameLog.info("MATCH", "host registered as %s" % local_player_name)
 	players_changed.emit()
 	_maybe_auto_start()
@@ -144,7 +145,7 @@ func _on_hosting_started() -> void:
 
 func _on_joined_server() -> void:
 	GameLog.info("MATCH", "joined, registering as %s" % local_player_name)
-	_register.rpc_id(1, local_player_name, _preferred_role())
+	_register.rpc_id(1, local_player_name, ANY_ROLE)
 
 
 func _preferred_role() -> int:
@@ -167,7 +168,7 @@ func set_preferred_role(role: int) -> void:
 
 
 @rpc("any_peer", "reliable")
-func _register(player_name: String, preferred_role: int) -> void:
+func _register(player_name: String, _preferred_role: int) -> void:
 	if not multiplayer.is_server():
 		return
 	var id := multiplayer.get_remote_sender_id()
@@ -178,8 +179,8 @@ func _register(player_name: String, preferred_role: int) -> void:
 	var clean := player_name.strip_edges().left(24)
 	if clean.is_empty():
 		clean = "Player %d" % id
-	players[id] = _new_player(clean, preferred_role)
-	GameLog.info("MATCH", "registered peer %d as %s (prefers %s)" % [id, clean, role_label(preferred_role)])
+	players[id] = _new_player(clean, ANY_ROLE)
+	GameLog.info("MATCH", "registered peer %d as %s" % [id, clean])
 	_sync_players.rpc(players)
 	_maybe_auto_start()
 
@@ -195,8 +196,8 @@ func _maybe_auto_start() -> void:
 	if needed <= 0 or not multiplayer.is_server() or phase != Phase.LOBBY:
 		return
 	if players.size() >= needed and players.size() >= required_players():
-		GameLog.info("MATCH", "auto-starting with %d players" % players.size())
-		start_match()
+		GameLog.info("MATCH", "lobby is full (%d players); opening role selection" % players.size())
+		continue_to_selection()
 
 
 func _on_peer_left(peer_id: int) -> void:
@@ -213,15 +214,128 @@ func _on_peer_left(peer_id: int) -> void:
 func _on_disconnected() -> void:
 	_reset_state()
 	players_changed.emit()
-	call_deferred("_change_scene", LOBBY_SCENE)
+	SceneTransitionManager.transition("", SceneTransitionManager.LOBBY)
 
 
 # --- Match flow ----------------------------------------------------------------------
 
-func start_match() -> void:
-	if not can_start_match():
+func continue_to_selection() -> void:
+	if not can_continue_to_selection():
 		return
-	var hunter_id := _pick_hunter()
+	if NetworkManager.is_online():
+		_enter_selection.rpc()
+	else:
+		_set_phase(Phase.ROLE_SELECTION)
+	SceneTransitionManager.transition(SceneTransitionManager.LOBBY, SceneTransitionManager.ROLE_SELECTION)
+
+
+@rpc("authority", "call_local", "reliable")
+func _enter_selection() -> void:
+	resolved_hunter_id = -1
+	_set_phase(Phase.ROLE_SELECTION)
+	GameLog.info("MATCH", "role selection opened")
+
+
+func request_side(role: int) -> void:
+	request_side_for(multiplayer.get_unique_id(), role)
+
+
+func request_side_for(peer_id: int, role: int) -> void:
+	if phase != Phase.ROLE_SELECTION:
+		return
+	var own_id := multiplayer.get_unique_id()
+	var test_player := peer_id >= TEST_PLAYER_ID
+	if peer_id != own_id and not test_player:
+		return
+	if NetworkManager.is_online() and not test_player and not multiplayer.is_server():
+		_request_side.rpc_id(1, role)
+		return
+	_apply_side(peer_id, role)
+
+
+@rpc("any_peer", "reliable")
+func _request_side(role: int) -> void:
+	if not multiplayer.is_server() or phase != Phase.ROLE_SELECTION:
+		return
+	_apply_side(sender_id(multiplayer), role)
+
+
+func _apply_side(peer_id: int, role: int) -> void:
+	if not players.has(peer_id):
+		return
+	if role != RoleConfig.Role.HUNTER and role != RoleConfig.Role.RUNNER:
+		return
+	var entry: Dictionary = players[peer_id]
+	entry.preferred_role = role
+	players[peer_id] = entry
+	resolved_hunter_id = -1
+	GameLog.info("MATCH", "peer %d requested %s" % [peer_id, role_label(role)])
+	if NetworkManager.is_online():
+		_sync_players.rpc(players)
+	else:
+		players_changed.emit()
+	_maybe_auto_resolve()
+
+
+func add_test_player() -> void:
+	if NetworkManager.is_online():
+		return
+	var id := _next_test_player_id
+	_next_test_player_id += 1
+	players[id] = _new_player("Tester %d" % (id - TEST_PLAYER_ID + 1), ANY_ROLE)
+	players_changed.emit()
+
+
+func resolve_roles() -> void:
+	if phase != Phase.ROLE_SELECTION or players.is_empty():
+		return
+	if NetworkManager.is_online() and not multiplayer.is_server():
+		return
+	_assign_roles()
+	if NetworkManager.is_online():
+		_sync_players.rpc(players)
+	else:
+		players_changed.emit()
+
+
+func start_game_from_selection() -> void:
+	if phase != Phase.ROLE_SELECTION:
+		return
+	if NetworkManager.is_online() and not multiplayer.is_server():
+		return
+	_drop_test_players()
+	if players.is_empty():
+		return
+	_assign_roles()
+	if NetworkManager.is_online():
+		_begin_preparation.rpc(players, head_start_duration)
+	else:
+		_apply_preparation(players, head_start_duration)
+	SceneTransitionManager.transition(SceneTransitionManager.ROLE_SELECTION, SceneTransitionManager.GAME)
+
+
+func _maybe_auto_resolve() -> void:
+	if LaunchOptions.auto_start_players <= 0 or not multiplayer.is_server() or phase != Phase.ROLE_SELECTION:
+		return
+	for key in players.keys():
+		var preference := int(players[key].preferred_role)
+		if preference != RoleConfig.Role.HUNTER and preference != RoleConfig.Role.RUNNER:
+			return
+	GameLog.info("MATCH", "every player has chosen a side")
+	start_game_from_selection()
+
+
+func _drop_test_players() -> void:
+	for key in players.keys():
+		if int(key) >= TEST_PLAYER_ID:
+			players.erase(int(key))
+	if resolved_hunter_id >= TEST_PLAYER_ID:
+		resolved_hunter_id = -1
+
+
+func _assign_roles() -> void:
+	var hunter_id := choose_hunter_id(players)
+	resolved_hunter_id = hunter_id
 	for key in players.keys():
 		var id := int(key)
 		var entry: Dictionary = players[id]
@@ -229,28 +343,26 @@ func start_match() -> void:
 		entry.alive = true
 		players[id] = entry
 		GameLog.info("MATCH", "peer %d %s -> %s" % [id, entry.name, role_label(int(entry.role))])
-	_begin_preparation.rpc(players, head_start_duration)
 
 
-func _pick_hunter() -> int:
+static func choose_hunter_id(roster: Dictionary, rng: RandomNumberGenerator = null) -> int:
 	var requested: Array[int] = []
-	for key in players.keys():
+	var everyone: Array[int] = []
+	for key in roster.keys():
 		var id := int(key)
-		if int(players[id].preferred_role) == RoleConfig.Role.HUNTER:
+		everyone.append(id)
+		if int(roster[id].preferred_role) == RoleConfig.Role.HUNTER:
 			requested.append(id)
-	if requested.is_empty():
-		var lowest := 2147483647
-		for key in players.keys():
-			lowest = mini(lowest, int(key))
-		GameLog.info("MATCH", "no hunter was requested; peer %d becomes the hunter" % lowest)
-		return lowest
-	if requested.size() > 1:
-		GameLog.info("MATCH", "several peers requested hunter; using peer %d" % requested[0])
-	return requested[0]
+	var pool: Array[int] = requested if not requested.is_empty() else everyone
+	if pool.is_empty():
+		return -1
+	var roll := randi() if rng == null else rng.randi()
+	var chosen: int = pool[roll % pool.size()]
+	GameLog.info("MATCH", "hunter candidates %s; chose peer %d" % [pool, chosen])
+	return chosen
 
 
-@rpc("authority", "call_local", "reliable")
-func _begin_preparation(raw_players: Dictionary, duration: float) -> void:
+func _apply_preparation(raw_players: Dictionary, duration: float) -> void:
 	players = _normalize_players(raw_players)
 	time_left = duration
 	_loaded_peers.clear()
@@ -262,7 +374,11 @@ func _begin_preparation(raw_players: Dictionary, duration: float) -> void:
 	_set_phase(Phase.RUNNER_PREPARATION)
 	players_changed.emit()
 	GameLog.info("MATCH", "runner preparation started (%.1f s)" % duration)
-	call_deferred("_change_scene", MATCH_SCENE)
+
+
+@rpc("authority", "call_local", "reliable")
+func _begin_preparation(raw_players: Dictionary, duration: float) -> void:
+	_apply_preparation(raw_players, duration)
 
 
 func request_skip_preparation() -> void:
@@ -313,7 +429,7 @@ func report_scene_ready() -> void:
 
 
 func _check_all_loaded() -> void:
-	if phase == Phase.LOBBY or phase == Phase.ENDED or _announced_loaded:
+	if phase == Phase.LOBBY or phase == Phase.ROLE_SELECTION or phase == Phase.ENDED or _announced_loaded:
 		return
 	if not everyone_loaded():
 		return
@@ -323,8 +439,11 @@ func _check_all_loaded() -> void:
 
 
 func reset_match() -> void:
-	if multiplayer.is_server():
-		_reset_to_lobby.rpc()
+	if not multiplayer.is_server():
+		return
+	var from_path := SceneTransitionManager.current_scene_path()
+	_reset_to_lobby.rpc()
+	SceneTransitionManager.transition(from_path, SceneTransitionManager.LOBBY)
 
 
 @rpc("authority", "call_local", "reliable")
@@ -333,14 +452,15 @@ func _reset_to_lobby() -> void:
 		var entry: Dictionary = players[key]
 		entry.alive = true
 		entry.role = RoleConfig.Role.RUNNER
+		entry.preferred_role = ANY_ROLE
 		players[key] = entry
+	resolved_hunter_id = -1
 	time_left = 0.0
 	_loaded_peers.clear()
 	_announced_loaded = false
 	_set_phase(Phase.LOBBY)
 	players_changed.emit()
 	GameLog.info("MATCH", "match reset to the lobby")
-	call_deferred("_change_scene", LOBBY_SCENE)
 
 
 # --- Helpers -------------------------------------------------------------------------
@@ -396,6 +516,8 @@ func _phase_name(value: int) -> String:
 	match value:
 		Phase.LOBBY:
 			return "LOBBY"
+		Phase.ROLE_SELECTION:
+			return "ROLE_SELECTION"
 		Phase.RUNNER_PREPARATION:
 			return "RUNNER_PREPARATION"
 		Phase.HUNTER_ACTIVE:
@@ -417,13 +539,30 @@ func _reset_state() -> void:
 	hunter_spawned_during_preparation = false
 	phases_seen.clear()
 	players_at_hunter_phase.clear()
+	resolved_hunter_id = -1
 	_set_phase(Phase.LOBBY)
 
 
-func _change_scene(path: String) -> void:
-	var current := get_tree().current_scene
-	if current != null and current.scene_file_path == path:
-		return
-	var err: Error = get_tree().change_scene_to_file(path)
-	if err != OK:
-		push_error("Could not open %s: %s" % [path, error_string(err)])
+func prepare_lobby_test() -> void:
+	_reset_state()
+
+
+func prepare_selection_test() -> void:
+	_reset_state()
+	players[1] = _new_player(local_player_name, ANY_ROLE)
+	_set_phase(Phase.ROLE_SELECTION)
+	players_changed.emit()
+
+
+func prepare_game_test() -> void:
+	_reset_state()
+	var role := RoleConfig.Role.RUNNER
+	if LaunchOptions.test_role == "hunter":
+		role = RoleConfig.Role.HUNTER
+	var entry := _new_player(local_player_name, role)
+	entry.role = role
+	players[1] = entry
+	resolved_hunter_id = 1 if role == RoleConfig.Role.HUNTER else -1
+	time_left = head_start_duration
+	_set_phase(Phase.RUNNER_PREPARATION)
+	players_changed.emit()
