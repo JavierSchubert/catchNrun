@@ -57,7 +57,7 @@ func _ready() -> void:
 
 
 func _queue_rebuild() -> void:
-	if _rebuild_queued:
+	if not is_inside_tree() or _rebuild_queued:
 		return
 	_rebuild_queued = true
 	call_deferred("_rebuild")
@@ -100,6 +100,8 @@ func _vote_for_automated_peer() -> void:
 
 func _rebuild() -> void:
 	_rebuild_queued = false
+	if not is_inside_tree():
+		return
 	_clear(_runner_box)
 	_clear(_hunter_box)
 	_clear(_waiting_box)
@@ -129,7 +131,7 @@ func _player_row(peer_id: int, player_name: String) -> HBoxContainer:
 	label.text = player_name + suffix
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
-	if peer_id >= GameManager.TEST_PLAYER_ID:
+	if not NetworkManager.is_online() and peer_id >= GameManager.TEST_PLAYER_ID:
 		_add_button(row, "Runners", _set_test_side.bind(peer_id, RoleConfig.Role.RUNNER))
 		_add_button(row, "Hunter", _set_test_side.bind(peer_id, RoleConfig.Role.HUNTER))
 	return row

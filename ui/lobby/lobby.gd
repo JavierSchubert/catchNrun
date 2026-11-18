@@ -110,6 +110,8 @@ func _on_phase_changed(_phase: GameManager.Phase) -> void:
 
 
 func _refresh() -> void:
+	if not is_inside_tree():
+		return
 	var online: bool = NetworkManager.is_online()
 	_connect_box.visible = not online
 	_lobby_box.visible = online

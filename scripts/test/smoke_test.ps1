@@ -86,7 +86,8 @@ function As-Array {
 
 $failures = @()
 foreach ($proc in $procs) {
-    if ($proc.ExitCode -ne 0) {
+    $proc.Refresh()
+    if ($null -ne $proc.ExitCode -and $proc.ExitCode -ne 0) {
         $failures += "Process $($proc.Id) exited with code $($proc.ExitCode)."
     }
 }

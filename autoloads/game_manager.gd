@@ -244,10 +244,10 @@ func request_side_for(peer_id: int, role: int) -> void:
 	if phase != Phase.ROLE_SELECTION:
 		return
 	var own_id := multiplayer.get_unique_id()
-	var test_player := peer_id >= TEST_PLAYER_ID
+	var test_player := not NetworkManager.is_online() and peer_id >= TEST_PLAYER_ID
 	if peer_id != own_id and not test_player:
 		return
-	if NetworkManager.is_online() and not test_player and not multiplayer.is_server():
+	if not test_player and not multiplayer.is_server():
 		_request_side.rpc_id(1, role)
 		return
 	_apply_side(peer_id, role)
@@ -326,6 +326,8 @@ func _maybe_auto_resolve() -> void:
 
 
 func _drop_test_players() -> void:
+	if NetworkManager.is_online():
+		return
 	for key in players.keys():
 		if int(key) >= TEST_PLAYER_ID:
 			players.erase(int(key))
