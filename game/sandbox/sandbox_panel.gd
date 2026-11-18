@@ -5,11 +5,11 @@ extends Node
 ## Bot buttons start another copy of this project with the Godot executable path shown
 ## in the panel. They do nothing until that path points at a real Godot binary.
 
-var _status := Label.new()
-var _state := Label.new()
-var _peers := Label.new()
-var _bin_edit := LineEdit.new()
-var _headless := CheckBox.new()
+var _status: Label
+var _state: Label
+var _peers: Label
+var _bin_edit: LineEdit
+var _headless: CheckBox
 var _runner_count := 0
 var _hunter_count := 0
 
@@ -18,6 +18,12 @@ func _ready() -> void:
 	if not LaunchOptions.sandbox_enabled:
 		set_process(false)
 		return
+	_status = Label.new()
+	_state = Label.new()
+	_peers = Label.new()
+	_bin_edit = LineEdit.new()
+	_headless = CheckBox.new()
+
 	var layer := CanvasLayer.new()
 	layer.layer = 100
 	add_child(layer)

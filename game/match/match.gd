@@ -18,6 +18,8 @@ func _ready() -> void:
 	GameManager.all_players_loaded.connect(_spawn_pending)
 	GameManager.phase_changed.connect(_on_phase_changed)
 	GameManager.player_removed.connect(_on_player_removed)
+	if GameManager.players.is_empty():
+		return
 	if multiplayer.is_server():
 		GameManager.report_scene_ready()
 	else:
