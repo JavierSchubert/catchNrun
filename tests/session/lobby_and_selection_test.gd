@@ -137,11 +137,19 @@ func _test_match_presentation() -> void:
 		_check(unit.get_node_or_null("HealthBar") is HealthBar, "%s includes a health bar" % scene_path)
 		var sprite := unit.get_node_or_null("Sprite") as Sprite2D
 		var health_bar := unit.get_node_or_null("HealthBar") as HealthBar
+		var collision := unit.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		var collision_circle := collision.shape as CircleShape2D if collision != null else null
 		_check(
 			sprite != null and health_bar != null
 				and is_equal_approx(sprite.scale.x, 0.24)
 				and is_equal_approx(150.0 * sprite.scale.x, health_bar.custom_minimum_size.x * health_bar.scale.x),
 			"%s scales the sprite down and matches the health bar width" % scene_path
+		)
+		_check(
+			sprite != null and collision_circle != null
+				and is_equal_approx(collision_circle.radius, 16.0)
+				and collision_circle.radius * 2.0 < 150.0 * sprite.scale.x,
+			"%s uses a circular collision shape slightly smaller than the sprite" % scene_path
 		)
 		_check(
 			sprite != null and sprite.texture.resource_path.ends_with(expected_sprites[index]),
@@ -167,6 +175,9 @@ func _test_match_presentation() -> void:
 	var match_root := match_scene.instantiate()
 	var background := match_root.get_node_or_null("Background") as Sprite2D
 	var camera := match_root.get_node_or_null("MatchCamera") as Camera2D
+	var camera_script := load("res://game/camera/match_camera.gd") as Script
+	var default_camera := Camera2D.new()
+	default_camera.set_script(camera_script)
 	var map_world_size := Vector2.ZERO
 	if background != null and background.texture != null:
 		map_world_size = Vector2(background.texture.get_size()) * background.scale
@@ -183,10 +194,16 @@ func _test_match_presentation() -> void:
 		"movement bounds match the rendered map size"
 	)
 	_check(
-		camera != null and camera.zoom.is_equal_approx(Vector2(1.25, 1.25))
+		camera != null and is_equal_approx(camera.zoom_factor, float(default_camera.get("zoom_factor")))
 			and camera.bounds == Unit.MAP_BOUNDS,
-		"the camera zooms in and keeps its view inside the map"
+		"the match camera uses the configurable script zoom factor without a scene override"
 	)
+	if camera != null:
+		camera.zoom_factor = 2.0
+		_check(camera.zoom.is_equal_approx(Vector2(2.0, 2.0)), "changing zoom_factor updates camera zoom")
+		camera.zoom_factor = 1.0
+		_check(camera.zoom.is_equal_approx(Vector2.ONE), "a zoom factor of 1 resets the camera zoom")
+	default_camera.free()
 	match_root.free()
 
 

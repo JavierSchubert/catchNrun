@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-19** (session skeleton + multiplayer prototype + basic melee combat / observer / free camera).
+Last reviewed: **2026-11-20** (session skeleton + multiplayer prototype + unit sprites / health bars / map bounds / zoomed camera).
 
 ---
 
@@ -27,6 +27,8 @@ Last reviewed: **2026-11-19** (session skeleton + multiplayer prototype + basic 
 | 2026-11-19 | CP-03 / CP-04 / CP-05 / CP-06 updates | Match end + observer; free edge-scroll camera + `C` center; runtime HP/damage stats; hunter-bot hunt behavior; melee test scene |
 | 2026-11-19 | CP-04 move feedback | Right-click ground shows a short tweened move-click ring (`src/fx/move_click_marker.gd`) |
 | 2026-11-19 | CP-04 move marker tests | Headless FX test + runner: `tests/fx/move_click_marker_test.tscn`, `scripts/test/move_click_marker_test.ps1` |
+| 2026-11-20 | CP-03 / CP-04 unit presentation and map | Selectable Runner/Hunter sprites; shared inherited Unit scene with health bars sized to sprites; lava map; units clamped inside map bounds; circular collision shapes smaller than sprites; camera zoom factor 5.0 (configurable) and edge margin 300; session presentation tests |
+| 2026-11-20 | CP-04 camera zoom configuration | Removed the match-scene zoom override so the exported `zoom_factor` in `match_camera.gd` controls the camera; default is now 1.0 and changes apply directly to `Camera2D.zoom` |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -75,7 +77,9 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Wait until all peers report scene ready | Done | `report_scene_ready`, `all_players_loaded` |
 | Runners spawn in preparation | Done | `game/match/match.gd` |
 | Hunter spawns only after preparation ends | Done | `_spawn_pending` + `HUNTER_ACTIVE` |
-| Distinct Hunter (red) / Runner (blue) placeholders | Done | `src/units/hunter/`, `src/units/runner/` |
+| Role-specific selectable Runner / Hunter sprites | Done | `ui/role_selection/`, `src/units/unit/unit.gd`, `GameManager` sprite index |
+| Shared health bar on each Runner / Hunter | Done | `src/units/unit/unit.tscn`, `ui/hud/health_bar/` |
+| Lava map background | Done | `game/match/match.tscn` |
 | Minimal match HUD (phase, timer, local role / HP / observer) | Done | `game/match/hud.gd` |
 | Reset match to lobby | Done | `GameManager.reset_match` |
 | Match / network logging | Done | `src/logging/game_log.gd` |
@@ -90,12 +94,14 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 | Item | Status | Evidence |
 | --- | --- | --- |
-| Shared `Unit` CharacterBody2D | Done | `src/units/unit/unit.gd` |
+| Shared `Unit` CharacterBody2D scene inherited by Runner / Hunter | Done | `src/units/unit/unit.tscn`, `src/units/unit/unit.gd` |
 | Right-click move intent → host path order | Done | `_unhandled_input`, `_submit_move_order` |
 | Host simulates movement; clients interpolate | Done | `unit.gd` + `src/navigation/movement.gd` |
+| Units and requested move destinations stay inside map bounds | Done | `Unit._clamp_to_map`; bounds match the lava background |
+| Circular collision shape smaller than the selected sprite | Done | `src/units/unit/unit.tscn` |
 | Path follow + replace current order | Done | `path_follow.gd`, `movement.order_move` |
 | Movement speed driven by stats | Done | `StatSheet` → `UnitMovement.speed` |
-| Free match camera with edge scroll + `C` center | Done | `game/camera/match_camera.gd` |
+| Free match camera with edge scroll + `C` center, map-aware bounds, configurable zoom (default 1.0), edge margin 300 | Done | `game/camera/match_camera.gd`, `game/match/match.tscn` |
 | Right-click move marker (pop + fade) | Done | `src/fx/move_click_marker.gd` (local only) |
 | Move-marker automated tests | Done | `tests/fx/move_click_marker_test.gd` |
 | Straight-line paths (no obstacles) | Partial | `navigation_paths.gd` stub; no walls yet |

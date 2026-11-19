@@ -2,14 +2,19 @@ extends Camera2D
 ## Free match camera. Edge scrolling moves the view. C centers on the local unit
 ## while that unit is alive. Dead local players keep this camera as observers.
 
-@export var edge_margin := 150.0
+@export var edge_margin := 300.0
 @export var camera_speed := 900.0
 @export var bounds := Unit.MAP_BOUNDS
+@export_range(0.25, 8.0, 0.05) var zoom_factor := 1.0:
+	set(value):
+		zoom_factor = maxf(value, 0.01)
+		zoom = Vector2.ONE * zoom_factor
 
 var _follow_peer_id := -1
 
 
 func _ready() -> void:
+	zoom = Vector2.ONE * zoom_factor
 	enabled = LaunchOptions.bot_role.is_empty() and DisplayServer.get_name() != "headless"
 	make_current()
 	_follow_peer_id = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
