@@ -1,11 +1,10 @@
-[gd_resource type="Resource" script_class="RoleConfig" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="RoleConfig" format=3 uid="uid://dutg05yayhs6w"]
 
-[ext_resource type="Script" path="res://src/units/role_config.gd" id="1_role"]
-[ext_resource type="Script" path="res://src/stats/stat_block.gd" id="2_stats"]
+[ext_resource type="Script" uid="uid://bj52l61ir63r5" path="res://src/units/role_config.gd" id="1_role"]
+[ext_resource type="Script" uid="uid://bdtlvfgxoutv" path="res://src/stats/stat_block.gd" id="2_stats"]
 
 [sub_resource type="Resource" id="Resource_stats"]
 script = ExtResource("2_stats")
-max_health = 100.0
 health_regeneration = 0.0
 defense = 0.0
 movement_speed = 230.0
@@ -13,7 +12,6 @@ melee_damage = 25.0
 ranged_damage = 0.0
 magic_damage = 0.0
 critical_chance = 0.0
-critical_damage_multiplier = 1.5
 lifesteal_chance = 0.0
 lifesteal_amount = 0.0
 
@@ -22,8 +20,8 @@ script = ExtResource("1_role")
 role = 0
 display_name = "Hunter"
 color = Color(0.9, 0.2, 0.2, 1)
+base_stats = SubResource("Resource_stats")
 move_speed = 230.0
 attack_range = 70.0
-acquisition_range = 2000.0
+acquisition_range = 500.0
 attack_interval = 0.75
-base_stats = SubResource("Resource_stats")

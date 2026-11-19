@@ -2,7 +2,7 @@ extends Camera2D
 ## Free match camera. Edge scrolling moves the view. C centers on the local unit
 ## while that unit is alive. Dead local players keep this camera as observers.
 
-@export var edge_margin := 28.0
+@export var edge_margin := 150.0
 @export var camera_speed := 900.0
 @export var bounds := Rect2(Vector2(-1100, -700), Vector2(2200, 1400))
 

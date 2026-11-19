@@ -144,6 +144,8 @@ The camera can move independently from the controlled character.
 
 Moving the mouse cursor to the edges or corners of the screen moves the camera in the corresponding direction.
 
+The edge detection margin is configurable in the `MatchCamera` inspector through `edge_margin` (in pixels; default: 80).
+
 ```text
 Top edge          -> Move camera up
 Bottom edge       -> Move camera down
