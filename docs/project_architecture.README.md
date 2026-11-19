@@ -141,7 +141,7 @@ Contains source assets used by the game, organized by asset type.
 
 ### `autoloads/`
 
-Contains globally available Godot services. Possible autoloads include match state, multiplayer session management, configuration access, scene transitions, and audio management.
+Contains globally available Godot services. Possible autoloads include match state, multiplayer session management, configuration access, the scene transition manager, and audio management.
 
 Autoloads should only be used for systems that genuinely require global lifetime or global access. Gameplay entities should not be implemented as autoloads.
 
@@ -354,39 +354,81 @@ UI
 
 CatchNRun is a 2D, top-down, asymmetric, team-based multiplayer game with Runner and Hunter teams.
 
-### 6.2. Main Scene
+### 6.2. Session Scenes
+
+The session is three separate scenes. Who may leave a scene, and how roles are resolved, is defined in `gameplay.README.md`.
 
 ```text
-Main
+s0  Lobby            ui/lobby/lobby.tscn
+s1  Role Selection   ui/role_selection/role_selection.tscn
+s2  Game             game/match/match.tscn
+```
+
+```text
+s0 Lobby
+-> s1 Role Selection
+-> s2 Game
+```
+
+The game scene assembles the match. It does not implement every gameplay rule itself.
+
+```text
+Game
 ├── Match
-├── Multiplayer Session
 ├── Arena
 ├── Camera
 ├── HUD
 └── Debug Tools
 ```
 
-The Main scene coordinates systems without implementing all gameplay rules itself.
+### 6.3. Scene Transition Manager
 
-### 6.3. Match System
+`SceneTransitionManager` is an autoload. It is the only code that changes the current session scene.
 
-Possible match states include:
+The caller passes both scenes:
 
 ```text
-Initializing
--> Waiting for Players
--> Runner Preparation
+transition(from, to)
+
+from
+-> The scene the players are leaving
+
+to
+-> The scene the players are opening
+```
+
+```text
+Lobby continues
+-> transition(lobby, role_selection)
+
+Role selection is resolved
+-> transition(role_selection, game)
+```
+
+The manager checks that `from` is the scene currently open, then opens `to` on every connected peer. It does not assign roles, start the preparation timer, or apply gameplay rules.
+
+A scene may also be opened directly, with no previous scene, so it can be tested on its own. In that case `from` is empty.
+
+### 6.4. Match System
+
+Inside the game scene, match states include:
+
+```text
+Runner Preparation
 -> Hunter Active
 -> Match Finished
 ```
 
-The Match system owns role assignment, the Runner head-start timer, Hunter spawn, match transitions, elimination, and win/loss conditions.
+The match system owns the Runner head-start timer, Hunter spawn, elimination, and win/loss conditions. Role resolution happens on the role selection screen before the transition into this scene.
 
-### 6.4. Scene Organization
+### 6.5. Scene Organization
 
 Gameplay entities should have independently testable scenes where practical.
 
 ```text
+lobby.tscn
+role_selection.tscn
+game / match.tscn
 hunter.tscn
 runner.tscn
 wall.tscn
@@ -394,7 +436,6 @@ tower.tscn
 crystal_mine.tscn
 hunter_shop.tscn
 arena.tscn
-main.tscn
 ```
 
 ---
@@ -481,6 +522,35 @@ construction_test.tscn
 ### 8.3. Multiplayer Test Scene
 
 The multiplayer test scene should support creating a host, connecting local clients, assigning roles, spawning synchronized players, moving, attacking, building, and synchronizing health/resources.
+
+### 8.4. Independent Scene Tests
+
+Every session screen can be run and tested without playing through the screens before it.
+
+```text
+Lobby
+-> Host, join, show the connected players, and continue
+
+Role Selection
+-> Show Runners on the left and the Hunter on the right
+-> Accept a side from each player
+-> Resolve several Hunter requests by random choice
+-> Continue to the game
+
+Game
+-> Start from roles supplied by the test
+-> Run preparation, the delayed Hunter spawn, and movement
+```
+
+Systems inside the game have their own test scenes as well. A test scene supplies only the state that system needs. It does not open the lobby or the role selection screen first.
+
+```text
+combat_test.tscn
+item_shop_test.tscn
+building_test.tscn
+```
+
+The same rule applies to the other gameplay systems: each one can be exercised on its own before it is wired into the full session.
 
 ---
 

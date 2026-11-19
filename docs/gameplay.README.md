@@ -26,9 +26,65 @@ Hunter Team
 -> Eliminate Runners
 ```
 
-## 2. Teams and Match Flow
+## 2. Session Flow
 
-### 2.1. Runner Team
+A session moves through three screens, in order:
+
+```text
+s0 Lobby
+-> s1 Role Selection
+-> s2 Game
+```
+
+Players stay connected across the screens. The host is the authority for closing a screen and for the role result. Changing from one screen to the next is done by the scene transition manager described in `project_architecture.README.md`. That manager receives the scene to leave and the scene to open. It does not decide roles or match rules.
+
+Each screen can be opened and tested on its own. A test does not have to play through the earlier screens.
+
+### 2.1. Lobby (s0)
+
+The lobby is the first screen. Players host or join and see who is connected.
+
+The lobby does not assign roles. When the host continues, the session moves to role selection.
+
+### 2.2. Role Selection (s1)
+
+The selection screen is a vote, split into two sides:
+
+```text
+Left side
+-> Runners
+
+Right side
+-> Hunter
+```
+
+Each player chooses a side. The choice is a request. The host resolves the requests when selection closes.
+
+There is exactly one Hunter. Every other player is a Runner.
+
+```text
+One player requests Hunter
+-> That player becomes the Hunter
+
+Several players request Hunter
+-> The host picks one of them at random
+-> The others become Runners
+
+Nobody requests Hunter
+-> The host picks one connected player at random
+```
+
+The same connected players must see the same result. After the host resolves the vote, the session transitions to the game.
+
+### 2.3. Game (s2)
+
+The game scene starts only after roles are resolved. Runner preparation, the delayed Hunter spawn, combat, the item shop, and building happen inside this scene.
+
+Those in-game systems are specified by their own documents. Each of them can be tested on its own, without walking through the lobby and the role selection screen first.
+
+## 3. Teams and Match Flow
+
+### 3.1. Runner Team
 
 Runners can:
 
@@ -42,7 +98,7 @@ Runners can:
 
 Each Runner may own a maximum of one Crystal Mine at a time. The existing Crystal Mine must be upgraded to increase Crystal generation instead of constructing additional Crystal Mines.
 
-### 2.2. Hunter Team
+### 3.2. Hunter Team
 
 The Hunter can:
 
@@ -55,7 +111,7 @@ The Hunter can:
 - Take damage from Runner Towers.
 - Be eliminated if their health reaches zero.
 
-### 2.3. Runner Head Start
+### 3.3. Runner Head Start
 
 The initial preparation duration is configurable.
 
@@ -73,7 +129,7 @@ Runner Head Start Ends
 -> Hunter Gameplay Begins
 ```
 
-## 3. Runner Gameplay Loop
+## 4. Runner Gameplay Loop
 
 Build Crystal Mine
 
@@ -103,7 +159,7 @@ All Runner structures have health and can be attacked and destroyed by the Hunte
 
 Walls and Towers can be upgraded by their owning Runner using Crystals.
 
-## 4. Hunter Gameplay Loop
+## 5. Hunter Gameplay Loop
 
 ```text
 Find Runner Defenses
@@ -117,7 +173,7 @@ Find Runner Defenses
 
 The Hunter becomes stronger through active combat and purchases made with earned Crystals.
 
-## 5. Health and Destruction
+## 6. Health and Destruction
 
 Runners, the Hunter, and destructible structures have health.
 
@@ -159,7 +215,7 @@ Towers
 
 Detailed stat and damage calculations belong to the Stats and Combat systems.
 
-## 6. Vision and Information
+## 7. Vision and Information
 
 The map uses fog of war. Hunter and Runner teams can only observe the world within their available vision.
 
@@ -175,7 +231,7 @@ Previously seen information is not updated again until the relevant area or enti
 
 Detailed visibility rules belong to `vision.README.md`.
 
-## 7. Configurable Gameplay Parameters
+## 8. Configurable Gameplay Parameters
 
 Values expected to require balancing must be configurable instead of hard-coded into unrelated gameplay or UI logic.
 
@@ -195,12 +251,16 @@ hunter_passive_income_interval
 vision_range
 ```
 
-## 8. System Boundaries
+## 9. System Boundaries
 
 This document defines the high-level game rules. Detailed behavior belongs to dedicated specifications.
 
 ```text
 Gameplay
+├── Session Flow
+│   ├── Lobby (s0)
+│   ├── Role Selection (s1)
+│   └── Game (s2)
 ├── Teams
 ├── Match Flow
 ├── Objectives

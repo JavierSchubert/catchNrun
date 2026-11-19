@@ -36,8 +36,10 @@ The first milestone should establish:
 - runnable Godot project,
 - local host,
 - clients joining through localhost,
-- minimal lobby,
-- Hunter / Runner role assignment,
+- lobby (`s0`), role selection (`s1`), and game (`s2`), as specified in `gameplay.README.md`,
+- scene changes only through the scene transition manager, which receives the scene to leave and the scene to open,
+- Hunter / Runner role selection, with a random Hunter when several players request it,
+- each session screen testable on its own, and combat, the item shop, and building testable inside the game without playing the earlier screens,
 - synchronized player spawning,
 - synchronized basic movement,
 - match start,
@@ -136,7 +138,7 @@ Implement incrementally:
 
 4. Host / client networking
 
-5. Minimal lobby and role assignment
+5. Lobby, role selection, and scene transitions
 
 6. Multiplayer spawning and movement
 
@@ -176,9 +178,11 @@ The prototype is successful when:
 - the project starts without errors,
 - a host can create a game,
 - clients can join locally,
-- players appear in a minimal lobby,
-- Hunter and Runner roles are assigned,
-- the host can start the match,
+- players appear in the lobby,
+- the host can continue to role selection, with Runners on the left and the Hunter on the right,
+- several Hunter requests are resolved by a random choice,
+- the scene transition manager opens the game scene from role selection,
+- the lobby, role selection, and the game can each be tested on their own,
 - Runners spawn,
 - the Hunter spawns after the preparation phase,
 - Hunter and Runner placeholders are visually distinguishable,
