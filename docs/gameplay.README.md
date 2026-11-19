@@ -59,6 +59,8 @@ Right side
 ```
 
 Each player chooses a side. The choice is a request. The host resolves the requests when selection closes.
+Players also choose a sprite for their requested side: Runners use `Player_1`–`Player_5`, while Hunters use `Enemy_1`–`Enemy_5`.
+If no side is requested, the Runner sprite list is shown; a player selected as Hunter uses the corresponding Enemy sprite number.
 
 There is exactly one Hunter. Every other player is a Runner.
 
@@ -81,6 +83,7 @@ The same connected players must see the same result. After the host resolves the
 The game scene starts only after roles are resolved. Runner preparation, the delayed Hunter spawn, combat, the item shop, and building happen inside this scene.
 
 Those in-game systems are specified by their own documents. Each of them can be tested on its own, without walking through the lobby and the role selection screen first.
+Runners and Hunters inherit a shared Unit scene for their stats, health, and health bar. Their movement is clamped to the map bounds. The health bar matches the sprite's 36-world-unit width; at the current 1.25 camera zoom, each appears about 45 pixels wide. The current match uses the lava map sprite.
 
 ## 3. Teams and Match Flow
 

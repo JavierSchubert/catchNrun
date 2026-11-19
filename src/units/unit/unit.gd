@@ -8,6 +8,23 @@ extends CharacterBody2D
 
 const INTERPOLATION_SPEED := 12.0
 const SNAP_DISTANCE := 200.0
+const MAP_BOUNDS := Rect2(-1200.0, -800.0, 2400.0, 1600.0)
+const MAP_INSET := 20.0
+const SPRITE_COUNT := 5
+const RUNNER_SPRITES := [
+	preload("res://assets/sprites/units/Player_1.png"),
+	preload("res://assets/sprites/units/Player_2.png"),
+	preload("res://assets/sprites/units/Player_3.png"),
+	preload("res://assets/sprites/units/Player_4.png"),
+	preload("res://assets/sprites/units/Player_5.png"),
+]
+const HUNTER_SPRITES := [
+	preload("res://assets/sprites/units/Enemy_1.png"),
+	preload("res://assets/sprites/units/Enemy_2.png"),
+	preload("res://assets/sprites/units/Enemy_3.png"),
+	preload("res://assets/sprites/units/Enemy_4.png"),
+	preload("res://assets/sprites/units/Enemy_5.png"),
+]
 
 @export var config: RoleConfig
 
@@ -25,6 +42,7 @@ var _bot_repath_in := 0.0
 @onready var name_label: Label = $NameLabel
 @onready var movement: UnitMovement = $Movement
 @onready var health: HealthComponent = $Health
+@onready var health_bar: HealthBar = $HealthBar
 @onready var attack: AttackController = $Attack
 
 
@@ -39,15 +57,19 @@ func _ready() -> void:
 	if config == null:
 		push_error("Unit %s is missing a role config." % name)
 		return
+	_clamp_to_map()
+	sync_position = position
 	stats.stats_changed.connect(_apply_derived_stats)
 	stats.set_base(_base_stats())
 	attack.attack_range = config.attack_range
 	attack.acquisition_range = config.acquisition_range
 	attack.attack_interval = config.attack_interval
 	health.died.connect(_on_died)
+	health.health_changed.connect(health_bar.update_for_health)
 	health.setup(stats.final_value(StatBlock.Stat.MAX_HEALTH))
 	sync_health = health.current
-	sprite.modulate = config.color
+	var player_data: Dictionary = GameManager.players.get(peer_id, {})
+	sprite.texture = sprite_texture(int(player_data.get("sprite_index", 0)), config.role)
 	_refresh_label()
 	GameManager.players_changed.connect(_on_players_changed)
 	if GameManager.is_eliminated(peer_id):
@@ -76,6 +98,11 @@ func is_attackable() -> bool:
 
 func role() -> int:
 	return config.role if config != null else RoleConfig.Role.RUNNER
+
+
+static func sprite_texture(sprite_index: int, role_id: int) -> Texture2D:
+	var textures: Array = HUNTER_SPRITES if role_id == RoleConfig.Role.HUNTER else RUNNER_SPRITES
+	return textures[clampi(sprite_index, 0, SPRITE_COUNT - 1)] as Texture2D
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -115,10 +142,12 @@ func _physics_process(delta: float) -> void:
 			if not movement.has_order():
 				movement.intent = _intent
 			movement.apply(self)
+			_clamp_to_map()
 		sync_position = position
 		sync_health = health.current
 	else:
 		_follow_sync_position(delta)
+		_clamp_to_map()
 		_apply_synced_health()
 
 
@@ -271,11 +300,22 @@ func _follow_sync_position(delta: float) -> void:
 		position = position.lerp(sync_position, 1.0 - exp(-INTERPOLATION_SPEED * delta))
 
 
+func _clamp_to_map() -> void:
+	global_position = _clamp_map_position(global_position)
+
+
+func _clamp_map_position(world_position: Vector2) -> Vector2:
+	return Vector2(
+		clampf(world_position.x, MAP_BOUNDS.position.x + MAP_INSET, MAP_BOUNDS.end.x - MAP_INSET),
+		clampf(world_position.y, MAP_BOUNDS.position.y + MAP_INSET, MAP_BOUNDS.end.y - MAP_INSET)
+	)
+
+
 func _request_move(destination: Vector2, clear_attack := true) -> void:
 	if multiplayer.is_server():
 		if clear_attack:
 			attack.clear_target()
-		movement.order_move(global_position, destination)
+		movement.order_move(global_position, _clamp_map_position(destination))
 	else:
 		_submit_move_order.rpc_id(1, destination, clear_attack)
 
@@ -369,7 +409,7 @@ func _submit_move_order(destination: Vector2, clear_attack := true) -> void:
 		return
 	if clear_attack:
 		attack.clear_target()
-	movement.order_move(global_position, destination)
+	movement.order_move(global_position, _clamp_map_position(destination))
 
 
 @rpc("any_peer", "reliable")

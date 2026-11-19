@@ -22,10 +22,15 @@ func _ready() -> void:
 	margin.add_child(root)
 
 	var title := Label.new()
-	title.text = "Choose a side"
+	title.text = "Choose a side and sprite"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 32)
 	root.add_child(title)
+
+	var instructions := Label.new()
+	instructions.text = "Runners choose a Player sprite; Hunters choose an Enemy sprite."
+	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root.add_child(instructions)
 
 	_result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(_result)
@@ -109,7 +114,12 @@ func _rebuild() -> void:
 		var id := int(key)
 		var entry: Dictionary = GameManager.players[id]
 		var preference := int(entry.get("preferred_role", GameManager.ANY_ROLE))
-		var row := _player_row(id, str(entry.get("name", "Player")))
+		var row := _player_row(
+			id,
+			str(entry.get("name", "Player")),
+			preference,
+			int(entry.get("sprite_index", 0))
+		)
 		if preference == RoleConfig.Role.HUNTER:
 			_hunter_box.add_child(row)
 		elif preference == RoleConfig.Role.RUNNER:
@@ -124,13 +134,38 @@ func _rebuild() -> void:
 	_start_button.disabled = NetworkManager.is_online() and not multiplayer.is_server()
 
 
-func _player_row(peer_id: int, player_name: String) -> HBoxContainer:
+func _player_row(peer_id: int, player_name: String, preferred_role: int, sprite_index: int) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	var label := Label.new()
 	var suffix := " (you)" if peer_id == multiplayer.get_unique_id() else ""
 	label.text = player_name + suffix
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
+
+	var sprite_role := RoleConfig.Role.HUNTER if preferred_role == RoleConfig.Role.HUNTER else RoleConfig.Role.RUNNER
+	var can_choose_sprite := peer_id == multiplayer.get_unique_id() \
+		or (not NetworkManager.is_online() and peer_id >= GameManager.TEST_PLAYER_ID)
+	var sprite_selector := HBoxContainer.new()
+	sprite_selector.name = "SpriteSelector_%d" % peer_id
+	sprite_selector.add_theme_constant_override("separation", 2)
+	for index in GameManager.SPRITE_COUNT:
+		var sprite_button := TextureButton.new()
+		sprite_button.name = "SpriteOption%d" % (index + 1)
+		sprite_button.custom_minimum_size = Vector2(32, 32)
+		sprite_button.ignore_texture_size = true
+		sprite_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+		sprite_button.texture_normal = Unit.sprite_texture(index, sprite_role)
+		sprite_button.texture_pressed = sprite_button.texture_normal
+		sprite_button.disabled = not can_choose_sprite
+		sprite_button.modulate = Color(1.0, 0.8, 0.45) if index == sprite_index else Color.WHITE
+		sprite_button.tooltip_text = "%s %d" % [
+			"Hunter" if sprite_role == RoleConfig.Role.HUNTER else "Runner",
+			index + 1,
+		]
+		sprite_button.pressed.connect(GameManager.set_sprite_for.bind(peer_id, index))
+		sprite_selector.add_child(sprite_button)
+	row.add_child(sprite_selector)
+
 	if not NetworkManager.is_online() and peer_id >= GameManager.TEST_PLAYER_ID:
 		_add_button(row, "Runners", _set_test_side.bind(peer_id, RoleConfig.Role.RUNNER))
 		_add_button(row, "Hunter", _set_test_side.bind(peer_id, RoleConfig.Role.HUNTER))

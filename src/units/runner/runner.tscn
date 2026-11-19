@@ -1,53 +1,13 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene format=3 uid="uid://uk1tc2fuojjd"]
 
-[ext_resource type="Script" path="res://src/units/unit/unit.gd" id="1_unit"]
-[ext_resource type="Texture2D" path="res://assets/textures/icon.svg" id="2_icon"]
-[ext_resource type="Resource" path="res://src/units/runner/runner_config.tres" id="3_config"]
-[ext_resource type="Script" path="res://src/navigation/movement.gd" id="4_move"]
-[ext_resource type="Script" path="res://src/components/health/health_component.gd" id="5_health"]
-[ext_resource type="Script" path="res://src/combat/attack_controller.gd" id="6_attack"]
+[ext_resource type="PackedScene" path="res://src/units/unit/unit.tscn" id="1_unit"]
+[ext_resource type="Resource" uid="uid://byj7nddatb7ul" path="res://src/units/runner/runner_config.tres" id="2_config"]
 
-[sub_resource type="CircleShape2D" id="circle"]
-radius = 20.0
+[node name="Runner" unique_id=1511249192 instance=ExtResource("1_unit")]
+config = ExtResource("2_config")
 
-[sub_resource type="SceneReplicationConfig" id="sync_cfg"]
-properties/0/path = NodePath(".:sync_position")
-properties/0/spawn = true
-properties/0/replication_mode = 1
-properties/1/path = NodePath(".:sync_health")
-properties/1/spawn = true
-properties/1/replication_mode = 1
-
-[node name="Runner" type="CharacterBody2D"]
-z_index = 1
-motion_mode = 1
-collision_layer = 0
-collision_mask = 0
-script = ExtResource("1_unit")
-config = ExtResource("3_config")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("circle")
-
-[node name="Sprite" type="Sprite2D" parent="."]
-scale = Vector2(0.32, 0.32)
-texture = ExtResource("2_icon")
-
-[node name="NameLabel" type="Label" parent="."]
-offset_left = -80.0
-offset_top = -48.0
-offset_right = 80.0
-offset_bottom = -24.0
-horizontal_alignment = 1
-
-[node name="Movement" type="Node" parent="."]
-script = ExtResource("4_move")
-
-[node name="Health" type="Node" parent="."]
-script = ExtResource("5_health")
-
-[node name="Attack" type="Node" parent="."]
-script = ExtResource("6_attack")
-
-[node name="ServerSync" type="MultiplayerSynchronizer" parent="."]
-replication_config = SubResource("sync_cfg")
+[node name="HealthBar" parent="." index="3"]
+offset_left = -24.0
+offset_top = -36.0
+offset_right = 72.0
+offset_bottom = -16.0

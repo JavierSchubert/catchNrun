@@ -1,53 +1,7 @@
-[gd_scene format=3 uid="uid://bdtxvl7fs8hcj"]
+[gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" uid="uid://dr8ir5leqic5y" path="res://src/units/unit/unit.gd" id="1_unit"]
-[ext_resource type="Texture2D" uid="uid://3l62gaupye4o" path="res://assets/textures/icon.svg" id="2_icon"]
-[ext_resource type="Resource" uid="uid://dutg05yayhs6w" path="res://src/units/hunter/hunter_config.tres" id="3_config"]
-[ext_resource type="Script" uid="uid://bfghkruseq2d1" path="res://src/navigation/movement.gd" id="4_move"]
-[ext_resource type="Script" uid="uid://bjjfqfyd0nwen" path="res://src/components/health/health_component.gd" id="5_health"]
-[ext_resource type="Script" uid="uid://dp4h1t13qri1b" path="res://src/combat/attack_controller.gd" id="6_attack"]
+[ext_resource type="PackedScene" path="res://src/units/unit/unit.tscn" id="1_unit"]
+[ext_resource type="Resource" path="res://src/units/hunter/hunter_config.tres" id="2_config"]
 
-[sub_resource type="CircleShape2D" id="circle"]
-radius = 20.0
-
-[sub_resource type="SceneReplicationConfig" id="sync_cfg"]
-properties/0/path = NodePath(".:sync_position")
-properties/0/spawn = true
-properties/0/replication_mode = 1
-properties/1/path = NodePath(".:sync_health")
-properties/1/spawn = true
-properties/1/replication_mode = 1
-
-[node name="Hunter" type="CharacterBody2D" unique_id=909256909]
-z_index = 1
-collision_layer = 0
-collision_mask = 0
-motion_mode = 1
-script = ExtResource("1_unit")
-config = ExtResource("3_config")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=182168034]
-shape = SubResource("circle")
-
-[node name="Sprite" type="Sprite2D" parent="." unique_id=2057635426]
-scale = Vector2(0.32, 0.32)
-texture = ExtResource("2_icon")
-
-[node name="NameLabel" type="Label" parent="." unique_id=218238997]
-offset_left = -80.0
-offset_top = -48.0
-offset_right = 80.0
-offset_bottom = -24.0
-horizontal_alignment = 1
-
-[node name="Movement" type="Node" parent="." unique_id=590008887]
-script = ExtResource("4_move")
-
-[node name="Health" type="Node" parent="." unique_id=1878041897]
-script = ExtResource("5_health")
-
-[node name="Attack" type="Node" parent="." unique_id=341716620]
-script = ExtResource("6_attack")
-
-[node name="ServerSync" type="MultiplayerSynchronizer" parent="." unique_id=75207509]
-replication_config = SubResource("sync_cfg")
+[node name="Hunter" instance=ExtResource("1_unit")]
+config = ExtResource("2_config")

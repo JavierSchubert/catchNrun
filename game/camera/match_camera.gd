@@ -4,7 +4,7 @@ extends Camera2D
 
 @export var edge_margin := 150.0
 @export var camera_speed := 900.0
-@export var bounds := Rect2(Vector2(-1100, -700), Vector2(2200, 1400))
+@export var bounds := Unit.MAP_BOUNDS
 
 var _follow_peer_id := -1
 
@@ -84,5 +84,10 @@ func _local_unit() -> Node2D:
 
 
 func _clamp_to_bounds() -> void:
-	global_position.x = clampf(global_position.x, bounds.position.x, bounds.end.x)
-	global_position.y = clampf(global_position.y, bounds.position.y, bounds.end.y)
+	var half_view_size := get_viewport_rect().size / zoom * 0.5
+	var min_center := bounds.position + half_view_size
+	var max_center := bounds.end - half_view_size
+	global_position.x = bounds.get_center().x if min_center.x > max_center.x \
+		else clampf(global_position.x, min_center.x, max_center.x)
+	global_position.y = bounds.get_center().y if min_center.y > max_center.y \
+		else clampf(global_position.y, min_center.y, max_center.y)
