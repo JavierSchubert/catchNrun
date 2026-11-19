@@ -8,6 +8,8 @@ extends Node
 signal players_changed
 signal phase_changed(phase: Phase)
 signal player_removed(peer_id: int)
+signal player_eliminated(peer_id: int)
+signal match_finished(winner_team: String)
 signal all_players_loaded
 signal auto_host_failed(error_code: Error)
 
@@ -111,6 +113,72 @@ func everyone_loaded() -> bool:
 		if not _loaded_peers.has(int(key)):
 			return false
 	return true
+
+
+func is_eliminated(peer_id: int) -> bool:
+	if not players.has(peer_id):
+		return false
+	return not bool(players[peer_id].get("alive", true))
+
+
+func living_runner_ids() -> Array[int]:
+	var ids: Array[int] = []
+	for key in players.keys():
+		var id := int(key)
+		var entry: Dictionary = players[id]
+		if int(entry.get("role", RoleConfig.Role.RUNNER)) != RoleConfig.Role.RUNNER:
+			continue
+		if bool(entry.get("alive", true)):
+			ids.append(id)
+	return ids
+
+
+func living_hunter_ids() -> Array[int]:
+	var ids: Array[int] = []
+	for key in players.keys():
+		var id := int(key)
+		var entry: Dictionary = players[id]
+		if int(entry.get("role", RoleConfig.Role.RUNNER)) != RoleConfig.Role.HUNTER:
+			continue
+		if bool(entry.get("alive", true)):
+			ids.append(id)
+	return ids
+
+
+## Host marks a player defeated. Dead Runners become observers; the match ends when
+## every Runner is down or the Hunter falls.
+func eliminate_player(peer_id: int) -> void:
+	if not multiplayer.is_server():
+		return
+	if phase != Phase.RUNNER_PREPARATION and phase != Phase.HUNTER_ACTIVE:
+		return
+	if not players.has(peer_id) or is_eliminated(peer_id):
+		return
+	var entry: Dictionary = players[peer_id]
+	entry.alive = false
+	players[peer_id] = entry
+	GameLog.info("MATCH", "peer %d eliminated (%s)" % [peer_id, role_label(int(entry.role))])
+	_sync_players.rpc(players)
+	player_eliminated.emit(peer_id)
+	_check_match_end()
+
+
+func _check_match_end() -> void:
+	if not multiplayer.is_server():
+		return
+	if phase != Phase.HUNTER_ACTIVE and phase != Phase.RUNNER_PREPARATION:
+		return
+	if living_runner_ids().is_empty():
+		_finish_match.rpc("hunter")
+	elif living_hunter_ids().is_empty():
+		_finish_match.rpc("runner")
+
+
+@rpc("authority", "call_local", "reliable")
+func _finish_match(winner_team: String) -> void:
+	_set_phase(Phase.ENDED)
+	GameLog.info("MATCH", "match finished — %s team wins" % winner_team)
+	match_finished.emit(winner_team)
 
 
 static func sender_id(mp: MultiplayerAPI) -> int:

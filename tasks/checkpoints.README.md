@@ -1,0 +1,176 @@
+# Checkpoints — Implemented
+
+Status of work that already exists in the repository, relative to `docs/` and the first milestone in `docs/instructions.README.md`.
+
+Use this file together with `working_packages.README.md` to compare done vs open work.
+
+Last reviewed: **2026-11-19** (session skeleton + multiplayer prototype + basic melee combat / observer / free camera).
+
+---
+
+## How to read this file
+
+| Status | Meaning |
+| --- | --- |
+| Done | Behavior exists and matches the owning doc for the scoped milestone |
+| Partial | Present but incomplete vs the full doc |
+| Scaffold only | Enum, field, folder, or config exists without gameplay behavior |
+
+---
+
+## Changelog (when)
+
+| Date | Checkpoint / scope | What landed |
+| --- | --- | --- |
+| 2026-11-19 | Tasks folder created | Initial `checkpoints.README.md` + `working_packages.README.md` audit of existing session/multiplayer skeleton (CP-01 … CP-07 as of that audit) |
+| 2026-11-19 | **CP-08** Basic melee combat | Health component; host melee; Hunter 25 / Runner 0 damage; hunter bot chase+attack; elimination → observer; `Phase.ENDED` win/loss |
+| 2026-11-19 | CP-03 / CP-04 / CP-05 / CP-06 updates | Match end + observer; free edge-scroll camera + `C` center; runtime HP/damage stats; hunter-bot hunt behavior; melee test scene |
+| 2026-11-19 | CP-04 move feedback | Right-click ground shows a short tweened move-click ring (`src/fx/move_click_marker.gd`) |
+| 2026-11-19 | CP-04 move marker tests | Headless FX test + runner: `tests/fx/move_click_marker_test.tscn`, `scripts/test/move_click_marker_test.ps1` |
+
+Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
+
+---
+
+## CP-01 — Project and session skeleton
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Runnable Godot 4.7 project | Done | `project.godot` |
+| Autoload stack | Done | `LaunchOptions`, `NetworkManager`, `GameManager`, `SceneTransitionManager`, `BotClient`, `Sandbox` |
+| Scene transitions only via manager (`from` → `to`) | Done | `autoloads/scene_transition_manager.gd` |
+| Direct scene open for isolated tests | Done | `--scene=lobby\|selection\|game`, empty `from` supported |
+| Lobby (s0) host / join / roster / continue | Done | `ui/lobby/` |
+| Role selection (s1) left Runners / right Hunter | Done | `ui/role_selection/` |
+| Exactly one Hunter; random among Hunter requests; random if none | Done | `GameManager.choose_hunter_id` |
+| Game (s2) match scene | Done | `game/match/` |
+| Each session screen testable alone | Done | Launch options + sandbox open buttons + session tests |
+
+**Doc owners:** `gameplay.README.md` §2, `project_architecture.README.md` §6.2–6.3, `instructions.README.md` §2 / §7
+
+---
+
+## CP-02 — Multiplayer networking
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| ENet host / join on localhost | Done | `autoloads/network_manager.gd` |
+| Host-authoritative roster and RPCs | Done | `autoloads/game_manager.gd` |
+| Clients send intent, host applies | Done | Movement orders, side votes, skip prep |
+| Peer disconnect handling → lobby | Done | `_on_peer_left`, `_on_disconnected` |
+| Steam lobby / invite path | Partial | Extra vs initial localhost scope; present in `network_manager.gd` |
+| Public matchmaking / lobby browser | Not in scope yet | Explicit exclusion in architecture §7.4 |
+
+**Doc owners:** `project_architecture.README.md` §7, `instructions.README.md` §2
+
+---
+
+## CP-03 — Match lifecycle
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Phases: Lobby → Role Selection → Runner Preparation → Hunter Active | Done | `GameManager.Phase` |
+| Configurable head start (default 60s) | Done | `src/match/match_config.tres`, CLI `--head-start` |
+| Preparation timer + host skip | Done | `_process`, `request_skip_preparation` |
+| Wait until all peers report scene ready | Done | `report_scene_ready`, `all_players_loaded` |
+| Runners spawn in preparation | Done | `game/match/match.gd` |
+| Hunter spawns only after preparation ends | Done | `_spawn_pending` + `HUNTER_ACTIVE` |
+| Distinct Hunter (red) / Runner (blue) placeholders | Done | `src/units/hunter/`, `src/units/runner/` |
+| Minimal match HUD (phase, timer, local role / HP / observer) | Done | `game/match/hud.gd` |
+| Reset match to lobby | Done | `GameManager.reset_match` |
+| Match / network logging | Done | `src/logging/game_log.gd` |
+| Match finished / win-loss (`Phase.ENDED`) | Done | `GameManager._finish_match` when all Runners or Hunter are down |
+| Player `alive` / elimination → observer | Done | `eliminate_player`; dead local player keeps free camera |
+
+**Doc owners:** `gameplay.README.md` §3–§6, `project_architecture.README.md` §6.4
+
+---
+
+## CP-04 — Units, movement, navigation
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Shared `Unit` CharacterBody2D | Done | `src/units/unit/unit.gd` |
+| Right-click move intent → host path order | Done | `_unhandled_input`, `_submit_move_order` |
+| Host simulates movement; clients interpolate | Done | `unit.gd` + `src/navigation/movement.gd` |
+| Path follow + replace current order | Done | `path_follow.gd`, `movement.order_move` |
+| Movement speed driven by stats | Done | `StatSheet` → `UnitMovement.speed` |
+| Free match camera with edge scroll + `C` center | Done | `game/camera/match_camera.gd` |
+| Right-click move marker (pop + fade) | Done | `src/fx/move_click_marker.gd` (local only) |
+| Move-marker automated tests | Done | `tests/fx/move_click_marker_test.gd` |
+| Straight-line paths (no obstacles) | Partial | `navigation_paths.gd` stub; no walls yet |
+| Move-command automated tests | Done | `tests/navigation/move_command_test.gd` |
+
+**Doc owners:** `controls.README.md` §1.2 / §2 camera subset, `project_architecture.README.md` § navigation
+
+---
+
+## CP-05 — Stats calculation
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Supported stats per `stats.README.md` | Done | `src/stats/stat_block.gd` |
+| Flat + percentage modifiers; `ALL_DAMAGE` scope | Done | `src/stats/stat_modifier.gd` |
+| Final value formula + chance / non-neg constraints | Done | `src/stats/stat_sheet.gd` |
+| Role base stats as resources | Done | `hunter_config.tres`, `runner_config.tres` |
+| Automated calculation tests (incl. docs example) | Done | `tests/stats/stat_calculation_test.gd` |
+| Runtime health from `max_health` | Done | `HealthComponent` + unit sync |
+| Hunter melee damage / Runner damage `0` | Done | Role configs + `CombatDamage` |
+| Crit / lifesteal / defense / regen consumed in melee | Partial | Wired in `CombatDamage` / regen tick; defaults currently 0 for clear fights |
+
+**Doc owners:** `stats.README.md` §1–§2
+
+---
+
+## CP-08 — Basic melee combat
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Health component | Done | `src/components/health/health_component.gd` |
+| Host melee swing + acquisition / attack range | Done | `src/combat/attack_controller.gd`, `unit.gd` |
+| Right-click attack command with chase | Done | Unit input + `_submit_attack_target` |
+| Hunter bot chases / attacks nearest Runner | Done | `_hunter_bot_chase` |
+| Elimination + observer + match end | Done | `GameManager.eliminate_player`, HUD observing text |
+| Melee damage automated tests | Done | `tests/combat/melee_damage_test.gd` |
+
+**Still open:** attack-move, hitbox/hurtbox scenes, ranged/magic projectiles — see WP-01.
+
+---
+
+## CP-06 — Sandbox, bots, tests
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Debug sandbox panel | Done | `game/sandbox/sandbox_panel.gd` |
+| Host, add bots, quick-start 1H+2R | Done | Sandbox actions |
+| Skip preparation / reset / open s0–s2 alone | Done | Sandbox actions |
+| Peer / role / phase inspection | Done | Sandbox refresh UI |
+| Bot client: connect, vote, spawn, move, disconnect | Done | `tests/bots/bot_client.gd` |
+| Hunter bot chase / attack behavior | Done | `Unit._hunter_bot_chase` (Runner bots still circle) |
+| Multiplayer smoke test | Done | `scripts/test/smoke_test.ps1` |
+| Session / stats / move / melee test runners | Done | `scripts/test/*.ps1` |
+| Lobby + role-selection scene test | Done | `tests/session/lobby_and_selection_test.gd` |
+| Full god-mode checklist (structures, crystals, fog, damage) | Partial | Networking-focused only |
+
+**Doc owners:** `instructions.README.md` §4–§7, `project_architecture.README.md` §8–§10 (subset)
+
+---
+
+## CP-07 — Architecture scaffolding present
+
+| Present | Notes |
+| --- | --- |
+| `autoloads/`, `src/units`, `src/navigation`, `src/stats`, `src/match`, `src/logging`, `src/combat`, `src/components/health` | Active implementation |
+| `game/match`, `game/sandbox`, `game/camera` | Active |
+| `ui/lobby`, `ui/role_selection` | Active |
+| `tests/{bots,session,stats,navigation,combat}`, `scripts/test/` | Active |
+| `addons/godotsteam`, Web preset in `export_presets.cfg` | Present; export path / CI still open |
+| Empty leftover dirs (`components/`, `common/`, `data/`, …) | Legacy experimental code removed; not gameplay features |
+
+---
+
+## First milestone verdict
+
+Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, hunter-bot hunting, elimination/observer, and free camera edge-scroll are also in.
+
+Still open in `working_packages.README.md`: economy, construction, attack-move / advanced combat, fog of war, minimap, shop, and selection-panel UI.

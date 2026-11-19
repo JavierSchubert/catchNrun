@@ -9,3 +9,6 @@ enum Role { HUNTER, RUNNER }
 @export var color := Color.WHITE ## Tint of the placeholder icon.
 @export var base_stats: StatBlock
 @export var move_speed := 220.0 ## Used only when base_stats is empty. Pixels per second.
+@export var attack_range := 64.0 ## Distance at which a melee swing can start.
+@export var acquisition_range := 900.0 ## Distance for automatic target acquisition.
+@export var attack_interval := 0.8 ## Seconds between melee swings.
