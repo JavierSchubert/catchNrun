@@ -5,45 +5,43 @@
 [ext_resource type="PackedScene" uid="uid://uk1tc2fuojjd" path="res://src/units/runner/runner.tscn" id="3_runner"]
 [ext_resource type="Script" uid="uid://dcw1xxn706g7c" path="res://game/match/hud.gd" id="4_hud"]
 [ext_resource type="Script" uid="uid://cnfuwn80uvk73" path="res://game/camera/match_camera.gd" id="5_camera"]
-[ext_resource type="Texture2D" uid="uid://c3ccn5us7xedh" path="res://assets/sprites/maps/lava.png" id="6_lava"]
+[ext_resource type="PackedScene" uid="uid://bq8plateaumap01" path="res://src/maps/plateau_map.tscn" id="6_map"]
 [ext_resource type="Script" path="res://src/selection/selection_manager.gd" id="7_selection"]
 
-[node name="Match" type="Node2D" unique_id=1056678482]
+[node name="Match" type="Node2D"]
 script = ExtResource("1_match")
 hunter_scene = ExtResource("2_hunter")
 runner_scene = ExtResource("3_runner")
 
-[node name="Background" type="Sprite2D" parent="." unique_id=125313316]
-scale = Vector2(1.5625, 1.5625)
-texture = ExtResource("6_lava")
+[node name="PlateauMap" parent="." instance=ExtResource("6_map")]
 
-[node name="SpawnPoints" type="Node2D" parent="." unique_id=1657303481]
+[node name="SpawnPoints" type="Node2D" parent="."]
 
-[node name="HunterSpawn" type="Marker2D" parent="SpawnPoints" unique_id=1756832479]
+[node name="HunterSpawn" type="Marker2D" parent="SpawnPoints"]
 
-[node name="RunnerSpawn1" type="Marker2D" parent="SpawnPoints" unique_id=2127887856]
-position = Vector2(-500, -300)
+[node name="RunnerSpawn1" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(-1344, -704)
 
-[node name="RunnerSpawn2" type="Marker2D" parent="SpawnPoints" unique_id=1321569976]
-position = Vector2(500, -300)
+[node name="RunnerSpawn2" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(1216, -704)
 
-[node name="RunnerSpawn3" type="Marker2D" parent="SpawnPoints" unique_id=431328000]
-position = Vector2(-500, 300)
+[node name="RunnerSpawn3" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(-1344, 704)
 
-[node name="RunnerSpawn4" type="Marker2D" parent="SpawnPoints" unique_id=1897976347]
-position = Vector2(500, 300)
+[node name="RunnerSpawn4" type="Marker2D" parent="SpawnPoints"]
+position = Vector2(1216, 704)
 
-[node name="Players" type="Node2D" parent="." unique_id=1419917159]
+[node name="Players" type="Node2D" parent="."]
 
-[node name="PlayerSpawner" type="MultiplayerSpawner" parent="." unique_id=575453540]
+[node name="PlayerSpawner" type="MultiplayerSpawner" parent="."]
 spawn_path = NodePath("../Players")
 
 [node name="SelectionManager" type="Node2D" parent="."]
 script = ExtResource("7_selection")
 
-[node name="MatchCamera" type="Camera2D" parent="." unique_id=1588073250]
+[node name="MatchCamera" type="Camera2D" parent="."]
 script = ExtResource("5_camera")
-zoom_factor = 2.0
+zoom_factor = 1.0
 
-[node name="HUD" type="CanvasLayer" parent="." unique_id=2023254789]
+[node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("4_hud")
