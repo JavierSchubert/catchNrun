@@ -61,11 +61,18 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 ## WP-02 — Construction and structures (P0)
 
-**Owning docs:** `construction.README.md`, `gameplay.README.md` §3–§4, `project_architecture.README.md` (`src/buildings/`, `src/construction/`)
+**Owning docs:** `construction.README.md`, `building.README.md`, `gameplay.README.md` §3–§4, `project_architecture.README.md` (`src/buildings/`, `src/construction/`)
+
+### Done (foundation)
+
+- [x] Grid-based placement rules documented (`building.README.md`)
+- [x] Physics layers: world / obstacle / unit / building / destructible / item
+- [x] `BuildGrid` + `PlacementValidator` + footprint hitbox `Building`
+- [x] Interactive grid test scene + headless footprint logic test
 
 ### Open
 
-- [ ] Placement mode, preview, and position validation
+- [ ] Match-integrated placement mode (Runner build menu → place in game)
 - [ ] Crystal Mine scene (one per Runner)
 - [ ] Wall scene (blocks movement; updates navigation on destroy)
 - [ ] Tower scene (acquires / attacks Hunter)
@@ -73,7 +80,6 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 - [ ] Structure upgrades driven by configuration (health / damage / output)
 - [ ] Server-authoritative build / upgrade transactions
 - [ ] Navigation path recalculation when walls appear / disappear
-- [ ] Building / construction test scenes
 
 ### Depends on
 
@@ -235,7 +241,7 @@ Milestone A — Fight and finish
   Remaining: attack-move, hitboxes, ranged/magic
 
 Milestone B — Build and earn
-  WP-02 Construction (minimal Crystal Mine + Wall)
+  WP-02 Construction: grid foundation ✅ (CP-11); Crystal Mine / Wall / Tower still open
   WP-03 Economy (mine ticks + spend + hunter damage income)
 
 Milestone C — Command and HUD

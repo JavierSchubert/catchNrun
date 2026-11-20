@@ -118,6 +118,7 @@ catchNrun/
 │   ├── stats.README.md
 │   ├── economy.README.md
 │   ├── construction.README.md
+│   ├── building.README.md
 │   ├── selection_panel.README.md
 │   └── minimap.README.md
 │
@@ -172,7 +173,7 @@ src/units/hunter/
 
 ### `src/buildings/`
 
-Contains constructible and interactive structures such as Crystal Mines, Walls, Towers, and the Hunter Shop.
+Contains constructible and interactive structures such as Crystal Mines, Walls, Towers, and the Hunter Shop. Each building's grid footprint defines its rectangular hitbox (`docs/building.README.md`).
 
 ### `src/combat/`
 
@@ -180,7 +181,7 @@ Contains attack execution, damage events, projectile handling, melee collision r
 
 ### `src/construction/`
 
-Contains placement mode, previews, build-position validation, construction transactions, structure creation, and navigation updates.
+Contains the build grid, placement previews, footprint validation against blocker layers, construction transactions, structure creation, and navigation updates.
 
 ### `src/economy/`
 
@@ -661,8 +662,9 @@ docs/
 ├── stats.README.md
 ├── economy.README.md
 ├── construction.README.md
+├── building.README.md
 ├── vision.README.md
-├── selection-panel.README.md
+├── selection_panel.README.md
 └── minimap.README.md
 ```
 

@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-20** (session skeleton + multiplayer + selection + selection-panel / minimap HUD).
+Last reviewed: **2026-11-20** (session skeleton + multiplayer + selection + HUD + grid building foundation).
 
 ---
 
@@ -31,6 +31,7 @@ Last reviewed: **2026-11-20** (session skeleton + multiplayer + selection + sele
 | 2026-11-20 | CP-04 camera zoom configuration | Removed the match-scene zoom override so the exported `zoom_factor` in `match_camera.gd` controls the camera; default is now 1.0 and changes apply directly to `Camera2D.zoom` |
 | 2026-11-20 | **CP-09** Entity selection | Left-click / drag-box selection; hover + selected circles (green own / blue runner team / red hunter); own-group control gating; priority resolver + headless test |
 | 2026-11-20 | **CP-10** Selection panel + minimap HUD | Bottom selection strip (circular portrait + stats); bottom-left minimap with lava map asset + unit pixels; `C` always centers on own unit |
+| 2026-11-20 | **CP-11** Grid building foundation | `building.README.md`; physics layers; BuildGrid / PlacementValidator / Building footprint=hitbox; interactive + headless construction tests |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -182,6 +183,24 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 ---
 
+## CP-11 — Grid building foundation
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Building README (grid, footprint=hitbox, layers) | Done | `docs/building.README.md` |
+| Construction doc points at grid placement | Done | `docs/construction.README.md` §2 |
+| Physics layers world/obstacle/unit/building/destructible/item | Done | `project.godot` + `src/construction/physics_layers.gd` |
+| Build grid + placement validator | Done | `build_grid.gd`, `placement_validator.gd` |
+| Building footprint spawns matching rect hitbox | Done | `src/buildings/building.gd` / `building.tscn` |
+| Interactive grid placement test scene | Done | `tests/construction/building_grid_test.tscn` |
+| Headless footprint / blocker-mask tests | Done | `tests/construction/build_grid_logic_test.gd` |
+
+**Still open:** Crystal Mine / Wall / Tower content, match build menu, economy spend, nav updates — WP-02.
+
+**Doc owners:** `building.README.md`, `construction.README.md`
+
+---
+
 ## CP-06 — Sandbox, bots, tests
 
 | Item | Status | Evidence |
@@ -205,7 +224,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 | Present | Notes |
 | --- | --- |
-| `autoloads/`, `src/units`, `src/navigation`, `src/stats`, `src/match`, `src/logging`, `src/combat`, `src/components/health`, `src/selection` | Active implementation |
+| `autoloads/`, `src/units`, `src/navigation`, `src/stats`, `src/match`, `src/logging`, `src/combat`, `src/components/health`, `src/selection`, `src/construction`, `src/buildings` | Active implementation |
 | `game/match`, `game/sandbox`, `game/camera` | Active |
 | `ui/lobby`, `ui/role_selection`, `ui/hud/{health_bar,selection_panel,minimap}` | Active |
 | `tests/{bots,session,stats,navigation,combat}`, `scripts/test/` | Active |
@@ -218,4 +237,4 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, hunter-bot hunting, elimination/observer, and free camera edge-scroll are also in.
 
-Still open in `working_packages.README.md`: economy, construction, attack-move / advanced combat, fog of war (minimap FoW), shop, cursors, and selection context-actions. World selection is CP-09; selection strip + live minimap pixels are CP-10.
+Still open in `working_packages.README.md`: economy, full structure content (mines/walls/towers), attack-move / advanced combat, fog of war (minimap FoW), shop, cursors, and selection context-actions. Grid building foundation is CP-11.
