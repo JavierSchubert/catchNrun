@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://bq8plateaumap01"]
-
-[ext_resource type="Script" path="res://src/maps/plateau_map.gd" id="1_map"]
-
-[node name="PlateauMap" type="Node2D"]
-script = ExtResource("1_map")
