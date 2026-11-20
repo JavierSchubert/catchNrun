@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://dcw1xxn706g7c" path="res://game/match/hud.gd" id="4_hud"]
 [ext_resource type="Script" uid="uid://cnfuwn80uvk73" path="res://game/camera/match_camera.gd" id="5_camera"]
 [ext_resource type="Texture2D" uid="uid://c3ccn5us7xedh" path="res://assets/sprites/maps/lava.png" id="6_lava"]
+[ext_resource type="Script" path="res://src/selection/selection_manager.gd" id="7_selection"]
 
 [node name="Match" type="Node2D" unique_id=1056678482]
 script = ExtResource("1_match")
@@ -36,6 +37,9 @@ position = Vector2(500, 300)
 
 [node name="PlayerSpawner" type="MultiplayerSpawner" parent="." unique_id=575453540]
 spawn_path = NodePath("../Players")
+
+[node name="SelectionManager" type="Node2D" parent="."]
+script = ExtResource("7_selection")
 
 [node name="MatchCamera" type="Camera2D" parent="." unique_id=1588073250]
 script = ExtResource("5_camera")

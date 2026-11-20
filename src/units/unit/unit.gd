@@ -44,6 +44,11 @@ var _bot_repath_in := 0.0
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
 @onready var attack: AttackController = $Attack
+@onready var collision_shape: CollisionShape2D = $CollisionShape2D
+
+var _selection_circle: SelectionCircle
+var _selection_hovered := false
+var _selection_selected := false
 
 
 func _enter_tree() -> void:
@@ -54,6 +59,8 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	add_to_group("units")
+	add_to_group("clickable")
+	_ensure_selection_circle()
 	if config == null:
 		push_error("Unit %s is missing a role config." % name)
 		return
@@ -71,9 +78,11 @@ func _ready() -> void:
 	var player_data: Dictionary = GameManager.players.get(peer_id, {})
 	sprite.texture = sprite_texture(int(player_data.get("sprite_index", 0)), config.role)
 	_refresh_label()
+	refresh_selection_visual()
 	GameManager.players_changed.connect(_on_players_changed)
 	if GameManager.is_eliminated(peer_id):
 		_apply_eliminated_visual()
+	_notify_selection_manager_ready()
 
 
 func _base_stats() -> StatBlock:
@@ -96,6 +105,54 @@ func is_attackable() -> bool:
 	return is_alive()
 
 
+func is_clickable() -> bool:
+	return is_alive()
+
+
+func is_player_character() -> bool:
+	return true
+
+
+func is_local_controllable(local_peer_id: int) -> bool:
+	return peer_id == local_peer_id and is_alive()
+
+
+func selection_hit_radius() -> float:
+	return _body_radius() * 1.75
+
+
+func selection_circle_radius() -> float:
+	return _body_radius() * 1.45
+
+
+func set_selection_hover(active: bool) -> void:
+	_selection_hovered = active
+	refresh_selection_visual()
+
+
+func set_selection_selected(active: bool) -> void:
+	_selection_selected = active
+	refresh_selection_visual()
+
+
+func refresh_selection_visual() -> void:
+	_ensure_selection_circle()
+	if _selection_circle == null:
+		return
+	var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	_selection_circle.configure(selection_circle_radius(), selection_affinity_color(local_id))
+	_selection_circle.set_hover(_selection_hovered and not _selection_selected)
+	_selection_circle.set_selected(_selection_selected)
+
+
+func selection_affinity_color(local_peer_id: int) -> Color:
+	if is_local_controllable(local_peer_id):
+		return SelectionCircle.COLOR_OWN
+	if role() == RoleConfig.Role.HUNTER:
+		return SelectionCircle.COLOR_HUNTER
+	return SelectionCircle.COLOR_RUNNER_TEAM
+
+
 func role() -> int:
 	return config.role if config != null else RoleConfig.Role.RUNNER
 
@@ -109,6 +166,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if peer_id != multiplayer.get_unique_id() or not LaunchOptions.bot_role.is_empty():
 		return
 	if not is_alive() or not _movement_allowed():
+		return
+	if not _can_issue_commands():
 		return
 	if not event is InputEventMouseButton:
 		return
@@ -277,6 +336,48 @@ func _on_died() -> void:
 func _apply_eliminated_visual() -> void:
 	visible = false
 	set_physics_process(false)
+	_selection_hovered = false
+	_selection_selected = false
+	if _selection_circle != null:
+		_selection_circle.set_hover(false)
+		_selection_circle.set_selected(false)
+
+
+func _can_issue_commands() -> bool:
+	var manager := _selection_manager()
+	if manager == null:
+		# Headless / isolated unit tests have no selection manager.
+		return true
+	return manager.selected == self and manager.is_controllable_selected()
+
+
+func _selection_manager() -> SelectionManager:
+	var tree := get_tree()
+	if tree == null:
+		return null
+	return tree.get_first_node_in_group("selection_manager") as SelectionManager
+
+
+func _notify_selection_manager_ready() -> void:
+	var manager := _selection_manager()
+	if manager != null:
+		manager.notify_clickable_ready(self)
+
+
+func _ensure_selection_circle() -> void:
+	if _selection_circle != null:
+		return
+	_selection_circle = SelectionCircle.new()
+	_selection_circle.name = "SelectionCircle"
+	add_child(_selection_circle)
+	move_child(_selection_circle, 0)
+
+
+func _body_radius() -> float:
+	if collision_shape != null and collision_shape.shape is CircleShape2D:
+		return (collision_shape.shape as CircleShape2D).radius
+	return 16.0
+
 
 
 func _apply_synced_health() -> void:

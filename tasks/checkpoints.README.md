@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-20** (session skeleton + multiplayer prototype + unit sprites / health bars / map bounds / zoomed camera).
+Last reviewed: **2026-11-20** (session skeleton + multiplayer + selection + selection-panel / minimap HUD).
 
 ---
 
@@ -29,6 +29,8 @@ Last reviewed: **2026-11-20** (session skeleton + multiplayer prototype + unit s
 | 2026-11-19 | CP-04 move marker tests | Headless FX test + runner: `tests/fx/move_click_marker_test.tscn`, `scripts/test/move_click_marker_test.ps1` |
 | 2026-11-20 | CP-03 / CP-04 unit presentation and map | Selectable Runner/Hunter sprites; shared inherited Unit scene with health bars sized to sprites; lava map; units clamped inside map bounds; circular collision shapes smaller than sprites; camera zoom factor 5.0 (configurable) and edge margin 300; session presentation tests |
 | 2026-11-20 | CP-04 camera zoom configuration | Removed the match-scene zoom override so the exported `zoom_factor` in `match_camera.gd` controls the camera; default is now 1.0 and changes apply directly to `Camera2D.zoom` |
+| 2026-11-20 | **CP-09** Entity selection | Left-click / drag-box selection; hover + selected circles (green own / blue runner team / red hunter); own-group control gating; priority resolver + headless test |
+| 2026-11-20 | **CP-10** Selection panel + minimap HUD | Bottom selection strip (circular portrait + stats); bottom-left minimap with lava map asset + unit pixels; `C` always centers on own unit |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -143,6 +145,43 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 ---
 
+## CP-09 — Entity selection
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| `src/selection/` manager + resolver + circle + drag box | Done | `selection_manager.gd`, `selection_resolver.gd`, `selection_circle.gd`, `drag_select_box.gd` |
+| Left-click select / clear on empty ground | Done | `SelectionManager` point selection |
+| Hold-drag transparent selection rectangle | Done | `DragSelectBox` + drag threshold |
+| Hover thin circle → selected thick circle | Done | `SelectionCircle` hover/selected widths |
+| Colors: own green / runner-team blue / hunter red | Done | `SelectionCircle` + `Unit._selection_circle_color` |
+| Selectable vs controllable (own group only) | Done | Right-click gated by `SelectionManager.is_controllable_selected` |
+| Priority: own → player figures → NPC; else random | Done | `SelectionResolver` + `tests/selection/selection_priority_test.gd` |
+| Spec in controls doc §1.1 | Done | `docs/controls.README.md` |
+| Selection Panel HUD | Moved to CP-10 | Minimal portrait + stats strip |
+
+**Doc owners:** `controls.README.md` §1.1 / §3.1, `project_architecture.README.md` § `src/selection/`
+
+---
+
+## CP-10 — Selection panel and minimap HUD
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Bottom selection strip with circular portrait + stats | Done | `ui/hud/selection_panel/selection_panel.gd` |
+| Portrait ring uses selection affinity colors | Done | Own green / runner blue / hunter red |
+| Shows selected HP / speed / melee / defense + controllable flag | Done | Bound from `SelectionManager` each frame |
+| `C` always centers on local own unit (ignores foreign selection) | Done | `game/camera/match_camera.gd`, `controls.README.md` §1.4 |
+| Bottom-left minimap with current map asset | Done | `ui/hud/minimap/minimap.gd` + lava texture |
+| Unit pixels at relative world positions | Done | Mapped via `Unit.MAP_BOUNDS` |
+| Pixel colors match selection circles | Done | Own green / other runners blue / hunter red |
+| Spec updates | Done | `minimap.README.md` §2.1, `selection_panel.README.md` §2 |
+
+**Still open:** fog-of-war filtering on minimap, context-action buttons, cursors — see WP-04 / WP-05.
+
+**Doc owners:** `selection_panel.README.md`, `minimap.README.md`, `controls.README.md` §1.4
+
+---
+
 ## CP-06 — Sandbox, bots, tests
 
 | Item | Status | Evidence |
@@ -154,7 +193,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Bot client: connect, vote, spawn, move, disconnect | Done | `tests/bots/bot_client.gd` |
 | Hunter bot chase / attack behavior | Done | `Unit._hunter_bot_chase` (Runner bots still circle) |
 | Multiplayer smoke test | Done | `scripts/test/smoke_test.ps1` |
-| Session / stats / move / melee test runners | Done | `scripts/test/*.ps1` |
+| Session / stats / move / melee / selection test runners | Done | `scripts/test/*.ps1` |
 | Lobby + role-selection scene test | Done | `tests/session/lobby_and_selection_test.gd` |
 | Full god-mode checklist (structures, crystals, fog, damage) | Partial | Networking-focused only |
 
@@ -166,9 +205,9 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 | Present | Notes |
 | --- | --- |
-| `autoloads/`, `src/units`, `src/navigation`, `src/stats`, `src/match`, `src/logging`, `src/combat`, `src/components/health` | Active implementation |
+| `autoloads/`, `src/units`, `src/navigation`, `src/stats`, `src/match`, `src/logging`, `src/combat`, `src/components/health`, `src/selection` | Active implementation |
 | `game/match`, `game/sandbox`, `game/camera` | Active |
-| `ui/lobby`, `ui/role_selection` | Active |
+| `ui/lobby`, `ui/role_selection`, `ui/hud/{health_bar,selection_panel,minimap}` | Active |
 | `tests/{bots,session,stats,navigation,combat}`, `scripts/test/` | Active |
 | `addons/godotsteam`, Web preset in `export_presets.cfg` | Present; export path / CI still open |
 | Empty leftover dirs (`components/`, `common/`, `data/`, …) | Legacy experimental code removed; not gameplay features |
@@ -179,4 +218,4 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, hunter-bot hunting, elimination/observer, and free camera edge-scroll are also in.
 
-Still open in `working_packages.README.md`: economy, construction, attack-move / advanced combat, fog of war, minimap, shop, and selection-panel UI.
+Still open in `working_packages.README.md`: economy, construction, attack-move / advanced combat, fog of war (minimap FoW), shop, cursors, and selection context-actions. World selection is CP-09; selection strip + live minimap pixels are CP-10.

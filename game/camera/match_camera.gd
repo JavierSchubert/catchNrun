@@ -1,6 +1,7 @@
 extends Camera2D
-## Free match camera. Edge scrolling moves the view. C centers on the local unit
-## while that unit is alive. Dead local players keep this camera as observers.
+## Free match camera. Edge scrolling moves the view.
+## C always centers on the local player's own unit (never on a foreign selection).
+## Dead local players keep this camera as observers.
 
 @export var edge_margin := 300.0
 @export var camera_speed := 900.0
@@ -28,6 +29,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if (event as InputEventKey).physical_keycode == KEY_C:
+			# Ignore current selection — always the local controllable unit.
 			_snap_to_local_unit()
 			get_viewport().set_input_as_handled()
 
@@ -79,8 +81,14 @@ func _snap_to_local_unit() -> void:
 
 
 func _local_unit() -> Node2D:
-	var id := multiplayer.get_unique_id()
+	## Own player only — never the currently selected foreign entity.
+	var id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
 	for node in get_tree().get_nodes_in_group("units"):
+		if node is Unit and (node as Unit).peer_id == id:
+			var unit := node as Unit
+			if not unit.is_alive():
+				return null
+			return unit
 		if node.name == str(id) and node is Node2D:
 			if node.has_method("is_alive") and not bool(node.call("is_alive")):
 				return null

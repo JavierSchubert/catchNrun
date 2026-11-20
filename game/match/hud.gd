@@ -1,22 +1,46 @@
 extends CanvasLayer
-## Match HUD. Shows phase, timer, local role/health, and observer state.
+## Match HUD: phase status, selection panel, and minimap.
 
 var _status := Label.new()
+var _selection_panel: SelectionPanel
+var _minimap: MatchMinimap
 var _winner := ""
 
 
 func _ready() -> void:
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side in ["left", "top", "right", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 16)
-	add_child(margin)
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(root)
 
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_status.add_theme_font_size_override("font_size", 20)
-	margin.add_child(_status)
+	_status.add_theme_font_size_override("font_size", 18)
+	_status.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_status.offset_left = -420.0
+	_status.offset_top = 16.0
+	_status.offset_right = -16.0
+	_status.offset_bottom = 120.0
+	root.add_child(_status)
+
+	_minimap = MatchMinimap.new()
+	_minimap.name = "Minimap"
+	_minimap.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_minimap.offset_left = 16.0
+	_minimap.offset_top = -162.0
+	_minimap.offset_right = 236.0
+	_minimap.offset_bottom = -16.0
+	root.add_child(_minimap)
+
+	_selection_panel = SelectionPanel.new()
+	_selection_panel.name = "SelectionPanel"
+	_selection_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_selection_panel.offset_left = -210.0
+	_selection_panel.offset_top = -120.0
+	_selection_panel.offset_right = 210.0
+	_selection_panel.offset_bottom = -16.0
+	root.add_child(_selection_panel)
+
 	GameManager.match_finished.connect(_on_match_finished)
 	GameManager.phase_changed.connect(_on_phase_changed)
 	_refresh()
@@ -47,11 +71,22 @@ func _refresh() -> void:
 	var lines := [
 		"%s%s" % [GameManager.phase_label(), timer],
 		_local_unit_text(),
-		"Edge scroll camera | C centers on you",
+		"LMB select | RMB command own unit | C centers on you",
 	]
 	if not _winner.is_empty():
 		lines.append("%s team wins" % _winner.capitalize())
 	_status.text = "\n".join(lines)
+	_refresh_selection_panel()
+
+
+func _refresh_selection_panel() -> void:
+	if _selection_panel == null:
+		return
+	var manager := get_tree().get_first_node_in_group("selection_manager") as SelectionManager
+	if manager == null:
+		_selection_panel.bind_selection(null, false)
+		return
+	_selection_panel.bind_selection(manager.selected, manager.is_controllable_selected())
 
 
 func _local_unit_text() -> String:

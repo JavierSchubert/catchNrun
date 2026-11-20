@@ -115,17 +115,21 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 - [x] Edge-scrolling camera (normalized diagonals)
 - [x] `C` centers camera on controlled character (while alive)
 - [x] Observer keeps free camera after death
+- [x] Left-click selection of clickable entities (hover + selected circles, ownership colors)
+- [x] Clear selection on empty world click
+- [x] Drag-box multi-candidate selection with priority (own → player figures → NPC; else random)
+- [x] Selectable vs controllable: only own control group accepts move/attack commands
+- [x] Selection system in `src/selection/` (state + circles; no HUD panel yet)
+- [x] Selection Panel HUD: circular portrait + entity stats (context actions later)
+- [x] `C` always centers on own unit regardless of selection
 
 ### Still open
 
-- [ ] Left-click selection of clickable entities
-- [ ] Clear selection on empty world click (as applicable)
-- [ ] Clickable vs attackable capability separation (groups / components)
+- [ ] Clickable vs attackable capability separation (groups / components) beyond unit methods
 - [ ] Context-sensitive cursors (move / attack / invalid / attack-move)
-- [ ] Selection system in `src/selection/` (state only; no HUD rules)
-- [ ] Selection Panel HUD: entity info (left) + context actions (right)
-- [ ] Capability-driven actions (build, upgrade, …) without hard-coding every instance
-- [ ] Team / ownership rules for what actions and info are shown
+- [ ] Context Action Panel (build, upgrade, …) without hard-coding every instance
+- [ ] Capability-driven actions for structures / shop hooks
+- [ ] Team / ownership rules for what actions and info are shown in the panel
 
 ### Depends on
 
@@ -134,13 +138,19 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 ### Notes
 
-- Match camera: `game/camera/match_camera.gd`. HUD shows phase / HP / observer; selection panel still open.
+- Match camera: `game/camera/match_camera.gd`. HUD: phase status, selection strip, minimap.
 
 ---
 
 ## WP-05 — Vision, fog of war, and minimap (P1)
 
 **Owning docs:** `gameplay.README.md` §7, `minimap.README.md`, referenced `vision.README.md` (**file missing**)
+
+### Done (partial, pre-FoW)
+
+- [x] Live minimap with map asset + unit pixels (own green / runners blue / hunter red)
+- [x] Relative world→minimap position mapping
+- [x] Minimap color rules documented in `minimap.README.md` §2.1
 
 ### Open
 
@@ -149,8 +159,8 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 - [ ] Vision states: Unexplored / Currently Visible / Previously Seen
 - [ ] Last-known entity / structure information
 - [ ] `src/vision/` implementation
-- [ ] Minimap presentation from known information only
-- [ ] Configurable structure / unit colors or icons on minimap
+- [ ] Minimap presentation from known information only (hide units outside vision)
+- [ ] Configurable structure icons on minimap
 - [ ] Separate Runner vs Hunter knowledge
 - [ ] Moving units do not leak live positions outside vision
 - [ ] Vision / minimap test coverage
@@ -229,11 +239,11 @@ Milestone B — Build and earn
   WP-03 Economy (mine ticks + spend + hunter damage income)
 
 Milestone C — Command and HUD
-  WP-04 Selection + selection panel + cursors (camera done)
+  WP-04 World selection ✅ (CP-09); selection strip ✅ (CP-10); cursors / context actions still open
   Hunter Shop + tower attacks as extensions of B
 
 Milestone D — Fog and map awareness
-  WP-05 Vision doc + FoW + minimap
+  WP-05 Vision doc + FoW; live minimap pixels already in CP-10
 
 Milestone E — Hardening
   WP-06 Sandbox / bot depth

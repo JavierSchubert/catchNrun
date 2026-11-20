@@ -19,19 +19,94 @@ Clickable entities include:
 - Destructible objects
 - Walls
 
-The selected entity is displayed in the selection panel at the bottom of the screen.
+#### Selectable vs controllable
 
-The information shown in the selection panel depends on the groups or entity types assigned to the selected entity.
+Every clickable entity can be selected. Selection alone does not grant control.
+
+Each player is their own control group. Only entities that belong to the local player's group can be controlled (movement, attack commands, and similar orders).
+
+Selecting another player's unit (for example a Runner selecting the Hunter) shows that unit's permitted information and draws a selection circle, but does not allow commanding it. Selecting the local player's own unit again restores control of that unit.
+
+```text
+Left Click Entity
+    |
+    +-- Own control group
+    |       -> Select
+    |       -> Show stats / selection panel
+    |       -> Accept control commands
+    |
+    +-- Other group / team entity
+            -> Select
+            -> Show permitted stats / selection panel
+            -> Do not accept control commands
+```
+
+#### Selection circle
+
+When an entity is selected, a selection circle is drawn under it. The circle radius scales with the entity's size (hitbox / visual footprint).
+
+Hover and selection use the same circle, with different stroke weight:
+
+| State | Circle |
+| --- | --- |
+| Hover (cursor over hitbox, not selected) | Thinner selection circle |
+| Selected | Thicker selection circle |
+
+If the hovered entity is also selected, only the selected (thicker) circle is shown.
+
+#### Selection circle colors
+
+Circle color depends on ownership and team relative to the local player:
+
+| Relation to local player | Color |
+| --- | --- |
+| Own control group (local player's entities) | Green |
+| Same team (Runner-team entities that are not the local player's) | Blue |
+| Hunter | Red |
+
+Own-group green takes priority over the Hunter red when the local player is the Hunter and has selected themselves.
+
+#### Drag-box selection
+
+Holding left mouse button and dragging draws a transparent rectangle selection box. On release, entities whose hitboxes intersect the box become selection candidates. Exactly one entity is chosen from those candidates using the priority rules below.
+
+A short press without meaningful mouse travel remains a normal point-click selection. Dragging past a small movement threshold starts the box.
+
+#### Selection priority (box or overlapping hits)
+
+When more than one clickable entity is a candidate:
+
+1. **Own unit first.** If the local player's controllable unit is among the candidates, select it.
+2. **Player characters over NPCs.** Hunter / Runner (and other player figures) outrank NPCs and similar non-player clickables.
+3. **Otherwise random.** Among multiple non-owned candidates in the same priority band, pick one at random.
+
+```text
+Candidates in box / under cursor
+    |
+    +-- Own unit present?
+    |       -> Select own unit
+    |
+    +-- Else player figures (Hunter / Runner) present?
+    |       -> Pick one at random among them
+    |
+    +-- Else NPCs / other clickables
+            -> Pick one at random among them
+```
+
+#### Flow
 
 Conceptually:
 
 ```text
-Left Click
+Left Click / Drag Select
     |
-    +-- Clickable Entity
+    +-- Clickable Entity (or box candidates)
+    |       -> Resolve priority
     |       -> Select entity
+    |       -> Show selection circle (color by ownership / team)
     |       -> Determine entity groups / type
     |       -> Update selection panel
+    |       -> Enable control commands only if own group
     |
     +-- Non-clickable World
             -> Clear selection if applicable
@@ -132,7 +207,9 @@ After the target is no longer valid, the character continues toward the original
 
 ### 1.4. Camera Center
 
-Pressing `C` centers the camera on the controlled character.
+Pressing `C` centers the camera on the local player's own unit.
+
+This always targets the local controllable character, even when another entity is currently selected for viewing. Selection does not change what `C` centers on.
 
 ---
 
@@ -175,7 +252,7 @@ Entities may expose different interaction capabilities.
 
 ### 3.1. Clickable Entities
 
-Clickable entities can be selected with left click.
+Clickable entities can be selected with left click. Selection feedback uses the hover / selected circles described in §1.1. Being clickable does not imply being controllable; control is limited to the local player's own group.
 
 Examples:
 
