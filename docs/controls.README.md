@@ -211,6 +211,10 @@ Pressing `C` centers the camera on the local player's own unit.
 
 This always targets the local controllable character, even when another entity is currently selected for viewing. Selection does not change what `C` centers on.
 
+Left-click on the **minimap** also recenters the camera on the corresponding world position (see `minimap.README.md` §2.3).
+
+Eliminations and other roster updates must **not** auto-recenter the camera. A free camera stays where the player left it until `C`, a minimap click, or match start.
+
 ---
 
 ## 2. Camera
@@ -245,6 +249,8 @@ movement = direction * camera_speed
 ```
 
 Camera movement does not affect the controlled character.
+
+Edge scroll is **disabled** while the cursor hovers a blocking UI control (`Viewport.gui_get_hovered_control()` is non-null). That covers the settings dock, minimap, sandbox chrome, and similar overlays so scrolling does not fight the UI.
 
 ### 2.2. Map bounds and overscroll padding
 

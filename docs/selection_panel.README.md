@@ -39,6 +39,18 @@ Selection Panel (bottom of screen)
 
 Minimal visual-test layout: circular portrait + stats. Context actions can be added without changing the portrait / info strip.
 
+### 2.1. Scene / style resources
+
+Layout and StyleBoxes are editor-editable scenes/resources; scripts only bind selection data at runtime:
+
+```text
+ui/hud/selection_panel/selection_panel.tscn
+ui/hud/selection_panel/selection_panel_style.tres
+ui/hud/selection_panel/selection_ring_style.tres
+```
+
+Instanced by `game/match/hud.tscn`. The panel script is `@tool` so StyleBox `@export` changes refresh in the editor.
+
 ## 3. Selectable Entities
 
 Selectable entities may include:

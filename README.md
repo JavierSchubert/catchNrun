@@ -117,8 +117,11 @@ Fog-of-war minimap presentation
 Settings dock, music playlist, lobby UX, sandbox chrome
 -> ui_audio.README.md
 
-Camera edge scroll / overscroll padding
+Camera edge scroll / overscroll padding / UI hover / minimap click
 -> controls.README.md §2
+
+Editor-preview HUD shells and StyleBoxes
+-> project_architecture.README.md §5.3
 ```
 
 Gameplay values that are expected to change during balancing must remain configurable and must not be hard-coded into UI components.
@@ -164,6 +167,18 @@ Settings load `user://settings.cfg`, push volumes onto SoundManager, then call `
 | `camera_speed` | `900` | World units / second |
 | `zoom_factor` | `1.0` | Sets `Camera2D.zoom` |
 | `bound_padding` | `360` | Screen px overscroll so map corners stay inset; converted with `/ zoom` |
+
+Also: no edge scroll over blocking UI; no auto-recenter on eliminations; minimap LMB → `center_on`; `C` still centers on own unit.
+
+### Match HUD / styles (CP-13)
+
+| Piece | Location |
+| --- | --- |
+| Match HUD scene | `game/match/hud.tscn` |
+| Selection panel / minimap | `ui/hud/selection_panel/`, `ui/hud/minimap/` (+ StyleBox `.tres`) |
+| Shared menu styles | `ui/styles/` |
+| UI kit gallery | `ui/widgets/ui_kit/ui_kit.tscn` |
+| Spawn ring | `Match.spawn_ring_radius` (default `160`) around map center |
 
 ## Implementation Principle
 
