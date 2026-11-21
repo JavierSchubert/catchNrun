@@ -398,16 +398,18 @@ func _server_combat_tick(delta: float) -> void:
 	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
 		return
 
-	var target := attack.pick_target(global_position, _enemy_candidates())
-	if target == null:
-		_resume_attack_move_if_needed()
+	## Shift-click chains always outrank in-range / auto-acquire combat.
+	if not _move_chain.is_empty():
 		_resume_move_chain_if_needed()
 		return
 
-	var player_engage := attack.explicit_target != null \
-		or attack.attack_move_active \
-		or not _move_chain.is_empty()
-	## A plain player move outranks opportunistic auto-attack; chains act like attack-move.
+	var target := attack.pick_target(global_position, _enemy_candidates())
+	if target == null:
+		_resume_attack_move_if_needed()
+		return
+
+	var player_engage := attack.explicit_target != null or attack.attack_move_active
+	## A plain player move outranks opportunistic auto-attack.
 	if not player_engage and movement.has_order():
 		return
 
@@ -623,9 +625,8 @@ func _marker_host() -> Node:
 func _chase_combat_target(target: Node2D) -> void:
 	if target == null:
 		return
-	var chaining := attack.attack_move_active or not _move_chain.is_empty()
-	if chaining and not attack.attack_move_chasing:
-		## Interrupt the destination / chain path once so we engage instead of walking past.
+	if attack.attack_move_active and not attack.attack_move_chasing:
+		## Interrupt the attack-move destination once so we engage instead of walking past.
 		attack.attack_move_chasing = true
 		movement.order_move(global_position, target.global_position)
 		return

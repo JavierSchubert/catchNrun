@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-21** (selection-panel combat HUD + ENet-only networking; GodotSteam removed).
+Last reviewed: **2026-11-22** (attack / attack-move / shift-click chains, minimap commands, camera drag, sandbox reset + scrollable log).
 
 ---
 
@@ -37,6 +37,7 @@ Last reviewed: **2026-11-21** (selection-panel combat HUD + ENet-only networking
 | 2026-11-21 | CP-03 / CP-04 / CP-10 camera + minimap UX | Center spawn ring (`PlateauMap.spawn_ring_positions`); viewer-relative minimap colors; camera frustum + LMB jump on minimap; no edge-scroll over UI; no auto-recenter on eliminations / roster noise |
 | 2026-11-21 | CP-10 selection panel combat HUD | Fixed-size panel; clean stat icons; 2×3 combat grid; health bar + regen; empty = grey box + empty ring |
 | 2026-11-21 | CP-02 networking cleanup | Removed `addons/godotsteam` and all Steam lobby / invite paths; `NetworkManager` is ENet-only |
+| 2026-11-22 | **CP-14** Attack UX, chains, camera, sandbox | Right-click attack (red ring); A+LMB attack-move; Shift+RMB green move chain; Shift+A+LMB red attack-move chain (mixable); chain path outranks in-range auto-attack; minimap RMB / Shift+RMB / A+LMB / Shift+A+LMB; MMB camera drag; faster edge-scroll (`camera_speed` 1600, `edge_margin` 48); sandbox Reset fixed (deferred lobby + null-safe multiplayer); scrollable GameLog panel |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -110,17 +111,21 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Circular collision shape smaller than the selected sprite | Done | `src/units/unit/unit.tscn` |
 | Path follow + replace current order | Done | `path_follow.gd`, `movement.order_move` |
 | Movement speed driven by stats | Done | `StatSheet` → `UnitMovement.speed` |
-| Free match camera with edge scroll + `C` center, map-aware bounds, configurable zoom (default 1.0), edge margin 300 | Done | `game/camera/match_camera.gd`, `game/match/match.tscn` |
+| Free match camera with edge scroll + `C` center, map-aware bounds, configurable zoom (default 1.0) | Done | `game/camera/match_camera.gd`, `game/match/match.tscn` |
+| Edge-scroll speed + trigger zone exports | Done | `camera_speed` default `1600`; `edge_margin` default `48` (nearer screen edge) |
+| Middle-mouse camera drag pan | Done | Hold MMB to drag; release to stop; pauses edge-scroll while dragging |
 | Camera overscroll padding (`bound_padding`, default 360 screen px, zoom-aware) | Done | Map corners stay inset; units at map edge remain readable — see `controls.README.md` §2.2 |
 | No edge scroll while cursor is over blocking UI | Done | `gui_get_hovered_control()` gate — settings dock, minimap, sandbox chrome |
 | No auto-recenter on eliminations / roster updates | Done | Free camera stays put; snap only on `_ready`, `C`, or minimap LMB |
 | Minimap LMB recenters camera on clicked world position | Done | `MatchMinimap` + `MatchCamera.center_on` |
-| Right-click move marker (pop + fade) | Done | `src/fx/move_click_marker.gd` (local only) |
+| Minimap RMB / Shift+RMB / A+LMB / Shift+A+LMB commands | Done | Move, green chain, attack-move, red attack-chain via `minimap_to_world` |
+| Right-click move marker (pop + fade; blue move / red attack) | Done | `src/fx/move_click_marker.gd` (local only) |
+| Shift-click move / attack-move chain (green + red, mixable) | Done | `MoveChainVisual`; chain path outranks in-range auto-attack |
 | Move-marker automated tests | Done | `tests/fx/move_click_marker_test.gd` |
 | Straight-line paths (no obstacles) | Partial | `navigation_paths.gd` stub; no walls yet |
 | Move-command automated tests | Done | `tests/navigation/move_command_test.gd` |
 
-**Doc owners:** `controls.README.md` §1.2 / §2 camera subset, `project_architecture.README.md` § navigation
+**Doc owners:** `controls.README.md` §1.2 / §1.3 / §2 camera subset, `minimap.README.md` §2.3, `project_architecture.README.md` § navigation
 
 ---
 
@@ -147,12 +152,15 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | --- | --- | --- |
 | Health component | Done | `src/components/health/health_component.gd` |
 | Host melee swing + acquisition / attack range | Done | `src/combat/attack_controller.gd`, `unit.gd` |
-| Right-click attack command with chase | Done | Unit input + `_submit_attack_target` |
+| Right-click attack command with chase + red target flash | Done | Unit input + `_submit_attack_target` + `MoveClickMarker` / selection flash |
+| A+LMB attack-move (red ground marker) | Done | `SelectionManager.attack_move_armed` + `issue_attack_move` |
+| Plain RMB cancels attack / chain (move priority) | Done | Clears explicit target + chain; auto-attack does not interrupt active player move |
+| Shift-click chains outrank in-range auto-attack | Done | Active `_move_chain` skips combat acquire until waypoints finish |
 | Hunter bot chases / attacks nearest Runner | Done | `_hunter_bot_chase` |
 | Elimination + observer + match end | Done | `GameManager.eliminate_player`, HUD observing text |
 | Melee damage automated tests | Done | `tests/combat/melee_damage_test.gd` |
 
-**Still open:** attack-move, hitbox/hurtbox scenes, ranged/magic projectiles — see WP-01.
+**Still open:** hitbox/hurtbox scenes, ranged/magic projectiles — see WP-01.
 
 ---
 
@@ -238,9 +246,9 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Debug sandbox panel | Done | `game/sandbox/sandbox_panel.gd` |
 | Top-left action bar (compact) + Runner/Hunter sample icons | Done | Host, bots, quick start, continue, skip, reset; headless **on by default** |
 | Top-right Tests panel | Done | Open lobby / roles / game alone (clears sandbox action bar) |
-| Bottom-right status | Done | Phase, peers, last action |
+| Bottom-right status + scrollable GameLog | Done | Phase, peers, last action; `ScrollContainer` + `GameLog` history listener |
 | Host, add bots, quick-start 1H+2R | Done | Sandbox actions |
-| Skip preparation / reset / open s0–s2 alone | Done | Sandbox actions |
+| Skip preparation / reset / open s0–s2 alone | Done | Reset works online (host) and offline; deferred `force_open` lobby; null-safe unit multiplayer during teardown |
 | Peer / role / phase inspection | Done | Sandbox refresh UI |
 | Bot client: connect, vote, spawn, move, disconnect | Done | `tests/bots/bot_client.gd` |
 | Hunter bot chase / attack behavior | Done | `Unit._hunter_bot_chase` (Runner bots still circle) |
@@ -289,8 +297,27 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 ---
 
+## CP-14 — Attack UX, shift-click chains, camera, sandbox polish
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Right-click attack on attackable (Hunter) + red entity flash | Done | `unit.gd` + `MoveClickMarker.ATTACK_COLOR` / `flash_attack_target_circle` |
+| A then LMB attack-move + red ground marker | Done | `SelectionManager.attack_move_armed` |
+| Shift+RMB green move chain (world + minimap) | Done | `issue_chain_append` + `MoveChainVisual.MOVE_COLOR` |
+| Shift+A+LMB red attack-move chain (world + minimap); mixable with green | Done | `issue_attack_chain_append` |
+| Chain path prioritizes over in-range auto-attack | Done | Active `_move_chain` skips combat acquire |
+| Plain RMB / plain A+LMB cancels chain | Done | Clears visual + server waypoint queue |
+| Minimap move / chain / attack-move / attack-chain | Done | `ui/hud/minimap/minimap.gd` |
+| MMB camera drag; tuned edge-scroll exports | Done | `match_camera.gd` |
+| Sandbox Reset + scrollable log | Done | `GameManager.reset_match` deferred lobby; `GameLog` UI buffer |
+| Spec updates | Done | `controls.README.md`, `minimap.README.md` |
+
+**Doc owners:** `controls.README.md` §1.2–§1.3 / §2, `minimap.README.md` §2.3
+
+---
+
 ## First milestone verdict
 
-Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, hunter-bot hunting, elimination/observer, free camera edge-scroll with overscroll padding / UI-aware scroll / no kill-recenter, editor-previewable HUD shells (CP-13), and persistent UI/audio settings are also in.
+Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, attack-move, shift-click move/attack chains, hunter-bot hunting, elimination/observer, free camera (edge-scroll + MMB drag), editor-previewable HUD shells (CP-13), and persistent UI/audio settings are also in.
 
-Still open in `working_packages.README.md`: economy, full structure content (mines/walls/towers), attack-move / advanced combat, fog of war (minimap FoW), shop, cursors, and selection context-actions. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13.
+Still open in `working_packages.README.md`: economy, full structure content (mines/walls/towers), fog of war (minimap FoW), shop, cursors, and selection context-actions. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14.

@@ -167,7 +167,7 @@ Hold `Shift` and right-click the ground (or the minimap) to queue **green** move
 
 Dotted lines and rings use the color of the waypoint they lead into. As the unit reaches a waypoint, that ring and its inbound dotted segment disappear.
 
-While a chain is active, units still use default in-range attack behavior (hunters engage, then resume the next waypoint). Cancel the whole chain with a plain right-click or a plain (non-Shift) `A` + left-click attack-move.
+While a chain is active, the path has priority over enemies in attack range — the unit keeps walking waypoints and does not stop to auto-attack. Cancel the whole chain with a plain right-click or a plain (non-Shift) `A` + left-click attack-move.
 
 #### Attack Command
 
