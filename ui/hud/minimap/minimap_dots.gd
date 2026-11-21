@@ -1,41 +1,60 @@
 extends Control
-## Draws living unit pixels on the minimap. Bounds come from the MatchMinimap parent.
+## Draws living unit markers and the local camera frustum on the minimap.
 
 const DOT_SIZE := 4.0
+const OWN_RECT_SIZE := 7.0
+const VIEW_RECT_COLOR := Color(1.0, 1.0, 1.0, 0.55)
 
 
 func _draw() -> void:
 	var minimap := get_parent() as MatchMinimap
 	if minimap == null or Engine.is_editor_hint():
 		return
-	var map_bounds: Rect2 = minimap.map_bounds
-	var local_id := 1
 	var tree := get_tree()
-	if tree != null and multiplayer.has_multiplayer_peer():
-		local_id = multiplayer.get_unique_id()
-	var inset := 3.0
-	var draw_size := size - Vector2(inset * 2.0, inset * 2.0)
-	if draw_size.x <= 1.0 or draw_size.y <= 1.0 or tree == null:
+	if tree == null:
 		return
+	var draw_size := minimap.draw_area_size()
+	if draw_size.x <= 1.0 or draw_size.y <= 1.0:
+		return
+
+	_draw_camera_view(minimap)
+
+	var local_id := 1
+	if multiplayer.has_multiplayer_peer():
+		local_id = multiplayer.get_unique_id()
+
 	for node in tree.get_nodes_in_group("units"):
 		if not node is Unit:
 			continue
 		var unit := node as Unit
 		if not unit.is_alive():
 			continue
-		var point := _world_to_minimap(unit.global_position, map_bounds, inset, draw_size)
-		var color := unit.selection_affinity_color(local_id)
-		var half := DOT_SIZE * 0.5
-		draw_rect(Rect2(point - Vector2(half, half), Vector2(DOT_SIZE, DOT_SIZE)), color, true)
+		var point := minimap.world_to_minimap(unit.global_position)
+		var color := unit.minimap_marker_color(local_id)
+		if unit.peer_id == local_id:
+			var half := OWN_RECT_SIZE * 0.5
+			draw_rect(Rect2(point - Vector2(half, half), Vector2(OWN_RECT_SIZE, OWN_RECT_SIZE)), color, false, 1.5)
+			draw_rect(Rect2(point - Vector2(half - 1.0, half - 1.0), Vector2(OWN_RECT_SIZE - 2.0, OWN_RECT_SIZE - 2.0)), color, true)
+		else:
+			var half := DOT_SIZE * 0.5
+			draw_rect(Rect2(point - Vector2(half, half), Vector2(DOT_SIZE, DOT_SIZE)), color, true)
 
 
-func _world_to_minimap(world_pos: Vector2, map_bounds: Rect2, inset: float, draw_size: Vector2) -> Vector2:
-	var u := 0.5
-	var v := 0.5
-	if map_bounds.size.x > 0.0:
-		u = (world_pos.x - map_bounds.position.x) / map_bounds.size.x
-	if map_bounds.size.y > 0.0:
-		v = (world_pos.y - map_bounds.position.y) / map_bounds.size.y
-	u = clampf(u, 0.0, 1.0)
-	v = clampf(v, 0.0, 1.0)
-	return Vector2(inset + u * draw_size.x, inset + v * draw_size.y)
+func _draw_camera_view(minimap: MatchMinimap) -> void:
+	var camera := get_viewport().get_camera_2d()
+	if camera == null or not camera.is_current():
+		return
+	var viewport := get_viewport()
+	if viewport == null:
+		return
+	var view_size := viewport.get_visible_rect().size
+	var zoom := camera.zoom
+	if zoom.x <= 0.001 or zoom.y <= 0.001:
+		return
+	var half_world := Vector2(view_size.x / zoom.x, view_size.y / zoom.y) * 0.5
+	var top_left := minimap.world_to_minimap(camera.global_position - half_world)
+	var bottom_right := minimap.world_to_minimap(camera.global_position + half_world)
+	var rect := Rect2(top_left, bottom_right - top_left).abs()
+	if rect.size.x < 2.0 or rect.size.y < 2.0:
+		return
+	draw_rect(rect, VIEW_RECT_COLOR, false, 1.0)

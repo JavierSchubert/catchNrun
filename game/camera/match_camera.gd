@@ -51,6 +51,11 @@ func _process(delta: float) -> void:
 		_clamp_to_bounds()
 
 
+func center_on(world_pos: Vector2) -> void:
+	global_position = world_pos
+	_clamp_to_bounds()
+
+
 func _edge_direction() -> Vector2:
 	var viewport := get_viewport()
 	if viewport == null:
@@ -59,6 +64,9 @@ func _edge_direction() -> Vector2:
 	var mouse := viewport.get_mouse_position()
 	# Ignore when the cursor is outside the window.
 	if mouse.x < 0.0 or mouse.y < 0.0 or mouse.x > size.x or mouse.y > size.y:
+		return Vector2.ZERO
+	# Settings dock, minimap, sandbox bar, etc. — no edge scroll while over UI.
+	if viewport.gui_get_hovered_control() != null:
 		return Vector2.ZERO
 
 	var direction := Vector2.ZERO
