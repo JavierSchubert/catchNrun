@@ -5,6 +5,8 @@ extends Node2D
 
 @export var hunter_scene: PackedScene
 @export var runner_scene: PackedScene
+## Players spawn on a ring around map center so they do not stack on top of each other.
+@export var spawn_ring_radius := 160.0
 
 var _spawned: Dictionary = {}
 
@@ -79,30 +81,15 @@ func _spawn_unit(data: Dictionary) -> Node:
 	return unit
 
 
-func _position_for(peer_id: int, role: int) -> Vector2:
-	if role == RoleConfig.Role.HUNTER:
-		return _marker_position("HunterSpawn")
-	var runner_ids: Array[int] = []
+func _position_for(peer_id: int, _role: int) -> Vector2:
+	var ids: Array[int] = []
 	for key in GameManager.players.keys():
-		var id := int(key)
-		if int(GameManager.players[id].role) == RoleConfig.Role.RUNNER:
-			runner_ids.append(id)
-	runner_ids.sort()
-	var slot := maxi(runner_ids.find(peer_id), 0)
-	var markers: Array[Node] = []
-	for child in spawn_points.get_children():
-		if child.name != "HunterSpawn":
-			markers.append(child)
-	if markers.is_empty():
-		return Vector2.ZERO
-	return (markers[slot % markers.size()] as Node2D).global_position
-
-
-func _marker_position(marker_name: String) -> Vector2:
-	var marker := spawn_points.get_node_or_null(marker_name) as Node2D
-	if marker == null:
-		return Vector2.ZERO
-	return marker.global_position
+		ids.append(int(key))
+	ids.sort()
+	var count := maxi(ids.size(), 1)
+	var slot := maxi(ids.find(peer_id), 0)
+	var positions := PlateauMap.spawn_ring_positions(count, spawn_ring_radius)
+	return positions[slot % positions.size()]
 
 
 func _on_player_removed(peer_id: int) -> void:

@@ -2,7 +2,6 @@ extends Control
 ## Draws living unit markers and the local camera frustum on the minimap.
 
 const DOT_SIZE := 4.0
-const OWN_RECT_SIZE := 7.0
 const VIEW_RECT_COLOR := Color(1.0, 1.0, 1.0, 0.55)
 
 
@@ -31,13 +30,8 @@ func _draw() -> void:
 			continue
 		var point := minimap.world_to_minimap(unit.global_position)
 		var color := unit.minimap_marker_color(local_id)
-		if unit.peer_id == local_id:
-			var half := OWN_RECT_SIZE * 0.5
-			draw_rect(Rect2(point - Vector2(half, half), Vector2(OWN_RECT_SIZE, OWN_RECT_SIZE)), color, false, 1.5)
-			draw_rect(Rect2(point - Vector2(half - 1.0, half - 1.0), Vector2(OWN_RECT_SIZE - 2.0, OWN_RECT_SIZE - 2.0)), color, true)
-		else:
-			var half := DOT_SIZE * 0.5
-			draw_rect(Rect2(point - Vector2(half, half), Vector2(DOT_SIZE, DOT_SIZE)), color, true)
+		var half := DOT_SIZE * 0.5
+		draw_rect(Rect2(point - Vector2(half, half), Vector2(DOT_SIZE, DOT_SIZE)), color, true)
 
 
 func _draw_camera_view(minimap: MatchMinimap) -> void:
