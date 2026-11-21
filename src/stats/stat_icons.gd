@@ -2,9 +2,16 @@ class_name StatIcons
 extends RefCounted
 ## Maps character stats to HUD icons and display labels.
 ## Icon file names under assets/sprites/stats/ drive the mapping.
+##
+## Source sprites are large (250–1024px). Drawing them raw into a small
+## TextureRect looks soft, so icons are Lanczos-resized once to HUD_ICON_PX.
 
 const POSITIVE_COLOR := "#6fdf8a"
 const NEGATIVE_COLOR := "#f07178"
+## Pixel size baked for the selection-panel TextureRects (keep in sync with scene).
+const HUD_ICON_PX := 36
+
+static var _texture_cache: Dictionary = {}
 
 ## Defense has no dedicated sprite yet; block_chance is the closest defensive icon.
 const ICON_PATHS := {
@@ -42,10 +49,22 @@ const _CHANCE_STATS := {
 
 
 static func icon(stat: StatBlock.Stat) -> Texture2D:
+	if _texture_cache.has(stat):
+		return _texture_cache[stat] as Texture2D
 	var path: String = ICON_PATHS.get(stat, "")
 	if path.is_empty():
 		return null
-	return load(path) as Texture2D
+	var source := load(path) as Texture2D
+	if source == null:
+		return null
+	var image := source.get_image()
+	if image == null:
+		return source
+	if image.get_width() != HUD_ICON_PX or image.get_height() != HUD_ICON_PX:
+		image.resize(HUD_ICON_PX, HUD_ICON_PX, Image.INTERPOLATE_LANCZOS)
+	var baked := ImageTexture.create_from_image(image)
+	_texture_cache[stat] = baked
+	return baked
 
 
 static func display_name(stat: StatBlock.Stat) -> String:

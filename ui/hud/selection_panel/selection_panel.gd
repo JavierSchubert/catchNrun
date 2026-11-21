@@ -80,6 +80,7 @@ func _apply_stat_icons() -> void:
 		var stat: StatBlock.Stat = PANEL_STATS[i]
 		var icon := _stat_icons[i]
 		icon.texture = StatIcons.icon(stat)
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		icon.tooltip_text = StatIcons.display_name(stat)
 
 

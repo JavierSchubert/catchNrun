@@ -9,7 +9,7 @@
 shader = ExtResource("4_shader")
 
 [node name="SelectionPanel" type="Control"]
-custom_minimum_size = Vector2(560, 140)
+custom_minimum_size = Vector2(520, 148)
 layout_mode = 3
 anchors_preset = 0
 mouse_filter = 2
@@ -96,27 +96,28 @@ visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
-theme_override_constants/h_separation = 14
-theme_override_constants/v_separation = 4
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 3
 columns = 3
 
 [node name="StatHealth" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatHealth"]
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
+texture_filter = 1
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatHealth"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 13
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
@@ -128,21 +129,22 @@ text = "100"
 
 [node name="StatDamage" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatDamage"]
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
+texture_filter = 1
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatDamage"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 13
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
@@ -154,21 +156,22 @@ text = "10"
 
 [node name="StatHpRegen" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatHpRegen"]
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
+texture_filter = 1
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatHpRegen"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 13
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
@@ -180,21 +183,22 @@ text = "2"
 
 [node name="StatAttackSpeed" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatAttackSpeed"]
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
+texture_filter = 1
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatAttackSpeed"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 13
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
@@ -206,21 +210,22 @@ text = "1.3"
 
 [node name="StatDefense" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatDefense"]
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
+texture_filter = 1
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatDefense"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 13
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
@@ -232,21 +237,22 @@ text = "20"
 
 [node name="StatLifesteal" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatLifesteal"]
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
+texture_filter = 1
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatLifesteal"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 13
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
@@ -258,21 +264,22 @@ text = "10%"
 
 [node name="StatMoveSpeed" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatMoveSpeed"]
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
+texture_filter = 1
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatMoveSpeed"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 13
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
@@ -284,21 +291,22 @@ text = "220"
 
 [node name="StatCrit" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatCrit"]
-custom_minimum_size = Vector2(28, 28)
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
+texture_filter = 1
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatCrit"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_horizontal = 0
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 13
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
