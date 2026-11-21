@@ -1,62 +1,29 @@
 extends Control
 ## Role vote. Runners are on the left and the Hunter is on the right.
-## The host resolves the vote. Several Hunter requests are decided at random.
+## Shell layout + StyleBoxes live in role_selection.tscn / ui/styles/*.tres.
+## Dynamic player rows and action buttons are still filled from code.
 
-var _result := Label.new()
-var _runner_box := VBoxContainer.new()
-var _hunter_box := VBoxContainer.new()
-var _waiting_box := VBoxContainer.new()
-var _start_button := Button.new()
+@export var button_style: StyleBoxFlat
+@export var button_hover_style: StyleBoxFlat
+
+@onready var _result: Label = %Result
+@onready var _runner_box: VBoxContainer = %RunnerBox
+@onready var _hunter_box: VBoxContainer = %HunterBox
+@onready var _waiting_box: VBoxContainer = %WaitingBox
+@onready var _actions: HBoxContainer = %Actions
+
+var _start_button: Button
 var _rebuild_queued := false
 
 
 func _ready() -> void:
-	_build_backdrop()
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "top", "right", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 28)
-	add_child(margin)
-
-	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 14)
-	margin.add_child(root)
-
-	var title := Label.new()
-	title.text = "Choose a side and sprite"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 34)
-	title.add_theme_color_override("font_color", Color(0.98, 0.9, 0.45))
-	root.add_child(title)
-
-	var instructions := Label.new()
-	instructions.text = "Runners choose a Player sprite; Hunters choose an Enemy sprite."
-	instructions.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	instructions.add_theme_color_override("font_color", Color(0.82, 0.82, 0.78))
-	root.add_child(instructions)
-
-	_result.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root.add_child(_result)
-
-	var columns := HBoxContainer.new()
-	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	columns.add_theme_constant_override("separation", 16)
-	root.add_child(columns)
-	columns.add_child(_side_panel("Runners", Color(0.16, 0.28, 0.48), _runner_box))
-	columns.add_child(_side_panel("Waiting", Color(0.2, 0.2, 0.2), _waiting_box))
-	columns.add_child(_side_panel("Hunter", Color(0.45, 0.16, 0.16), _hunter_box))
-
-	var actions := HBoxContainer.new()
-	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.add_theme_constant_override("separation", 12)
-	root.add_child(actions)
-	_add_button(actions, "Join Runners", func() -> void: GameManager.request_side(RoleConfig.Role.RUNNER))
-	_add_button(actions, "Join Hunter", func() -> void: GameManager.request_side(RoleConfig.Role.HUNTER))
+	_add_button(_actions, "Join Runners", func() -> void: GameManager.request_side(RoleConfig.Role.RUNNER))
+	_add_button(_actions, "Join Hunter", func() -> void: GameManager.request_side(RoleConfig.Role.HUNTER))
 	if not NetworkManager.is_online():
-		_add_button(actions, "Add test player", func() -> void: GameManager.add_test_player())
+		_add_button(_actions, "Add test player", func() -> void: GameManager.add_test_player())
 	if not NetworkManager.is_online() or multiplayer.is_server():
-		_add_button(actions, "Resolve vote", func() -> void: GameManager.resolve_roles())
-		_start_button = _add_button(actions, "Start game", func() -> void: GameManager.start_game_from_selection())
+		_add_button(_actions, "Resolve vote", func() -> void: GameManager.resolve_roles())
+		_start_button = _add_button(_actions, "Start game", func() -> void: GameManager.start_game_from_selection())
 
 	SettingsMenu.attach(self)
 	SoundManager.ensure_music()
@@ -67,21 +34,6 @@ func _ready() -> void:
 	_queue_rebuild()
 
 
-func _build_backdrop() -> void:
-	var veil := ColorRect.new()
-	veil.color = Color(0.05, 0.06, 0.08, 1)
-	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
-	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(veil)
-	var accent := ColorRect.new()
-	accent.color = Color(0.95, 0.82, 0.35, 0.08)
-	accent.set_anchors_preset(Control.PRESET_FULL_RECT)
-	accent.offset_left = 40
-	accent.offset_right = -40
-	accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(accent)
-
-
 func _queue_rebuild() -> void:
 	if not is_inside_tree() or _rebuild_queued:
 		return
@@ -89,52 +41,15 @@ func _queue_rebuild() -> void:
 	call_deferred("_rebuild")
 
 
-func _side_panel(heading: String, color: Color, list_box: VBoxContainer) -> PanelContainer:
-	var panel := PanelContainer.new()
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(color.r, color.g, color.b, 0.88)
-	style.border_color = Color(0.95, 0.82, 0.35, 0.45)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(14)
-	style.content_margin_left = 12
-	style.content_margin_top = 12
-	style.content_margin_right = 12
-	style.content_margin_bottom = 12
-	panel.add_theme_stylebox_override("panel", style)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
-	panel.add_child(box)
-	var label := Label.new()
-	label.text = heading
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 24)
-	label.add_theme_color_override("font_color", Color(0.96, 0.96, 0.92))
-	box.add_child(label)
-	list_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(list_box)
-	return panel
-
-
 func _add_button(parent: Node, text: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(0, 40)
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.16, 0.18, 0.22)
-	normal.border_color = Color(0.95, 0.82, 0.35, 0.55)
-	normal.set_border_width_all(1)
-	normal.set_corner_radius_all(10)
-	normal.content_margin_left = 14
-	normal.content_margin_top = 8
-	normal.content_margin_right = 14
-	normal.content_margin_bottom = 8
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.24, 0.26, 0.32)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", hover)
+	if button_style != null:
+		button.add_theme_stylebox_override("normal", button_style)
+		button.add_theme_stylebox_override("pressed", button_style)
+	if button_hover_style != null:
+		button.add_theme_stylebox_override("hover", button_hover_style)
 	button.pressed.connect(func() -> void:
 		SoundManager.play_ui()
 		callback.call()
@@ -180,7 +95,8 @@ func _rebuild() -> void:
 		_result.text = "Hunter: %s" % str(hunter.get("name", "Player"))
 	else:
 		_result.text = "The host resolves the vote. Several Hunter requests are decided at random."
-	_start_button.disabled = NetworkManager.is_online() and not multiplayer.is_server()
+	if _start_button != null:
+		_start_button.disabled = NetworkManager.is_online() and not multiplayer.is_server()
 
 
 func _player_row(peer_id: int, player_name: String, preferred_role: int, sprite_index: int) -> HBoxContainer:

@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://bjjfqfyd0nwen" path="res://src/components/health/health_component.gd" id="3_health"]
 [ext_resource type="Script" uid="uid://dp4h1t13qri1b" path="res://src/combat/attack_controller.gd" id="4_attack"]
 [ext_resource type="PackedScene" uid="uid://xq781ijkt6ys" path="res://ui/hud/health_bar/health_bar.tscn" id="5_health_bar"]
+[ext_resource type="Texture2D" path="res://assets/sprites/units/Player_1.png" id="6_default_sprite"]
 
 [sub_resource type="CircleShape2D" id="circle"]
 radius = 16.0
@@ -29,6 +30,7 @@ shape = SubResource("circle")
 
 [node name="Sprite" type="Sprite2D" parent="." unique_id=1766260936]
 scale = Vector2(0.24, 0.24)
+texture = ExtResource("6_default_sprite")
 
 [node name="NameLabel" type="Label" parent="." unique_id=953052554]
 offset_left = -80.0

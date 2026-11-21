@@ -14,6 +14,7 @@ var _spawned: Dictionary = {}
 
 
 func _ready() -> void:
+	_hide_spawn_gizmos()
 	spawner.spawn_function = _spawn_unit
 	GameManager.all_players_loaded.connect(_spawn_pending)
 	GameManager.phase_changed.connect(_on_phase_changed)
@@ -24,6 +25,19 @@ func _ready() -> void:
 		GameManager.report_scene_ready()
 	else:
 		GameManager.report_scene_ready.rpc_id(1)
+
+
+func _hide_spawn_gizmos() -> void:
+	## Spawn_mark sprites are editor/layout aids; hide them during play.
+	for marker in spawn_points.get_children():
+		var gizmo := marker.get_node_or_null("Gizmo") as CanvasItem
+		if gizmo != null:
+			gizmo.visible = false
+	var arena := get_node_or_null("ArenaPlateau")
+	if arena != null:
+		var preview := arena.get_node_or_null("EditorSpawnPreview") as CanvasItem
+		if preview != null:
+			preview.visible = false
 
 
 func _on_phase_changed(_phase: GameManager.Phase) -> void:

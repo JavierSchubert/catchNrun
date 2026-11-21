@@ -1,50 +1,18 @@
 extends CanvasLayer
 ## Match HUD: phase status, selection panel, and minimap.
+## Layout lives in hud.tscn; this script only binds match data.
 
-var _status := Label.new()
-var _selection_panel: SelectionPanel
-var _minimap: MatchMinimap
+@onready var _root: Control = %Root
+@onready var _status: Label = %Status
+@onready var _selection_panel: SelectionPanel = %SelectionPanel
+@onready var _minimap: MatchMinimap = %Minimap
+
 var _winner := ""
 
 
 func _ready() -> void:
-	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(root)
-
-	# Sit below the sandbox action bar (debug) and clear of the settings dock on the right.
-	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_status.add_theme_font_size_override("font_size", 18)
-	_status.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_status.offset_left = 260.0
-	_status.offset_top = 108.0
-	_status.offset_right = -260.0
-	_status.offset_bottom = 180.0
-	root.add_child(_status)
-
-	_minimap = MatchMinimap.new()
-	_minimap.name = "Minimap"
-	_minimap.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_minimap.offset_left = 16.0
-	_minimap.offset_top = -162.0
-	_minimap.offset_right = 236.0
-	_minimap.offset_bottom = -16.0
-	root.add_child(_minimap)
-
-	_selection_panel = SelectionPanel.new()
-	_selection_panel.name = "SelectionPanel"
-	_selection_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_selection_panel.offset_left = -210.0
-	_selection_panel.offset_top = -120.0
-	_selection_panel.offset_right = 210.0
-	_selection_panel.offset_bottom = -16.0
-	root.add_child(_selection_panel)
-
-	SettingsMenu.attach(root)
+	SettingsMenu.attach(_root)
 	SoundManager.ensure_music()
-
 	GameManager.match_finished.connect(_on_match_finished)
 	GameManager.phase_changed.connect(_on_phase_changed)
 	_refresh()

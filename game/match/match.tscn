@@ -3,10 +3,11 @@
 [ext_resource type="Script" uid="uid://c0oqk4usvv6j6" path="res://game/match/match.gd" id="1_match"]
 [ext_resource type="PackedScene" path="res://src/units/hunter/hunter.tscn" id="2_hunter"]
 [ext_resource type="PackedScene" uid="uid://uk1tc2fuojjd" path="res://src/units/runner/runner.tscn" id="3_runner"]
-[ext_resource type="Script" uid="uid://dcw1xxn706g7c" path="res://game/match/hud.gd" id="4_hud"]
+[ext_resource type="PackedScene" path="res://game/match/hud.tscn" id="4_hud"]
 [ext_resource type="Script" uid="uid://cnfuwn80uvk73" path="res://game/camera/match_camera.gd" id="5_camera"]
 [ext_resource type="PackedScene" uid="uid://co2dllw6ejyto" path="res://game/maps/arena_plateau.tscn" id="6_map"]
 [ext_resource type="Script" uid="uid://8ufwu7rhs85m" path="res://src/selection/selection_manager.gd" id="7_selection"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/Spawn_mark.png" id="8_spawn_mark"]
 
 [node name="Match" type="Node2D" unique_id=1631963897]
 script = ExtResource("1_match")
@@ -19,17 +20,42 @@ runner_scene = ExtResource("3_runner")
 
 [node name="HunterSpawn" type="Marker2D" parent="SpawnPoints" unique_id=796442943]
 
+[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/HunterSpawn"]
+modulate = Color(0.95, 0.45, 0.35, 0.85)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("8_spawn_mark")
+
 [node name="RunnerSpawn1" type="Marker2D" parent="SpawnPoints" unique_id=1456219910]
 position = Vector2(-2624, -1600)
+
+[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/RunnerSpawn1"]
+modulate = Color(0.35, 0.65, 0.95, 0.85)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("8_spawn_mark")
 
 [node name="RunnerSpawn2" type="Marker2D" parent="SpawnPoints" unique_id=1894451018]
 position = Vector2(2624, -1600)
 
+[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/RunnerSpawn2"]
+modulate = Color(0.35, 0.65, 0.95, 0.85)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("8_spawn_mark")
+
 [node name="RunnerSpawn3" type="Marker2D" parent="SpawnPoints" unique_id=187233804]
 position = Vector2(-2624, 1600)
 
+[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/RunnerSpawn3"]
+modulate = Color(0.35, 0.65, 0.95, 0.85)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("8_spawn_mark")
+
 [node name="RunnerSpawn4" type="Marker2D" parent="SpawnPoints" unique_id=1541347256]
 position = Vector2(2624, 1600)
+
+[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/RunnerSpawn4"]
+modulate = Color(0.35, 0.65, 0.95, 0.85)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("8_spawn_mark")
 
 [node name="Players" type="Node2D" parent="." unique_id=546494604]
 
@@ -42,5 +68,4 @@ script = ExtResource("7_selection")
 [node name="MatchCamera" type="Camera2D" parent="." unique_id=785354269]
 script = ExtResource("5_camera")
 
-[node name="HUD" type="CanvasLayer" parent="." unique_id=1908921651]
-script = ExtResource("4_hud")
+[node name="HUD" parent="." unique_id=1908921651 instance=ExtResource("4_hud")]

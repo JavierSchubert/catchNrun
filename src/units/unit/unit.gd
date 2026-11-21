@@ -78,6 +78,8 @@ func _ready() -> void:
 	sync_health = health.current
 	var player_data: Dictionary = GameManager.players.get(peer_id, {})
 	sprite.texture = sprite_texture(int(player_data.get("sprite_index", 0)), config.role)
+	if config.color != Color.WHITE:
+		sprite.modulate = config.color
 	_refresh_label()
 	refresh_selection_visual()
 	GameManager.players_changed.connect(_on_players_changed)
