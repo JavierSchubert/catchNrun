@@ -50,6 +50,7 @@ var _bot_repath_in := 0.0
 var _selection_circle: SelectionCircle
 var _selection_hovered := false
 var _selection_selected := false
+var _attack_flash_remaining := 0.0
 
 
 func _enter_tree() -> void:
@@ -148,10 +149,21 @@ func refresh_selection_visual() -> void:
 	_ensure_selection_circle()
 	if _selection_circle == null:
 		return
+	if _attack_flash_remaining > 0.0:
+		_selection_circle.configure(selection_circle_radius(), SelectionCircle.COLOR_HUNTER)
+		_selection_circle.set_hover(false)
+		_selection_circle.set_selected(true)
+		return
 	var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
 	_selection_circle.configure(selection_circle_radius(), selection_affinity_color(local_id))
 	_selection_circle.set_hover(_selection_hovered and not _selection_selected)
 	_selection_circle.set_selected(_selection_selected)
+
+
+func flash_attack_target_circle(duration := 0.35) -> void:
+	## Brief red ring when this unit is the target of an attack command.
+	_attack_flash_remaining = maxf(duration, 0.05)
+	refresh_selection_visual()
 
 
 func selection_affinity_color(local_peer_id: int) -> Color:
@@ -190,6 +202,14 @@ func can_attack() -> bool:
 	return is_alive() and stats.final_value(StatBlock.Stat.MELEE_DAMAGE) > 0.0
 
 
+func issue_move(destination: Vector2) -> void:
+	## Player move: cancels attack / attack-move and shows the blue ground marker.
+	if not _can_issue_commands():
+		return
+	_request_move(destination)
+	_show_move_click_marker(destination)
+
+
 func issue_attack_move(destination: Vector2) -> void:
 	if not _can_issue_commands() or not can_attack():
 		return
@@ -212,9 +232,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	var world_pos := get_global_mouse_position()
 	var target := _clickable_enemy_at(world_pos)
 	if target != null and can_attack():
+		## Attack only — never also flash the blue move ring on the target.
 		_request_attack(target)
 		_show_attack_click_marker_on(target)
 	else:
+		## Ground RMB always wins over an in-progress attack / auto-acquire.
 		_request_move(world_pos)
 		_show_move_click_marker(world_pos)
 	get_viewport().set_input_as_handled()
@@ -223,6 +245,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if _eliminated:
 		return
+
+	_tick_attack_flash(delta)
 
 	if peer_id == multiplayer.get_unique_id() and not LaunchOptions.bot_role.is_empty():
 		_bot_tick()
@@ -244,6 +268,14 @@ func _physics_process(delta: float) -> void:
 		_follow_sync_position(delta)
 		_clamp_to_map()
 		_apply_synced_health()
+
+
+func _tick_attack_flash(delta: float) -> void:
+	if _attack_flash_remaining <= 0.0:
+		return
+	_attack_flash_remaining = maxf(_attack_flash_remaining - delta, 0.0)
+	if _attack_flash_remaining <= 0.0:
+		refresh_selection_visual()
 
 
 func _bot_tick() -> void:
@@ -308,6 +340,11 @@ func _server_combat_tick(delta: float) -> void:
 	var target := attack.pick_target(global_position, _enemy_candidates())
 	if target == null:
 		_resume_attack_move_if_needed()
+		return
+
+	var player_engage := attack.explicit_target != null or attack.attack_move_active
+	## A player move command always outranks opportunistic auto-attack.
+	if not player_engage and movement.has_order():
 		return
 
 	if not attack.in_attack_range(global_position, target):
@@ -482,6 +519,8 @@ func _show_attack_click_marker_on(target: Unit) -> void:
 	if target == null:
 		return
 	MoveClickMarker.spawn_on(target, MoveClickMarker.ATTACK_COLOR)
+	if target.has_method("flash_attack_target_circle"):
+		target.call("flash_attack_target_circle")
 
 
 func _marker_host() -> Node:
@@ -532,7 +571,9 @@ func _clickable_enemy_at(world_pos: Vector2) -> Unit:
 		var unit := node as Unit
 		if unit == null or not unit.is_attackable():
 			continue
-		var hit_radius := maxf(unit.selection_hit_radius(), 40.0)
+		## Match selection feel, with a floor so large sprites stay easy to click.
+		var hit_radius := maxf(unit.selection_hit_radius(), unit.selection_circle_radius() * 1.35)
+		hit_radius = maxf(hit_radius, 56.0)
 		var distance := world_pos.distance_to(unit.global_position)
 		if distance <= hit_radius and distance < best_distance:
 			best_distance = distance

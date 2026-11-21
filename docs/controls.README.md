@@ -159,7 +159,7 @@ Right Click Ground
 -> Calculate shortest valid path
 -> Move along path
 
-A newly issued movement command replaces the current movement or attack command.
+A newly issued movement command replaces the current movement or attack command. Right-click on empty ground always takes priority: it cancels the current attack / attack-move and walks to the click. Opportunistic auto-attack must not interrupt that player move while the path is still active.
 
 #### Attack Command
 
@@ -227,7 +227,7 @@ Implementation: `game/camera/match_camera.gd` (`MatchCamera`).
 
 Moving the mouse cursor to the edges or corners of the screen moves the camera in the corresponding direction.
 
-The edge detection margin is configurable in the `MatchCamera` inspector through `edge_margin` (in **screen** pixels; current default: `300`).
+The edge detection margin is configurable in the `MatchCamera` inspector through `edge_margin` (in **screen** pixels; current default: `48` — nearer the screen edge). Scroll speed is `camera_speed` (world units / s; current default: `1600`).
 
 ```text
 Top edge          -> Move camera up
@@ -250,7 +250,11 @@ movement = direction * camera_speed
 
 Camera movement does not affect the controlled character.
 
-Edge scroll is **disabled** while the cursor hovers a blocking UI control (`Viewport.gui_get_hovered_control()` is non-null). That covers the settings dock, minimap, sandbox chrome, and similar overlays so scrolling does not fight the UI.
+Edge scroll is **disabled** while the cursor hovers a blocking UI control (`Viewport.gui_get_hovered_control()` is non-null). That covers the settings dock, minimap, sandbox chrome, and similar overlays so scrolling does not fight the UI. Edge scroll is also paused while middle-mouse drag is active.
+
+### 2.1.1. Middle-mouse drag
+
+Hold the middle mouse button and move the mouse to drag the camera. Release middle mouse to stop. The map follows the cursor (camera moves opposite to the drag delta, zoom-aware).
 
 ### 2.2. Map bounds and overscroll padding
 
@@ -258,8 +262,8 @@ The camera clamps to `Unit.MAP_BOUNDS`, but it is allowed to scroll **past** the
 
 | Export | Unit | Current default | Meaning |
 | --- | --- | --- | --- |
-| `edge_margin` | screen px | `300` | How close the cursor must be to a viewport edge to scroll |
-| `camera_speed` | world units / s | `900` | Edge-scroll speed |
+| `edge_margin` | screen px | `48` | Trigger-zone offset from viewport edge for edge-scroll |
+| `camera_speed` | world units / s | `1600` | Edge-scroll velocity |
 | `zoom_factor` | multiplier | `1.0` | Applied to `Camera2D.zoom` |
 | `bound_padding` | screen px | `360` | How far the map edge sits inside the viewport when fully scrolled |
 

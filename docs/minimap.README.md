@@ -39,9 +39,15 @@ Own and other units use the same pixel size. Selection circles may still use tea
 
 The minimap draws a light outline of the current camera viewport so the player can see where they are looking relative to the map.
 
-### 2.3. Click to recenter
+### 2.3. Minimap clicks
 
-Left-click on the minimap recenters the match camera on the corresponding world position (`MatchCamera.center_on`). The minimap uses `MOUSE_FILTER_STOP` so the click is captured and edge-scroll stays off while hovering it.
+| Input | Result |
+| --- | --- |
+| Left-click | Recenter the match camera on the corresponding world position (`MatchCamera.center_on`) |
+| Right-click | Issue a move command for the selected controllable unit to that world position (blue marker) |
+| `A` then left-click | Issue an attack-move to that world position (red marker); requires an attacker selected |
+
+World mapping uses the same `minimap_to_world` / `world_to_minimap` helpers as the unit dots. The minimap uses `MOUSE_FILTER_STOP` so clicks are captured and edge-scroll stays off while hovering it.
 
 ### 2.4. Scene / style resources
 

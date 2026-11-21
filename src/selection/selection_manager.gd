@@ -111,8 +111,8 @@ func _handle_attack_move_key(key: InputEventKey) -> void:
 
 func _handle_mouse_button(click: InputEventMouseButton) -> void:
 	if click.button_index == MOUSE_BUTTON_RIGHT and click.pressed and attack_move_armed:
+		## Disarm only — do not consume. Unit RMB (move / attack) keeps priority.
 		_disarm_attack_move()
-		get_viewport().set_input_as_handled()
 		return
 	if click.button_index != MOUSE_BUTTON_LEFT:
 		return
