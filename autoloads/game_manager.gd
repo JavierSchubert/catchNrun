@@ -8,6 +8,8 @@ extends Node
 signal players_changed
 signal phase_changed(phase: Phase)
 signal player_removed(peer_id: int)
+signal player_eliminated(peer_id: int)
+signal match_finished(winner_team: String)
 signal all_players_loaded
 signal auto_host_failed(error_code: Error)
 
@@ -15,13 +17,14 @@ enum Phase { LOBBY, ROLE_SELECTION, RUNNER_PREPARATION, HUNTER_ACTIVE, ENDED }
 
 const ANY_ROLE := -1
 const TEST_PLAYER_ID := 1000
+const SPRITE_COUNT := 5
 
 var resolved_hunter_id := -1
 var _next_test_player_id := TEST_PLAYER_ID
 
 var config: MatchConfig
 var phase := Phase.LOBBY
-## peer id -> {name, preferred_role, role, alive}. Role is assigned when the match starts.
+## peer id -> {name, preferred_role, role, sprite_index, alive}. Role is assigned when the match starts.
 var players: Dictionary = {}
 var time_left := 0.0
 var head_start_duration := 60.0
@@ -111,6 +114,72 @@ func everyone_loaded() -> bool:
 		if not _loaded_peers.has(int(key)):
 			return false
 	return true
+
+
+func is_eliminated(peer_id: int) -> bool:
+	if not players.has(peer_id):
+		return false
+	return not bool(players[peer_id].get("alive", true))
+
+
+func living_runner_ids() -> Array[int]:
+	var ids: Array[int] = []
+	for key in players.keys():
+		var id := int(key)
+		var entry: Dictionary = players[id]
+		if int(entry.get("role", RoleConfig.Role.RUNNER)) != RoleConfig.Role.RUNNER:
+			continue
+		if bool(entry.get("alive", true)):
+			ids.append(id)
+	return ids
+
+
+func living_hunter_ids() -> Array[int]:
+	var ids: Array[int] = []
+	for key in players.keys():
+		var id := int(key)
+		var entry: Dictionary = players[id]
+		if int(entry.get("role", RoleConfig.Role.RUNNER)) != RoleConfig.Role.HUNTER:
+			continue
+		if bool(entry.get("alive", true)):
+			ids.append(id)
+	return ids
+
+
+## Host marks a player defeated. Dead Runners become observers; the match ends when
+## every Runner is down or the Hunter falls.
+func eliminate_player(peer_id: int) -> void:
+	if not multiplayer.is_server():
+		return
+	if phase != Phase.RUNNER_PREPARATION and phase != Phase.HUNTER_ACTIVE:
+		return
+	if not players.has(peer_id) or is_eliminated(peer_id):
+		return
+	var entry: Dictionary = players[peer_id]
+	entry.alive = false
+	players[peer_id] = entry
+	GameLog.info("MATCH", "peer %d eliminated (%s)" % [peer_id, role_label(int(entry.role))])
+	_sync_players.rpc(players)
+	player_eliminated.emit(peer_id)
+	_check_match_end()
+
+
+func _check_match_end() -> void:
+	if not multiplayer.is_server():
+		return
+	if phase != Phase.HUNTER_ACTIVE and phase != Phase.RUNNER_PREPARATION:
+		return
+	if living_runner_ids().is_empty():
+		_finish_match.rpc("hunter")
+	elif living_hunter_ids().is_empty():
+		_finish_match.rpc("runner")
+
+
+@rpc("authority", "call_local", "reliable")
+func _finish_match(winner_team: String) -> void:
+	_set_phase(Phase.ENDED)
+	GameLog.info("MATCH", "match finished — %s team wins" % winner_team)
+	match_finished.emit(winner_team)
 
 
 static func sender_id(mp: MultiplayerAPI) -> int:
@@ -275,6 +344,37 @@ func _apply_side(peer_id: int, role: int) -> void:
 	else:
 		players_changed.emit()
 	_maybe_auto_resolve()
+
+
+func set_sprite_for(peer_id: int, sprite_index: int) -> void:
+	if phase != Phase.ROLE_SELECTION or sprite_index < 0 or sprite_index >= SPRITE_COUNT:
+		return
+	var test_player := not NetworkManager.is_online() and peer_id >= TEST_PLAYER_ID
+	if peer_id != multiplayer.get_unique_id() and not test_player:
+		return
+	if not test_player and not multiplayer.is_server():
+		_request_sprite.rpc_id(1, sprite_index)
+		return
+	_apply_sprite(peer_id, sprite_index)
+
+
+@rpc("any_peer", "reliable")
+func _request_sprite(sprite_index: int) -> void:
+	if not multiplayer.is_server() or phase != Phase.ROLE_SELECTION:
+		return
+	_apply_sprite(sender_id(multiplayer), sprite_index)
+
+
+func _apply_sprite(peer_id: int, sprite_index: int) -> void:
+	if not players.has(peer_id) or sprite_index < 0 or sprite_index >= SPRITE_COUNT:
+		return
+	var entry: Dictionary = players[peer_id]
+	entry.sprite_index = sprite_index
+	players[peer_id] = entry
+	if NetworkManager.is_online():
+		_sync_players.rpc(players)
+	else:
+		players_changed.emit()
 
 
 func add_test_player() -> void:
@@ -472,6 +572,7 @@ func _new_player(player_name: String, preferred_role: int) -> Dictionary:
 		"name": player_name,
 		"preferred_role": preferred_role,
 		"role": RoleConfig.Role.RUNNER,
+		"sprite_index": 0,
 		"alive": true,
 	}
 
@@ -485,6 +586,7 @@ func _normalize_players(raw_players: Dictionary) -> Dictionary:
 			"name": str(entry.get("name", "Player %d" % id)),
 			"preferred_role": int(entry.get("preferred_role", ANY_ROLE)),
 			"role": int(entry.get("role", RoleConfig.Role.RUNNER)),
+			"sprite_index": clampi(int(entry.get("sprite_index", 0)), 0, SPRITE_COUNT - 1),
 			"alive": bool(entry.get("alive", true)),
 		}
 	return normalized

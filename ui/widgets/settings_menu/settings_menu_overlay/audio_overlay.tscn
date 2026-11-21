@@ -1,0 +1,48 @@
+[gd_scene format=3 uid="uid://d0xde8vutnfrw"]
+
+[ext_resource type="PackedScene" uid="uid://bm6120f2fflnn" path="res://ui/widgets/settings_menu/settings_menu_overlay/audio_control/audio_control_v2.tscn" id="1_ctrl"]
+[ext_resource type="Texture2D" path="res://assets/sprites/buttons/icon_music.tres" id="2_music"]
+[ext_resource type="Texture2D" path="res://assets/sprites/buttons/icon_music_muted.tres" id="3_music_m"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 12.0
+content_margin_bottom = 12.0
+bg_color = Color(0.08, 0.09, 0.11, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.95, 0.82, 0.35, 0.75)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 8
+
+[node name="audio_overlay" type="PanelContainer" unique_id=1084371738]
+visible = false
+custom_minimum_size = Vector2(250, 110)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=1221957512]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="VBox" unique_id=1011421620]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.88, 0.55, 1)
+theme_override_font_sizes/font_size = 16
+text = "Audio"
+horizontal_alignment = 1
+
+[node name="music_controller" parent="VBox" unique_id=180625028 instance=ExtResource("1_ctrl")]
+layout_mode = 2
+icon_unmuted = ExtResource("2_music")
+icon_muted = ExtResource("3_music_m")
+audio_bus_name = "Music"
+
+[node name="sfx_controller" parent="VBox" unique_id=468600850 instance=ExtResource("1_ctrl")]
+layout_mode = 2

@@ -2,8 +2,11 @@ extends Node
 ## Debug panel for local multiplayer. Visible in debug builds and when launched with
 ## --sandbox. Hidden for bots, headless runs, and release exports.
 ##
-## Bot buttons start another copy of this project with the Godot executable path shown
-## in the panel. They do nothing until that path points at a real Godot binary.
+## Layout: compact action bar top-left, tests top-right, status bottom-right.
+## Leaves the center and bottom-left free for lobby / match HUD / minimap.
+
+const RUNNER_ICON := preload("res://assets/sprites/units/Player_1.png")
+const HUNTER_ICON := preload("res://assets/sprites/units/Enemy_1.png")
 
 var _status: Label
 var _state: Label
@@ -18,6 +21,7 @@ func _ready() -> void:
 	if not LaunchOptions.sandbox_enabled:
 		set_process(false)
 		return
+
 	_status = Label.new()
 	_state = Label.new()
 	_peers = Label.new()
@@ -28,44 +32,14 @@ func _ready() -> void:
 	layer.layer = 100
 	add_child(layer)
 
-	var panel := PanelContainer.new()
-	panel.position = Vector2(12, 12)
-	panel.custom_minimum_size = Vector2(380, 0)
-	layer.add_child(panel)
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(root)
 
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 6)
-	panel.add_child(box)
-
-	var title := Label.new()
-	title.text = "Sandbox"
-	title.add_theme_font_size_override("font_size", 20)
-	box.add_child(title)
-
-	_state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_peers.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_peers.custom_minimum_size = Vector2(350, 0)
-	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_state)
-	box.add_child(_peers)
-	box.add_child(_status)
-
-	_bin_edit.placeholder_text = "Path to the Godot executable"
-	_bin_edit.text = OS.get_executable_path()
-	box.add_child(_bin_edit)
-	_headless.text = "Launch bots headless"
-	box.add_child(_headless)
-
-	_add_button(box, "Test lobby", _test_lobby)
-	_add_button(box, "Test role selection", _test_selection)
-	_add_button(box, "Test game", _test_game)
-	_add_button(box, "Start local host", _host)
-	_add_button(box, "Start host + 1 Hunter bot + 2 Runner bots", _quick_start)
-	_add_button(box, "Add Runner bot", _add_runner)
-	_add_button(box, "Add Hunter bot", _add_hunter)
-	_add_button(box, "Continue to role selection", _continue_to_selection)
-	_add_button(box, "Skip preparation", _skip_preparation)
-	_add_button(box, "Reset match", _reset_match)
+	_build_action_bar(root)
+	_build_tests_panel(root)
+	_build_status_panel(root)
 	_refresh()
 
 
@@ -73,10 +47,141 @@ func _process(_delta: float) -> void:
 	_refresh()
 
 
-func _add_button(parent: Node, text: String, callback: Callable) -> void:
+func _build_action_bar(root: Control) -> void:
+	var bar := PanelContainer.new()
+	bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	bar.offset_left = 16.0
+	bar.offset_top = 12.0
+	bar.offset_right = 780.0
+	bar.offset_bottom = 96.0
+	bar.mouse_filter = Control.MOUSE_FILTER_STOP
+	bar.add_theme_stylebox_override("panel", _panel_style(Color(0.07, 0.08, 0.1, 0.92)))
+	root.add_child(bar)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	bar.add_child(col)
+
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 8)
+	col.add_child(top)
+
+	var title := Label.new()
+	title.text = "Sandbox"
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", Color(0.98, 0.9, 0.45))
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	top.add_child(title)
+
+	_add_text_button(top, "Host", _host)
+	_add_icon_button(top, "Runner", RUNNER_ICON, _add_runner)
+	_add_icon_button(top, "Hunter", HUNTER_ICON, _add_hunter)
+	_add_text_button(top, "1H+2R", _quick_start)
+	_add_text_button(top, "Continue", _continue_to_selection)
+	_add_text_button(top, "Skip", _skip_preparation)
+	_add_text_button(top, "Reset", _reset_match)
+
+	var bottom := HBoxContainer.new()
+	bottom.add_theme_constant_override("separation", 8)
+	col.add_child(bottom)
+
+	_headless.text = "Headless"
+	_headless.button_pressed = true
+	_headless.tooltip_text = "Launch bots without a window"
+	bottom.add_child(_headless)
+
+	_bin_edit.placeholder_text = "Godot executable"
+	_bin_edit.text = OS.get_executable_path()
+	_bin_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bottom.add_child(_bin_edit)
+
+
+func _build_tests_panel(root: Control) -> void:
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	panel.offset_left = -250.0
+	panel.offset_top = 12.0
+	panel.offset_right = -16.0
+	panel.offset_bottom = 150.0
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.08, 0.09, 0.12, 0.94)))
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	panel.add_child(box)
+
+	var title := Label.new()
+	title.text = "Tests"
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", Color(0.95, 0.82, 0.35))
+	box.add_child(title)
+
+	_add_text_button(box, "Lobby", _test_lobby)
+	_add_text_button(box, "Roles", _test_selection)
+	_add_text_button(box, "Game", _test_game)
+
+
+func _build_status_panel(root: Control) -> void:
+	# Bottom-right keeps minimap (bottom-left) and selection (bottom-center) clear.
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	panel.offset_left = -360.0
+	panel.offset_top = -150.0
+	panel.offset_right = -100.0
+	panel.offset_bottom = -16.0
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.06, 0.07, 0.09, 0.85)))
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	panel.add_child(box)
+
+	_state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_peers.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_status.add_theme_color_override("font_color", Color(0.75, 0.85, 0.95))
+	box.add_child(_state)
+	box.add_child(_peers)
+	box.add_child(_status)
+
+
+func _panel_style(bg: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg
+	style.border_color = Color(0.95, 0.82, 0.35, 0.55)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(12)
+	style.content_margin_left = 10
+	style.content_margin_top = 8
+	style.content_margin_right = 10
+	style.content_margin_bottom = 8
+	return style
+
+
+func _add_text_button(parent: Node, text: String, callback: Callable) -> void:
 	var button := Button.new()
 	button.text = text
-	button.pressed.connect(callback)
+	button.custom_minimum_size = Vector2(0, 32)
+	button.pressed.connect(func() -> void:
+		SoundManager.play_ui()
+		callback.call()
+	)
+	parent.add_child(button)
+
+
+func _add_icon_button(parent: Node, label: String, icon: Texture2D, callback: Callable) -> void:
+	var button := Button.new()
+	button.text = label
+	button.icon = icon
+	button.expand_icon = true
+	button.custom_minimum_size = Vector2(108, 40)
+	button.add_theme_constant_override("icon_max_width", 28)
+	button.pressed.connect(func() -> void:
+		SoundManager.play_ui()
+		callback.call()
+	)
 	parent.add_child(button)
 
 
@@ -108,7 +213,7 @@ func _quick_start() -> void:
 		return
 	_hunter_count = 1
 	_runner_count = 2
-	_status.text = "Hosting with 1 Hunter bot and 2 Runner bots. Continue to role selection when they appear."
+	_status.text = "Hosting with 1 Hunter bot and 2 Runner bots. Continue when they appear."
 
 
 func _add_runner() -> void:
@@ -136,7 +241,7 @@ func _test_selection() -> void:
 		return
 	GameManager.prepare_selection_test()
 	SceneTransitionManager.transition("", SceneTransitionManager.ROLE_SELECTION)
-	_status.text = "Role selection opened on its own. Add test players, then resolve the vote."
+	_status.text = "Role selection opened on its own."
 
 
 func _test_game() -> void:
@@ -144,7 +249,7 @@ func _test_game() -> void:
 		return
 	GameManager.prepare_game_test()
 	SceneTransitionManager.transition("", SceneTransitionManager.GAME)
-	_status.text = "Game opened on its own as a Runner. Use --test-role=hunter to open it as the Hunter."
+	_status.text = "Game opened on its own as a Runner."
 
 
 func _can_open_scene_directly() -> bool:

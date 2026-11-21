@@ -15,25 +15,29 @@ The Selection Panel does not own gameplay rules. It reads entity state, capabili
 
 ## 2. Layout
 
-The Selection Panel is divided into two primary areas.
+The Selection Panel sits at the bottom of the screen while an entity is selected.
 
 | Section | Position | Purpose |
 | --- | --- | --- |
-| Entity Info Panel | Left | Displays selected entity information |
-| Context Action Panel | Right | Displays available contextual actions |
+| Portrait | Left | Circular crop of the selected entity's image / sprite |
+| Entity Info | Right of portrait | Name, type, health, and relevant stats |
+| Context Action Panel | Further right (later) | Available contextual actions |
 
 ```text
-Selection Panel
-├── Entity Info Panel
-│   ├── Portrait / Icon
+Selection Panel (bottom of screen)
+├── Circular Portrait
+│   └── Selected entity sprite / icon
+├── Entity Info
 │   ├── Name
 │   ├── Entity Type
 │   ├── Health
 │   └── Relevant Stats / Properties
 │
-└── Context Action Panel
+└── Context Action Panel (optional / later)
     └── Actions available for the selected entity
 ```
+
+Minimal visual-test layout: circular portrait + stats. Context actions can be added without changing the portrait / info strip.
 
 ## 3. Selectable Entities
 

@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/buildings/building.gd" id="1_building"]
+
+[sub_resource type="RectangleShape2D" id="rect"]
+size = Vector2(32, 32)
+
+[node name="Building" type="StaticBody2D"]
+collision_layer = 9
+collision_mask = 0
+script = ExtResource("1_building")
+
+[node name="Visual" type="Polygon2D" parent="."]
+color = Color(0.35, 0.7, 0.95, 0.9)
+polygon = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("rect")

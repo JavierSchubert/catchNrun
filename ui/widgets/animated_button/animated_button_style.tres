@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="AnimatedButtonStyle" load_steps=2 format=3 uid="uid://bcj603voatugp"]
+
+[ext_resource type="Script" path="res://ui/widgets/animated_button/animated_button_style.gd" id="1_gqftr"]
+
+[resource]
+script = ExtResource("1_gqftr")
+change_color_bg = true
+change_color_btn = true
+hover_scale = 1.08
+press_scale = 0.94
+press_offset = Vector2(0, 2)
+anim_time = 0.08
+icon_normal = Color(1, 1, 1, 1)
+icon_hover = Color(0.9, 0.9, 0.9, 1)
+icon_press = Color(0.75, 0.75, 0.75, 1)
+icon_disabled = Color(0.466667, 0.466667, 0.466667, 1)
+bg_normal = Color(0.12, 0.12, 0.14, 0.85)
+bg_hover = Color(0.18, 0.18, 0.22, 0.95)
+bg_press = Color(0.08, 0.08, 0.1, 0.95)
+border_color = Color(0.95, 0.82, 0.35, 0.9)
+border_width = 2
+corner_radius = 10
+label_font_size = 14
+label_visible = false

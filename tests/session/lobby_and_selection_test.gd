@@ -15,6 +15,9 @@ func _ready() -> void:
 
 func _run() -> void:
 	_test_hunter_choice()
+	_test_sprite_sync_data()
+	_test_health_bar()
+	_test_match_presentation()
 	await _test_lobby()
 	await _test_role_selection()
 	if _failures.is_empty():
@@ -69,6 +72,167 @@ func _test_hunter_choice() -> void:
 		_check(picked_any == 1 or picked_any == 2 or picked_any == 3, "with no Hunter request the choice stays in the roster")
 		anybody[picked_any] = true
 	_check(anybody.size() >= 2, "with no Hunter request more than one player can be chosen")
+
+
+func _test_sprite_sync_data() -> void:
+	var normalized := GameManager._normalize_players({
+		1: {"name": "Ada", "sprite_index": 3},
+		2: {"name": "Bo"},
+	})
+	_check(int(normalized[1].sprite_index) == 3, "sprite selection survives roster synchronization")
+	_check(int(normalized[2].sprite_index) == 0, "missing sprite selection gets the default")
+	_check(
+		Unit.sprite_texture(2, RoleConfig.Role.RUNNER).resource_path.ends_with("Player_3.png"),
+		"Runner sprite indices use Player assets"
+	)
+	_check(
+		Unit.sprite_texture(2, RoleConfig.Role.HUNTER).resource_path.ends_with("Enemy_3.png"),
+		"Hunter sprite indices use Enemy assets"
+	)
+
+
+func _test_health_bar() -> void:
+	var health_bar_scene := load("res://ui/hud/health_bar/health_bar.tscn") as PackedScene
+	if health_bar_scene == null:
+		_fail("the health bar scene loads")
+		return
+	var health_bar := health_bar_scene.instantiate() as HealthBar
+	if health_bar == null:
+		_fail("the health bar scene uses its HealthBar script")
+		return
+	add_child(health_bar)
+
+	var health := HealthComponent.new()
+	health.health_changed.connect(health_bar.update_for_health)
+	health.setup(100.0)
+	health.take_damage(25.0, 100.0)
+	_check(is_equal_approx(health_bar.progress_bar.value, 0.75), "health changes update the bar")
+	_check(health_bar.health_label.text == "75", "health changes update the visible amount")
+	var fill_style := health_bar.progress_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	_check(fill_style != null and fill_style.bg_color.a > 0.0, "the health bar keeps its visible fill style")
+	health.free()
+	health_bar.free()
+
+
+func _test_match_presentation() -> void:
+	GameManager.players[1] = _entry("Runner", RoleConfig.Role.RUNNER)
+	GameManager.players[1].sprite_index = 2
+	GameManager.players[2] = _entry("Hunter", RoleConfig.Role.HUNTER)
+	GameManager.players[2].sprite_index = 4
+	var scene_paths := [
+		"res://src/units/runner/runner.tscn",
+		"res://src/units/hunter/hunter.tscn",
+	]
+	var peer_ids := [1, 2]
+	var expected_sprites := ["Player_3.png", "Enemy_5.png"]
+	for index in scene_paths.size():
+		var scene_path: String = scene_paths[index]
+		var unit_scene := load(scene_path) as PackedScene
+		if unit_scene == null:
+			_fail("%s loads" % scene_path)
+			continue
+		var unit := unit_scene.instantiate()
+		unit.name = str(peer_ids[index])
+		add_child(unit)
+		_check(unit.get_node_or_null("HealthBar") is HealthBar, "%s includes a health bar" % scene_path)
+		var sprite := unit.get_node_or_null("Sprite") as Sprite2D
+		var health_bar := unit.get_node_or_null("HealthBar") as HealthBar
+		var collision := unit.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		var collision_circle := collision.shape as CircleShape2D if collision != null else null
+		_check(
+			sprite != null and health_bar != null
+				and is_equal_approx(sprite.scale.x, 0.24)
+				and is_equal_approx(150.0 * sprite.scale.x, health_bar.custom_minimum_size.x * health_bar.scale.x),
+			"%s scales the sprite down and matches the health bar width" % scene_path
+		)
+		_check(
+			sprite != null and collision_circle != null
+				and is_equal_approx(collision_circle.radius, 16.0)
+				and collision_circle.radius * 2.0 < 150.0 * sprite.scale.x,
+			"%s uses a circular collision shape slightly smaller than the sprite" % scene_path
+		)
+		_check(
+			sprite != null and sprite.texture.resource_path.ends_with(expected_sprites[index]),
+			"%s displays the selected role sprite" % scene_path
+		)
+		_check(
+			health_bar != null and is_equal_approx(health_bar.progress_bar.value, 1.0),
+			"%s initializes a visible full health bar" % scene_path
+		)
+		if index == 0:
+			unit.global_position = Unit.MAP_BOUNDS.end + Vector2(200.0, 100.0)
+			unit._clamp_to_map()
+			_check(
+				unit.global_position.is_equal_approx(Unit.MAP_BOUNDS.end - Vector2.ONE * Unit.MAP_INSET),
+				"units stay inside the map boundary"
+			)
+		unit.free()
+
+	var match_scene := load("res://game/match/match.tscn") as PackedScene
+	if match_scene == null:
+		_fail("the match scene loads")
+		return
+	var match_root := match_scene.instantiate()
+	var arena := match_root.get_node_or_null("ArenaPlateau")
+	var floor_layer := arena.get_node_or_null("FloorLayer") as TileMapLayer if arena != null else null
+	var overlay_layer := arena.get_node_or_null("OverlayLayer") as TileMapLayer if arena != null else null
+	var camera := match_root.get_node_or_null("MatchCamera") as Camera2D
+	var camera_script := load("res://game/camera/match_camera.gd") as Script
+	var default_camera := Camera2D.new()
+	default_camera.set_script(camera_script)
+	_check(
+		arena != null and floor_layer != null and overlay_layer != null,
+		"the match scene uses the painted lava TileMap arena"
+	)
+	_check(
+		floor_layer != null and floor_layer.tile_set != null
+			and str(floor_layer.tile_set.resource_path).ends_with("tiles/v3/tileset.tres"),
+		"the arena FloorLayer uses the lava (v3) TileSet"
+	)
+	_check(
+		PlateauMap.world_bounds().is_equal_approx(Unit.MAP_BOUNDS),
+		"movement bounds match the plateau map size"
+	)
+	var spawns := PlateauMap.runner_spawn_positions()
+	_check(spawns.size() == 4, "plateau map exposes four elevated runner spawns")
+	var spawn_root := match_root.get_node_or_null("SpawnPoints")
+	_check(spawn_root != null, "match scene has spawn points")
+	if spawn_root != null:
+		for i in 4:
+			var marker := spawn_root.get_node_or_null("RunnerSpawn%d" % (i + 1)) as Node2D
+			_check(
+				marker != null and marker.position.is_equal_approx(spawns[i]),
+				"runner spawn %d sits on an elevated base" % (i + 1)
+			)
+	_check(
+		camera != null and is_equal_approx(camera.zoom_factor, float(default_camera.get("zoom_factor")))
+			and camera.bounds == Unit.MAP_BOUNDS,
+		"the match camera uses the configurable script zoom factor without a scene override"
+	)
+	if camera != null:
+		camera.zoom_factor = 2.0
+		_check(camera.zoom.is_equal_approx(Vector2(2.0, 2.0)), "changing zoom_factor updates camera zoom")
+		camera.zoom_factor = 1.0
+		_check(camera.zoom.is_equal_approx(Vector2.ONE), "a zoom factor of 1 resets the camera zoom")
+
+	add_child(default_camera)
+	default_camera.bounds = Rect2(-1000.0, -500.0, 2000.0, 1000.0)
+	default_camera.bound_padding = 100.0
+	default_camera.zoom = Vector2.ONE
+	default_camera.global_position = Vector2(-10000.0, 10000.0)
+	default_camera._clamp_to_bounds()
+	var viewport_size := default_camera.get_viewport().get_visible_rect().size
+	var half_view := viewport_size * 0.5
+	var expected := Vector2(
+		clampf(-10000.0, -1000.0 + half_view.x - 100.0, 1000.0 - half_view.x + 100.0),
+		clampf(10000.0, -500.0 + half_view.y - 100.0, 500.0 - half_view.y + 100.0)
+	)
+	_check(
+		default_camera.global_position.is_equal_approx(expected),
+		"the match camera clamps with a screen-pixel edge offset"
+	)
+	default_camera.free()
+	match_root.free()
 
 
 func _test_lobby() -> void:
@@ -132,8 +296,31 @@ func _test_role_selection() -> void:
 	_check(actions.has("Join Runners") and actions.has("Join Hunter"), "a player can join either side")
 	_check(actions.has("Resolve vote") and actions.has("Start game"), "the host can resolve the vote and start")
 
+	var sprite_selector := selection.find_child("SpriteSelector_1", true, false) as HBoxContainer
+	_check(sprite_selector != null, "the local player can choose a sprite")
+	if sprite_selector != null:
+		var sprite_option := sprite_selector.get_node_or_null("SpriteOption3") as TextureButton
+		_check(sprite_option != null and not sprite_option.disabled, "the local sprite options are enabled")
+		if sprite_option != null:
+			sprite_option.pressed.emit()
+			await get_tree().process_frame
+			await get_tree().process_frame
+			_check(int(GameManager.players[1].sprite_index) == 2, "choosing a sprite updates the local roster entry")
+
+	GameManager.request_side(RoleConfig.Role.HUNTER)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	sprite_selector = selection.find_child("SpriteSelector_1", true, false) as HBoxContainer
+	if sprite_selector != null:
+		var hunter_option := sprite_selector.get_node_or_null("SpriteOption3") as TextureButton
+		_check(
+			hunter_option != null and hunter_option.texture_normal.resource_path.ends_with("Enemy_3.png"),
+			"the Hunter sprite selector shows Enemy assets"
+		)
 	GameManager.request_side(RoleConfig.Role.RUNNER)
 	await get_tree().process_frame
+	await get_tree().process_frame
+
 	columns = _selection_columns(selection)
 	if columns.size() == 3:
 		_check(_column_names(columns[0]).has("Ada (you)"), "joining Runners moves the local player left")
@@ -156,6 +343,7 @@ func _entry(player_name: String, preferred_role: int) -> Dictionary:
 		"name": player_name,
 		"preferred_role": preferred_role,
 		"role": RoleConfig.Role.RUNNER,
+		"sprite_index": 0,
 		"alive": true,
 	}
 
@@ -164,6 +352,11 @@ func _check(condition: bool, message: String) -> void:
 	if not condition:
 		_failures.append(message)
 		print("failed: %s" % message)
+
+
+func _fail(message: String) -> void:
+	_failures.append(message)
+	print("failed: %s" % message)
 
 
 func _button_texts(root: Node) -> PackedStringArray:

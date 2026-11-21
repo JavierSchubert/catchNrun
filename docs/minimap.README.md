@@ -8,6 +8,10 @@ It must respect fog of war and must never reveal live information that the Visio
 
 ## 2. Map Representation
 
+The minimap shows a scaled copy of the current match map asset (for example the lava background) so the player can relate world layout to the compact view.
+
+Entity and structure markers are drawn on top of that map image at positions that match their relative world coordinates: a unit at the top-left of the playable map appears at the top-left of the minimap, and so on.
+
 Relevant structures and entities can be represented using configured pixel colors or compact icons.
 
 The exact visual mapping should remain configurable.
@@ -19,6 +23,18 @@ Examples may include different representations for:
 - Runners.
 - Hunter.
 - Neutral / interactive objects.
+
+### 2.1. Unit pixel colors (current milestone)
+
+Until fog of war lands, living units are always shown on the minimap as small pixels (or compact dots) using the same ownership / team colors as the selection circles:
+
+| Unit | Minimap pixel |
+| --- | --- |
+| Local player's own unit | Green |
+| Other Runner-team units | Blue |
+| Hunter | Red |
+
+Runners are one team, so every Runner that is not the local player uses blue. The local controllable figure is always green, including when the local player is the Hunter.
 
 ## 3. Vision States
 

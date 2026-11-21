@@ -1,0 +1,194 @@
+extends Node
+## Pooled one-shots for SFX plus a dedicated music player. Volumes live on the Music/SFX buses.
+## Music keeps playing across scenes; when a track ends the next playlist entry starts.
+## Streams are loaded from raw bytes so playback works even before Godot finishes reimporting.
+
+enum Sound {
+	UI,
+	ENEMY_HIT,
+	COIN_DROP,
+	BG_MUSIC_1,
+	BG_MUSIC_2,
+	BG_MUSIC_3,
+}
+
+const _POOL_SIZE := 8
+const PLAYLIST: Array[Sound] = [Sound.BG_MUSIC_1, Sound.BG_MUSIC_2, Sound.BG_MUSIC_3]
+
+const _PATHS := {
+	Sound.UI: "res://assets/audio/sfx/UI Pop.mp3",
+	Sound.ENEMY_HIT: "res://assets/audio/sfx/EnemyHit.wav",
+	Sound.COIN_DROP: "res://assets/audio/sfx/coin_drop.mp3",
+	Sound.BG_MUSIC_1: "res://assets/audio/music/osrs_bh1.mp3",
+	Sound.BG_MUSIC_2: "res://assets/audio/music/osrs_bh2.mp3",
+	Sound.BG_MUSIC_3: "res://assets/audio/music/osrs_bh3.mp3",
+}
+
+var music_volume: float = 0.75
+var sfx_volume: float = 0.85
+var music_muted: bool = false
+var sfx_muted: bool = false
+
+var _sfx_players: Array[AudioStreamPlayer] = []
+var _music_player: AudioStreamPlayer
+var _sound_dict: Dictionary = {}
+var _playlist_index := 0
+var _current_music: Sound = Sound.BG_MUSIC_1
+
+
+func _ready() -> void:
+	for key in _PATHS.keys():
+		var stream := _load_stream(str(_PATHS[key]))
+		if stream != null:
+			_sound_dict[key] = stream
+		else:
+			push_warning("SoundManager: failed to load %s" % _PATHS[key])
+
+	for _i in _POOL_SIZE:
+		var player := AudioStreamPlayer.new()
+		player.bus = &"SFX"
+		player.volume_db = -6.0
+		add_child(player)
+		_sfx_players.append(player)
+
+	_music_player = AudioStreamPlayer.new()
+	_music_player.bus = &"Music"
+	_music_player.volume_db = -8.0
+	_music_player.finished.connect(_on_music_finished)
+	add_child(_music_player)
+	apply_bus_settings()
+	# Start playlist once audio buses and settings are applied.
+	call_deferred("ensure_music")
+
+
+func play_ui() -> void:
+	play_sound(Sound.UI)
+
+
+func play_sound(type: Sound, pitch_variance: float = 0.15) -> void:
+	var audio: AudioStream = _sound_dict.get(type) as AudioStream
+	if audio == null:
+		return
+	var stream := _free_sfx_player()
+	if stream == null:
+		return
+	stream.stream = audio
+	stream.pitch_scale = randf_range(1.0 - pitch_variance, 1.0 + pitch_variance)
+	stream.play()
+
+
+## Starts the playlist if nothing is playing. Does not interrupt the current track.
+func ensure_music() -> void:
+	if _music_player == null:
+		return
+	if _music_player.playing:
+		return
+	_play_at_playlist_index(_playlist_index)
+
+
+## Only switches when `type` differs from the current track (or restart is forced).
+func play_music(type: Sound, restart: bool = false) -> void:
+	if _music_player.playing and not restart and type == _current_music:
+		return
+	var idx := PLAYLIST.find(type)
+	if idx >= 0:
+		_playlist_index = idx
+	_start_track(type)
+
+
+func stop_music() -> void:
+	if _music_player != null and _music_player.playing:
+		_music_player.stop()
+
+
+func apply_bus_settings() -> void:
+	_apply_bus("Music", music_volume, music_muted)
+	_apply_bus("SFX", sfx_volume, sfx_muted)
+	# Keep Master audible even if a custom bus layout failed to load.
+	var master_id := AudioServer.get_bus_index("Master")
+	if master_id != -1 and AudioServer.is_bus_mute(master_id):
+		AudioServer.set_bus_mute(master_id, false)
+
+
+func set_music_volume(v: float) -> void:
+	music_volume = clampf(v, 0.0, 1.0)
+	apply_bus_settings()
+	SettingsManager.persist_audio()
+
+
+func set_sfx_volume(v: float) -> void:
+	sfx_volume = clampf(v, 0.0, 1.0)
+	apply_bus_settings()
+	SettingsManager.persist_audio()
+
+
+func set_music_muted(m: bool) -> void:
+	music_muted = m
+	apply_bus_settings()
+	SettingsManager.persist_audio()
+
+
+func set_sfx_muted(m: bool) -> void:
+	sfx_muted = m
+	apply_bus_settings()
+	SettingsManager.persist_audio()
+
+
+func _on_music_finished() -> void:
+	_playlist_index = (_playlist_index + 1) % PLAYLIST.size()
+	_play_at_playlist_index(_playlist_index)
+
+
+func _play_at_playlist_index(index: int) -> void:
+	if PLAYLIST.is_empty():
+		return
+	_playlist_index = clampi(index, 0, PLAYLIST.size() - 1)
+	_start_track(PLAYLIST[_playlist_index])
+
+
+func _start_track(type: Sound) -> void:
+	var audio: AudioStream = _sound_dict.get(type) as AudioStream
+	if audio == null:
+		push_warning("SoundManager: missing music stream for %s" % type)
+		return
+	# Prefer Music bus; fall back to Master if the layout is missing.
+	if AudioServer.get_bus_index("Music") == -1:
+		_music_player.bus = &"Master"
+	else:
+		_music_player.bus = &"Music"
+	_current_music = type
+	_music_player.stream = audio
+	_music_player.play()
+
+
+func _apply_bus(bus_name: String, vol_linear: float, muted: bool) -> void:
+	var id := AudioServer.get_bus_index(bus_name)
+	if id == -1:
+		return
+	AudioServer.set_bus_mute(id, muted)
+	var safe_linear: float = maxf(vol_linear, 0.0001)
+	AudioServer.set_bus_volume_db(id, linear_to_db(safe_linear))
+
+
+func _free_sfx_player() -> AudioStreamPlayer:
+	for stream in _sfx_players:
+		if not stream.playing:
+			return stream
+	return _sfx_players[0] if not _sfx_players.is_empty() else null
+
+
+func _load_stream(path: String) -> AudioStream:
+	# MP3 imports in this project are currently invalid=false — load raw bytes so music works.
+	if path.ends_with(".mp3"):
+		var bytes := FileAccess.get_file_as_bytes(path)
+		if bytes.is_empty():
+			return null
+		var mp3 := AudioStreamMP3.new()
+		mp3.data = bytes
+		return mp3
+
+	if ResourceLoader.exists(path):
+		var loaded := ResourceLoader.load(path)
+		if loaded is AudioStream:
+			return loaded as AudioStream
+	return null

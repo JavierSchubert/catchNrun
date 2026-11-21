@@ -1,0 +1,68 @@
+[gd_scene load_steps=6 format=3 uid="uid://bm6120f2fflnn"]
+
+[ext_resource type="Script" path="res://ui/widgets/settings_menu/settings_menu_overlay/audio_control/audio_control_v2.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://ui/widgets/animated_button/animated_button_32.tscn" id="2_btn"]
+[ext_resource type="Texture2D" path="res://assets/sprites/buttons/icon_sfx.tres" id="3_unmuted"]
+[ext_resource type="Texture2D" path="res://assets/sprites/buttons/icon_sfx_muted.tres" id="4_muted"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slider"]
+content_margin_left = 4.0
+content_margin_top = 6.0
+content_margin_right = 4.0
+content_margin_bottom = 6.0
+bg_color = Color(0.18, 0.16, 0.12, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.95, 0.82, 0.35, 0.55)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_grab"]
+bg_color = Color(0.95, 0.78, 0.28, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="audio_controller" type="Control"]
+custom_minimum_size = Vector2(220, 36)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 220.0
+offset_bottom = 36.0
+script = ExtResource("1_script")
+icon_unmuted = ExtResource("3_unmuted")
+icon_muted = ExtResource("4_muted")
+audio_bus_name = "SFX"
+
+[node name="HBox" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="mute_button" parent="HBox" instance=ExtResource("2_btn")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+preview_icon = ExtResource("3_unmuted")
+
+[node name="audio_control" type="HSlider" parent="HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 28)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/slider = SubResource("StyleBoxFlat_slider")
+theme_override_styles/grabber_area = SubResource("StyleBoxFlat_grab")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_grab")
+max_value = 1.0
+step = 0.05
+value = 0.8

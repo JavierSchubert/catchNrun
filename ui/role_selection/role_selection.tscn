@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://dimco2coj0apm"]
 
-[ext_resource type="Script" path="res://ui/role_selection/role_selection.gd" id="1_selection"]
+[ext_resource type="Script" uid="uid://byw0dodqrbi0x" path="res://ui/role_selection/role_selection.gd" id="1_selection"]
 
-[node name="RoleSelection" type="Control"]
+[node name="RoleSelection" type="Control" unique_id=136781184]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

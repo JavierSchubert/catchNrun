@@ -16,28 +16,27 @@ Construction rules are separate from economy, combat, stats, and UI presentation
 
 Selecting a structure to build enters placement mode.
 
+Placement is **grid-based**. Footprint size in cells defines the structure hitbox. Collision layers, snap rules, and blocker checks are specified in `building.README.md`.
+
 ```text
 Select Structure
 -> Enter Placement Mode
--> Show Placement Preview
--> Validate Position
+-> Show grid-snapped Placement Preview
+-> Validate footprint (bounds + blocker layers)
 -> Left Click Valid Position
 -> Spend Required Crystals
--> Create Structure
+-> Create Structure (hitbox = footprint cells)
 -> Exit Placement Mode
 ```
 
 Invalid placement must not spend resources or create the structure.
 
-Placement validation may consider:
+Placement validation must at least consider:
 
-- Map boundaries.
-- Navigable / buildable terrain.
-- Existing structures.
-- Required spacing.
-- Other gameplay-specific restrictions.
-
-Exact placement rules can be extended as the map design develops.
+- Build-grid bounds.
+- Footprint cell coverage (size of the entity in cells).
+- Collisions with obstacles, units, buildings, and destructibles (`building.README.md` §4–§5).
+- Other gameplay-specific restrictions (spacing, ownership) as the map design develops.
 
 ## 3. Crystal Mine
 
