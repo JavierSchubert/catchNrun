@@ -50,9 +50,14 @@ func _sync_audio_from_disk() -> void:
 	var config := ConfigFile.new()
 	if config.load(SAVE_PATH) != OK:
 		SoundManager.apply_bus_settings()
+		SoundManager.ensure_music()
 		return
-	SoundManager.music_volume = float(config.get_value("audio", "music_volume", SoundManager.music_volume))
-	SoundManager.sfx_volume = float(config.get_value("audio", "sfx_volume", SoundManager.sfx_volume))
+	var music_vol := float(config.get_value("audio", "music_volume", SoundManager.music_volume))
+	var sfx_vol := float(config.get_value("audio", "sfx_volume", SoundManager.sfx_volume))
+	# Guard against a broken first save that wrote 0 and silenced everything.
+	SoundManager.music_volume = music_vol if music_vol > 0.001 else SoundManager.music_volume
+	SoundManager.sfx_volume = sfx_vol if sfx_vol > 0.001 else SoundManager.sfx_volume
 	SoundManager.music_muted = bool(config.get_value("audio", "music_muted", SoundManager.music_muted))
 	SoundManager.sfx_muted = bool(config.get_value("audio", "sfx_muted", SoundManager.sfx_muted))
 	SoundManager.apply_bus_settings()
+	SoundManager.ensure_music()

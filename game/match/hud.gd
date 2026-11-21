@@ -13,14 +13,15 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	# Sit below the sandbox action bar (debug) and clear of the settings dock on the right.
+	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_status.add_theme_font_size_override("font_size", 18)
-	_status.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_status.offset_left = 16.0
-	_status.offset_top = 16.0
-	_status.offset_right = 420.0
-	_status.offset_bottom = 120.0
+	_status.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_status.offset_left = 260.0
+	_status.offset_top = 108.0
+	_status.offset_right = -260.0
+	_status.offset_bottom = 180.0
 	root.add_child(_status)
 
 	_minimap = MatchMinimap.new()

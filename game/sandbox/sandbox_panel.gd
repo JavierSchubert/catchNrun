@@ -2,8 +2,8 @@ extends Node
 ## Debug panel for local multiplayer. Visible in debug builds and when launched with
 ## --sandbox. Hidden for bots, headless runs, and release exports.
 ##
-## Top bar: host / bot actions with runner & hunter samples.
-## Top-right: scene test shortcuts. Headless is on by default.
+## Layout: compact action bar top-left, tests top-right, status bottom-right.
+## Leaves the center and bottom-left free for lobby / match HUD / minimap.
 
 const RUNNER_ICON := preload("res://assets/sprites/units/Player_1.png")
 const HUNTER_ICON := preload("res://assets/sprites/units/Enemy_1.png")
@@ -49,58 +49,60 @@ func _process(_delta: float) -> void:
 
 func _build_action_bar(root: Control) -> void:
 	var bar := PanelContainer.new()
-	bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	bar.offset_left = 16.0
 	bar.offset_top = 12.0
-	bar.offset_right = -320.0
-	bar.offset_bottom = 108.0
+	bar.offset_right = 780.0
+	bar.offset_bottom = 96.0
 	bar.mouse_filter = Control.MOUSE_FILTER_STOP
 	bar.add_theme_stylebox_override("panel", _panel_style(Color(0.07, 0.08, 0.1, 0.92)))
 	root.add_child(bar)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	bar.add_child(row)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	bar.add_child(col)
+
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 8)
+	col.add_child(top)
 
 	var title := Label.new()
 	title.text = "Sandbox"
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", 16)
 	title.add_theme_color_override("font_color", Color(0.98, 0.9, 0.45))
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(title)
+	top.add_child(title)
 
-	_add_text_button(row, "Host", _host)
-	_add_icon_button(row, "Add Runner", RUNNER_ICON, _add_runner)
-	_add_icon_button(row, "Add Hunter", HUNTER_ICON, _add_hunter)
-	_add_text_button(row, "Quick 1H+2R", _quick_start)
-	_add_text_button(row, "Continue", _continue_to_selection)
-	_add_text_button(row, "Skip prep", _skip_preparation)
-	_add_text_button(row, "Reset", _reset_match)
+	_add_text_button(top, "Host", _host)
+	_add_icon_button(top, "Runner", RUNNER_ICON, _add_runner)
+	_add_icon_button(top, "Hunter", HUNTER_ICON, _add_hunter)
+	_add_text_button(top, "1H+2R", _quick_start)
+	_add_text_button(top, "Continue", _continue_to_selection)
+	_add_text_button(top, "Skip", _skip_preparation)
+	_add_text_button(top, "Reset", _reset_match)
 
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(spacer)
+	var bottom := HBoxContainer.new()
+	bottom.add_theme_constant_override("separation", 8)
+	col.add_child(bottom)
 
 	_headless.text = "Headless"
 	_headless.button_pressed = true
 	_headless.tooltip_text = "Launch bots without a window"
-	row.add_child(_headless)
+	bottom.add_child(_headless)
 
 	_bin_edit.placeholder_text = "Godot executable"
 	_bin_edit.text = OS.get_executable_path()
-	_bin_edit.custom_minimum_size = Vector2(220, 0)
 	_bin_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_bin_edit.size_flags_stretch_ratio = 0.6
-	row.add_child(_bin_edit)
+	bottom.add_child(_bin_edit)
 
 
 func _build_tests_panel(root: Control) -> void:
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	panel.offset_left = -300.0
+	panel.offset_left = -250.0
 	panel.offset_top = 12.0
 	panel.offset_right = -16.0
-	panel.offset_bottom = 168.0
+	panel.offset_bottom = 150.0
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.08, 0.09, 0.12, 0.94)))
 	root.add_child(panel)
@@ -115,17 +117,18 @@ func _build_tests_panel(root: Control) -> void:
 	title.add_theme_color_override("font_color", Color(0.95, 0.82, 0.35))
 	box.add_child(title)
 
-	_add_text_button(box, "Test lobby", _test_lobby)
-	_add_text_button(box, "Test role selection", _test_selection)
-	_add_text_button(box, "Test game", _test_game)
+	_add_text_button(box, "Lobby", _test_lobby)
+	_add_text_button(box, "Roles", _test_selection)
+	_add_text_button(box, "Game", _test_game)
 
 
 func _build_status_panel(root: Control) -> void:
+	# Bottom-right keeps minimap (bottom-left) and selection (bottom-center) clear.
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	panel.offset_left = 16.0
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	panel.offset_left = -360.0
 	panel.offset_top = -150.0
-	panel.offset_right = 420.0
+	panel.offset_right = -100.0
 	panel.offset_bottom = -16.0
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.06, 0.07, 0.09, 0.85)))
@@ -150,17 +153,17 @@ func _panel_style(bg: Color) -> StyleBoxFlat:
 	style.border_color = Color(0.95, 0.82, 0.35, 0.55)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(12)
-	style.content_margin_left = 12
-	style.content_margin_top = 10
-	style.content_margin_right = 12
-	style.content_margin_bottom = 10
+	style.content_margin_left = 10
+	style.content_margin_top = 8
+	style.content_margin_right = 10
+	style.content_margin_bottom = 8
 	return style
 
 
 func _add_text_button(parent: Node, text: String, callback: Callable) -> void:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(0, 36)
+	button.custom_minimum_size = Vector2(0, 32)
 	button.pressed.connect(func() -> void:
 		SoundManager.play_ui()
 		callback.call()
@@ -173,8 +176,8 @@ func _add_icon_button(parent: Node, label: String, icon: Texture2D, callback: Ca
 	button.text = label
 	button.icon = icon
 	button.expand_icon = true
-	button.custom_minimum_size = Vector2(140, 56)
-	button.add_theme_constant_override("icon_max_width", 40)
+	button.custom_minimum_size = Vector2(108, 40)
+	button.add_theme_constant_override("icon_max_width", 28)
 	button.pressed.connect(func() -> void:
 		SoundManager.play_ui()
 		callback.call()
