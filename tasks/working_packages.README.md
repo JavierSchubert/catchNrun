@@ -114,13 +114,14 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 ## WP-04 — Selection, camera, and cursors (P0 / P1)
 
-**Owning docs:** `controls.README.md`, `selection_panel.README.md`
+**Owning docs:** `controls.README.md`, `selection_panel.README.md`, `ui_audio.README.md`
 
 ### Done
 
 - [x] Edge-scrolling camera (normalized diagonals)
 - [x] `C` centers camera on controlled character (while alive)
 - [x] Observer keeps free camera after death
+- [x] Camera overscroll padding (`bound_padding`, zoom-aware) so map corners stay inset
 - [x] Left-click selection of clickable entities (hover + selected circles, ownership colors)
 - [x] Clear selection on empty world click
 - [x] Drag-box multi-candidate selection with priority (own → player figures → NPC; else random)
@@ -128,6 +129,7 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 - [x] Selection system in `src/selection/` (state + circles; no HUD panel yet)
 - [x] Selection Panel HUD: circular portrait + entity stats (context actions later)
 - [x] `C` always centers on own unit regardless of selection
+- [x] Persistent settings dock + Music/SFX buses + playlist (CP-12)
 
 ### Still open
 
@@ -144,7 +146,7 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 ### Notes
 
-- Match camera: `game/camera/match_camera.gd`. HUD: phase status, selection strip, minimap.
+- Match camera: `game/camera/match_camera.gd` (`bound_padding` default 360 screen px). HUD: phase status, selection strip, minimap. UI/audio: `docs/ui_audio.README.md`.
 
 ---
 

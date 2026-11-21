@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-20** (session skeleton + multiplayer + selection + HUD + grid building foundation).
+Last reviewed: **2026-11-21** (UI / audio / settings dock + camera bound padding + lobby ENet presentation).
 
 ---
 
@@ -32,6 +32,7 @@ Last reviewed: **2026-11-20** (session skeleton + multiplayer + selection + HUD 
 | 2026-11-20 | **CP-09** Entity selection | Left-click / drag-box selection; hover + selected circles (green own / blue runner team / red hunter); own-group control gating; priority resolver + headless test |
 | 2026-11-20 | **CP-10** Selection panel + minimap HUD | Bottom selection strip (circular portrait + stats); bottom-left minimap with lava map asset + unit pixels; `C` always centers on own unit |
 | 2026-11-20 | **CP-11** Grid building foundation | `building.README.md`; physics layers; BuildGrid / PlacementValidator / Building footprint=hitbox; interactive + headless construction tests |
+| 2026-11-21 | **CP-12** UI, audio, settings, camera padding | `SettingsManager` / `SoundManager`; Music+SFX buses; persistent playlist; settings dock on every scene; lobby ENet-only UX; sandbox chrome layout; `MatchCamera.bound_padding` (zoom-aware overscroll) |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -42,10 +43,10 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Item | Status | Evidence |
 | --- | --- | --- |
 | Runnable Godot 4.7 project | Done | `project.godot` |
-| Autoload stack | Done | `LaunchOptions`, `NetworkManager`, `GameManager`, `SceneTransitionManager`, `BotClient`, `Sandbox` |
+| Autoload stack | Done | `LaunchOptions`, `NetworkManager`, `GameManager`, `SceneTransitionManager`, `SettingsManager`, `SoundManager`, `BotClient`, `Sandbox` |
 | Scene transitions only via manager (`from` → `to`) | Done | `autoloads/scene_transition_manager.gd` |
 | Direct scene open for isolated tests | Done | `--scene=lobby\|selection\|game`, empty `from` supported |
-| Lobby (s0) host / join / roster / continue | Done | `ui/lobby/` |
+| Lobby (s0) host / join / roster / continue (ENet UI) | Done | `ui/lobby/` — Host/Join local; Steam host buttons removed from lobby |
 | Role selection (s1) left Runners / right Hunter | Done | `ui/role_selection/` |
 | Exactly one Hunter; random among Hunter requests; random if none | Done | `GameManager.choose_hunter_id` |
 | Game (s2) match scene | Done | `game/match/` |
@@ -63,7 +64,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Host-authoritative roster and RPCs | Done | `autoloads/game_manager.gd` |
 | Clients send intent, host applies | Done | Movement orders, side votes, skip prep |
 | Peer disconnect handling → lobby | Done | `_on_peer_left`, `_on_disconnected` |
-| Steam lobby / invite path | Partial | Extra vs initial localhost scope; present in `network_manager.gd` |
+| Steam lobby / invite path | Partial | Still in `network_manager.gd`; **not** exposed in lobby UI (ENet-only presentation) |
 | Public matchmaking / lobby browser | Not in scope yet | Explicit exclusion in architecture §7.4 |
 
 **Doc owners:** `project_architecture.README.md` §7, `instructions.README.md` §2
@@ -82,8 +83,8 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Hunter spawns only after preparation ends | Done | `_spawn_pending` + `HUNTER_ACTIVE` |
 | Role-specific selectable Runner / Hunter sprites | Done | `ui/role_selection/`, `src/units/unit/unit.gd`, `GameManager` sprite index |
 | Shared health bar on each Runner / Hunter | Done | `src/units/unit/unit.tscn`, `ui/hud/health_bar/` |
-| Lava map background | Done | `game/match/match.tscn` |
-| Minimal match HUD (phase, timer, local role / HP / observer) | Done | `game/match/hud.gd` |
+| Lava map background (`arena_plateau` / tiles v3) | Done | `game/maps/arena_plateau.tscn`, `game/match/match.tscn` (not space atlas) |
+| Minimal match HUD (phase, timer, local role / HP / observer) | Done | `game/match/hud.gd` (status top-center under sandbox action bar) |
 | Reset match to lobby | Done | `GameManager.reset_match` |
 | Match / network logging | Done | `src/logging/game_log.gd` |
 | Match finished / win-loss (`Phase.ENDED`) | Done | `GameManager._finish_match` when all Runners or Hunter are down |
@@ -105,6 +106,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Path follow + replace current order | Done | `path_follow.gd`, `movement.order_move` |
 | Movement speed driven by stats | Done | `StatSheet` → `UnitMovement.speed` |
 | Free match camera with edge scroll + `C` center, map-aware bounds, configurable zoom (default 1.0), edge margin 300 | Done | `game/camera/match_camera.gd`, `game/match/match.tscn` |
+| Camera overscroll padding (`bound_padding`, default 360 screen px, zoom-aware) | Done | Map corners stay inset; units at map edge remain readable — see `controls.README.md` §2.2 |
 | Right-click move marker (pop + fade) | Done | `src/fx/move_click_marker.gd` (local only) |
 | Move-marker automated tests | Done | `tests/fx/move_click_marker_test.gd` |
 | Straight-line paths (no obstacles) | Partial | `navigation_paths.gd` stub; no walls yet |
@@ -206,6 +208,9 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Item | Status | Evidence |
 | --- | --- | --- |
 | Debug sandbox panel | Done | `game/sandbox/sandbox_panel.gd` |
+| Top-left action bar (compact) + Runner/Hunter sample icons | Done | Host, bots, quick start, continue, skip, reset; headless **on by default** |
+| Top-right Tests panel | Done | Open lobby / roles / game alone (clears sandbox action bar) |
+| Bottom-right status | Done | Phase, peers, last action |
 | Host, add bots, quick-start 1H+2R | Done | Sandbox actions |
 | Skip preparation / reset / open s0–s2 alone | Done | Sandbox actions |
 | Peer / role / phase inspection | Done | Sandbox refresh UI |
@@ -216,7 +221,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Lobby + role-selection scene test | Done | `tests/session/lobby_and_selection_test.gd` |
 | Full god-mode checklist (structures, crystals, fog, damage) | Partial | Networking-focused only |
 
-**Doc owners:** `instructions.README.md` §4–§7, `project_architecture.README.md` §8–§10 (subset)
+**Doc owners:** `instructions.README.md` §4–§7, `project_architecture.README.md` §8–§10 (subset), `ui_audio.README.md` §6
 
 ---
 
@@ -224,17 +229,39 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 | Present | Notes |
 | --- | --- |
-| `autoloads/`, `src/units`, `src/navigation`, `src/stats`, `src/match`, `src/logging`, `src/combat`, `src/components/health`, `src/selection`, `src/construction`, `src/buildings` | Active implementation |
-| `game/match`, `game/sandbox`, `game/camera` | Active |
-| `ui/lobby`, `ui/role_selection`, `ui/hud/{health_bar,selection_panel,minimap}` | Active |
+| `autoloads/` (+ `SettingsManager`, `SoundManager`) | Active |
+| `src/units`, `src/navigation`, `src/stats`, `src/match`, `src/logging`, `src/combat`, `src/components/health`, `src/selection`, `src/construction`, `src/buildings` | Active implementation |
+| `game/match`, `game/maps`, `game/sandbox`, `game/camera` | Active |
+| `ui/lobby`, `ui/role_selection`, `ui/widgets/`, `ui/hud/{health_bar,selection_panel,minimap}` | Active |
+| `default_bus_layout.tres` (Master → Music / SFX) | Wired in `project.godot` |
 | `tests/{bots,session,stats,navigation,combat}`, `scripts/test/` | Active |
 | `addons/godotsteam`, Web preset in `export_presets.cfg` | Present; export path / CI still open |
 | Empty leftover dirs (`components/`, `common/`, `data/`, …) | Legacy experimental code removed; not gameplay features |
 
 ---
 
+## CP-12 — UI presentation, audio, and settings
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Audio bus layout Master → Music / SFX | Done | `default_bus_layout.tres` + `project.godot` `[audio]` |
+| `SoundManager` playlist + SFX pool | Done | `autoloads/sound_manager.gd`; MP3 via raw bytes when imports invalid |
+| Persistent playlist across scene changes | Done | `ensure_music()` / `play_music` only switches on track change |
+| Boot music (osrs_bh1 → bh2 → bh3 loop) | Done | Deferred `ensure_music` from Settings / SoundManager |
+| Volume + mute persisted | Done | `SettingsManager` → `user://settings.cfg` |
+| Settings dock (gear) on lobby / roles / match | Done | `ui/widgets/settings_menu/` + `SettingsMenu.attach` |
+| Animated buttons + UI click SFX | Done | `ui/widgets/animated_button/`, `SoundManager.play_ui` |
+| Lobby branded card, ENet-only host/join | Done | `ui/lobby/lobby.gd` |
+| Sandbox chrome non-overlapping layout | Done | Action TL / Tests TR / Status BR; HUD under action bar |
+| Camera bound padding (overscroll) | Done | `MatchCamera.bound_padding` default `360` screen px |
+| Config documented | Done | `docs/ui_audio.README.md`, `README.md` runtime section, `controls.README.md` §2.2 |
+
+**Doc owners:** `ui_audio.README.md`, `controls.README.md` §2, root `README.md` runtime configuration
+
+---
+
 ## First milestone verdict
 
-Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, hunter-bot hunting, elimination/observer, and free camera edge-scroll are also in.
+Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, hunter-bot hunting, elimination/observer, free camera edge-scroll with overscroll padding, and persistent UI/audio settings are also in.
 
-Still open in `working_packages.README.md`: economy, full structure content (mines/walls/towers), attack-move / advanced combat, fog of war (minimap FoW), shop, cursors, and selection context-actions. Grid building foundation is CP-11.
+Still open in `working_packages.README.md`: economy, full structure content (mines/walls/towers), attack-move / advanced combat, fog of war (minimap FoW), shop, cursors, and selection context-actions. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12.

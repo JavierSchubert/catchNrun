@@ -217,11 +217,13 @@ This always targets the local controllable character, even when another entity i
 
 The camera can move independently from the controlled character.
 
+Implementation: `game/camera/match_camera.gd` (`MatchCamera`).
+
 ### 2.1. Edge Scrolling
 
 Moving the mouse cursor to the edges or corners of the screen moves the camera in the corresponding direction.
 
-The edge detection margin is configurable in the `MatchCamera` inspector through `edge_margin` (in pixels; default: 80).
+The edge detection margin is configurable in the `MatchCamera` inspector through `edge_margin` (in **screen** pixels; current default: `300`).
 
 ```text
 Top edge          -> Move camera up
@@ -243,6 +245,32 @@ movement = direction * camera_speed
 ```
 
 Camera movement does not affect the controlled character.
+
+### 2.2. Map bounds and overscroll padding
+
+The camera clamps to `Unit.MAP_BOUNDS`, but it is allowed to scroll **past** the map edge so that map corners are never glued to screen corners. Units standing on the map edge stay inset and readable.
+
+| Export | Unit | Current default | Meaning |
+| --- | --- | --- | --- |
+| `edge_margin` | screen px | `300` | How close the cursor must be to a viewport edge to scroll |
+| `camera_speed` | world units / s | `900` | Edge-scroll speed |
+| `zoom_factor` | multiplier | `1.0` | Applied to `Camera2D.zoom` |
+| `bound_padding` | screen px | `360` | How far the map edge sits inside the viewport when fully scrolled |
+
+`bound_padding` is converted to world space with the current zoom (`pad_world = padding / zoom`) so the **on-screen** inset stays consistent at every zoom level.
+
+```text
+half_view  = viewport_size / zoom / 2
+pad_world  = bound_padding / zoom
+min_center = map_origin + half_view - pad_world
+max_center = map_end    - half_view + pad_world
+```
+
+If the view is wider/taller than the map, the camera centers on the map along that axis instead of clamping.
+
+### 2.3. Zoom
+
+`zoom_factor` is an exported float on `MatchCamera` (range roughly `0.25`–`8.0`). Changing it updates `Camera2D.zoom` directly. Match scenes should not hard-override zoom unless intentionally testing a different value.
 
 ---
 
