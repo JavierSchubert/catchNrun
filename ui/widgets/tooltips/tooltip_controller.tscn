@@ -1,0 +1,91 @@
+[gd_scene load_steps=5 format=3 uid="uid://xvdwr6e8o2dh"]
+
+[ext_resource type="Script" uid="uid://j3lgmg4vj3g1" path="res://common/ui/widgets/tooltips/tooltip_controller.gd" id="1_gpaox"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_doimu"]
+bg_color = Color(0, 0, 0, 0.490196)
+
+[sub_resource type="LabelSettings" id="LabelSettings_4oj6p"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_1nlll"]
+font_color = Color(0.91179, 0.861335, 0.047402, 1)
+
+[node name="TooltipController" type="Node"]
+script = ExtResource("1_gpaox")
+
+[node name="popup_panel" type="Panel" parent="."]
+unique_name_in_owner = true
+offset_right = 140.0
+offset_bottom = 145.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_doimu")
+
+[node name="MarginContainer" type="MarginContainer" parent="popup_panel"]
+custom_minimum_size = Vector2(140, 80)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="Control" type="Control" parent="popup_panel/MarginContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="popup_panel/MarginContainer/Control"]
+unique_name_in_owner = true
+layout_mode = 2
+offset_top = 1.0
+offset_right = 128.0
+offset_bottom = 20.3333
+size_flags_vertical = 1
+text = "label"
+label_settings = SubResource("LabelSettings_4oj6p")
+autowrap_mode = 3
+
+[node name="value_label_text" type="Label" parent="popup_panel/MarginContainer/Control"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 29.0
+offset_bottom = 48.3333
+grow_horizontal = 2
+size_flags_vertical = 1
+text = "Value: 25"
+label_settings = SubResource("LabelSettings_4oj6p")
+autowrap_mode = 3
+
+[node name="value_label_value" type="Label" parent="popup_panel/MarginContainer/Control"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 59.0
+offset_top = 29.0
+offset_right = -1.0
+offset_bottom = 48.3333
+grow_horizontal = 2
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(0.856772, 0.660812, 0.149429, 1)
+text = "25"
+label_settings = SubResource("LabelSettings_1nlll")
+autowrap_mode = 3
+
+[node name="RichTextLabel" type="RichTextLabel" parent="popup_panel/MarginContainer/Control"]
+unique_name_in_owner = true
+layout_mode = 2
+offset_top = 48.0
+offset_right = 128.0
+offset_bottom = 68.0
+bbcode_enabled = true
+text = "placeholder"
+fit_content = true
+
+[node name="popup_timer" type="Timer" parent="."]
+unique_name_in_owner = true
+wait_time = 0.2
+one_shot = true

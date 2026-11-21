@@ -1,0 +1,82 @@
+[gd_scene load_steps=5 format=3 uid="uid://cnxgasunnr6k7"]
+
+[ext_resource type="Script" uid="uid://eb3lliseh5ng" path="res://common/ui/widgets/animated_button/animated_button.gd" id="1_tlpsr"]
+[ext_resource type="Resource" uid="uid://bcj603voatugp" path="res://common/ui/widgets/animated_button/animated_button_style.tres" id="2_x7bbh"]
+[ext_resource type="Texture2D" uid="uid://bccwjx0bjoi7i" path="res://assets/sprites/icons/icon_settings.tres" id="3_j4mb1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pe4oq"]
+bg_color = Color(0.258824, 0.258824, 0.258824, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.121569, 0.121569, 0.121569, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="animated_button_64" type="Control"]
+custom_minimum_size = Vector2(64, 102)
+layout_mode = 3
+anchors_preset = 0
+size_flags_horizontal = 3
+size_flags_vertical = 0
+script = ExtResource("1_tlpsr")
+style = ExtResource("2_x7bbh")
+preview_icon = ExtResource("3_j4mb1")
+
+[node name="vbox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 2
+
+[node name="visual" type="Control" parent="vbox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="bg" type="Panel" parent="vbox/visual"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_pe4oq")
+
+[node name="MarginContainer" type="MarginContainer" parent="vbox/visual"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="btn" type="TextureButton" parent="vbox/visual/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+texture_normal = ExtResource("3_j4mb1")
+texture_pressed = ExtResource("3_j4mb1")
+texture_hover = ExtResource("3_j4mb1")
+texture_disabled = ExtResource("3_j4mb1")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="lbl" type="Label" parent="vbox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 30)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+autowrap_mode = 3

@@ -1,0 +1,39 @@
+[gd_scene load_steps=5 format=3 uid="uid://d2o7ap7s4fl33"]
+
+[ext_resource type="Script" uid="uid://bt60xki8udwaw" path="res://common/ui/widgets/simple_button/simple_button.gd" id="1_fud3t"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_qf0dw"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p145h"]
+bg_color = Color(0.0941176, 0.623529, 0.745098, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mkexl"]
+bg_color = Color(0.388235, 0.388235, 0.388235, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="btn" type="Button"]
+custom_minimum_size = Vector2(180, 64)
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -33.0
+offset_top = -28.0
+offset_right = 33.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 48
+theme_override_styles/focus = SubResource("StyleBoxEmpty_qf0dw")
+theme_override_styles/hover = SubResource("StyleBoxFlat_p145h")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_mkexl")
+theme_override_styles/normal = SubResource("StyleBoxFlat_mkexl")
+text = "Select"
+script = ExtResource("1_fud3t")
