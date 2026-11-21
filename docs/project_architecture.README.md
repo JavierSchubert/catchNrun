@@ -274,11 +274,23 @@ HUD
 
 ### 5.3. Configure Runtime UI Through Code and Data
 
-Runtime values and dependencies should be assigned through code or data rather than existing only inside `.tscn` scenes.
+**Runtime remains the source of truth** for gameplay binding (selected entities, health, Crystals, costs, button states, roster rows, tooltip content). Scripts and resources own that behavior.
 
-Examples include selected entities, health, Crystals, costs, button states, and tooltip content.
+**Editor-previewable scenes** hold layout, anchors, StyleBoxes, and visual defaults so designers can open a `.tscn`, tweak margins / styles, and see units / HUD without empty sprites:
 
-Visual defaults, styles, anchors, and layout may still be configured in the editor.
+```text
+game/match/hud.tscn
+ui/hud/selection_panel/selection_panel.tscn
+ui/hud/minimap/minimap.tscn
+ui/lobby/lobby.tscn
+ui/role_selection/role_selection.tscn
+ui/styles/*.tres
+ui/widgets/ui_kit/ui_kit.tscn   # optional gallery
+src/units/hunter/hunter.tscn   # default Enemy sprite
+src/units/runner/runner.tscn   # default Player sprite
+```
+
+Dynamic lists (player rows, action buttons created at runtime) stay code-built on top of the scene shell.
 
 ### 5.4. Keep Gameplay Logic Out of UI
 
@@ -376,11 +388,13 @@ The game scene assembles the match. It does not implement every gameplay rule it
 ```text
 Game
 ├── Match
-├── Arena
+├── Arena          (arena_plateau.tscn — TileMaps + props / editor spawn preview)
 ├── Camera
-├── HUD
+├── HUD            (hud.tscn — status, minimap, selection panel)
 └── Debug Tools
 ```
+
+Players spawn on a ring around map center (`PlateauMap.spawn_ring_positions`, `Match.spawn_ring_radius`) so units do not stack.
 
 ### 6.3. Scene Transition Manager
 

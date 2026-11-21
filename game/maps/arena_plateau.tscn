@@ -1,6 +1,8 @@
 [gd_scene format=4 uid="uid://co2dllw6ejyto"]
 
 [ext_resource type="TileSet" uid="uid://b2vasiedgehhj" path="res://assets/sprites/maps/tiles/v3/tileset.tres" id="1_tileset"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/shadow.png" id="3_shadow"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/Spawn_mark.png" id="4_spawn"]
 
 [node name="ArenaPlateau" type="Node2D" unique_id=1786027950]
 
@@ -12,3 +14,45 @@ tile_set = ExtResource("1_tileset")
 z_index = 1
 tile_map_data = PackedByteArray("AAAAAAAABwAAAAAAAAABAAAABQAAAAAAAAACAAAABQAAAAAAAAADAAAABQAAAAAAAAAEAAAABQAAAAAAAAAFAAAABQAAAAAAAAAGAAAABQAAAAAAAAAHAAAABQAAAAAAAAAIAAAABQAAAAAAAAAJAAAABQAAAAAAAAAKAAAABQAAAAAAAAALAAAABQAAAAAAAAAMAAAABQAAAAAAAAANAAAABQAAAAAAAAAOAAAABQAAAAAAAAAPAAAABQAAAAAAAAAQAAAABQAAAAAAAAARAAAABQAAAAAAAAASAAAABQAAAAAAAAATAAAAAQAAAAAAHQA=")
 tile_set = ExtResource("1_tileset")
+
+[node name="PropsLayer" type="Node2D" parent="."]
+z_index = 2
+
+[node name="ShadowNW" type="Sprite2D" parent="PropsLayer"]
+position = Vector2(-1800, -1200)
+scale = Vector2(0.8, 0.8)
+texture = ExtResource("3_shadow")
+modulate = Color(1, 1, 1, 0.35)
+
+[node name="ShadowSE" type="Sprite2D" parent="PropsLayer"]
+position = Vector2(1800, 1200)
+scale = Vector2(0.8, 0.8)
+texture = ExtResource("3_shadow")
+modulate = Color(1, 1, 1, 0.35)
+
+[node name="EditorSpawnPreview" type="Node2D" parent="."]
+z_index = 3
+
+[node name="Spawn0" type="Sprite2D" parent="EditorSpawnPreview"]
+position = Vector2(0, -160)
+modulate = Color(0.45, 0.85, 0.45, 0.7)
+scale = Vector2(0.55, 0.55)
+texture = ExtResource("4_spawn")
+
+[node name="Spawn1" type="Sprite2D" parent="EditorSpawnPreview"]
+position = Vector2(160, 0)
+modulate = Color(0.45, 0.85, 0.45, 0.7)
+scale = Vector2(0.55, 0.55)
+texture = ExtResource("4_spawn")
+
+[node name="Spawn2" type="Sprite2D" parent="EditorSpawnPreview"]
+position = Vector2(0, 160)
+modulate = Color(0.45, 0.85, 0.45, 0.7)
+scale = Vector2(0.55, 0.55)
+texture = ExtResource("4_spawn")
+
+[node name="Spawn3" type="Sprite2D" parent="EditorSpawnPreview"]
+position = Vector2(-160, 0)
+modulate = Color(0.45, 0.85, 0.45, 0.7)
+scale = Vector2(0.55, 0.55)
+texture = ExtResource("4_spawn")

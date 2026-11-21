@@ -78,6 +78,7 @@ func _ready() -> void:
 	sync_health = health.current
 	var player_data: Dictionary = GameManager.players.get(peer_id, {})
 	sprite.texture = sprite_texture(int(player_data.get("sprite_index", 0)), config.role)
+	sprite.modulate = Color.WHITE
 	_refresh_label()
 	refresh_selection_visual()
 	GameManager.players_changed.connect(_on_players_changed)
@@ -149,6 +150,21 @@ func refresh_selection_visual() -> void:
 func selection_affinity_color(local_peer_id: int) -> Color:
 	if is_local_controllable(local_peer_id):
 		return SelectionCircle.COLOR_OWN
+	if role() == RoleConfig.Role.HUNTER:
+		return SelectionCircle.COLOR_HUNTER
+	return SelectionCircle.COLOR_RUNNER_TEAM
+
+
+## Minimap colors are viewer-relative: own = green, enemies = red, allied runners = blue.
+func minimap_marker_color(local_peer_id: int) -> Color:
+	if peer_id == local_peer_id:
+		return SelectionCircle.COLOR_OWN
+	var local_role := RoleConfig.Role.RUNNER
+	if GameManager.players.has(local_peer_id):
+		local_role = int(GameManager.players[local_peer_id].get("role", RoleConfig.Role.RUNNER))
+	if local_role == RoleConfig.Role.HUNTER:
+		## Hunter sees every Runner as an enemy (red).
+		return SelectionCircle.COLOR_HUNTER
 	if role() == RoleConfig.Role.HUNTER:
 		return SelectionCircle.COLOR_HUNTER
 	return SelectionCircle.COLOR_RUNNER_TEAM

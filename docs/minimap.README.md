@@ -26,15 +26,33 @@ Examples may include different representations for:
 
 ### 2.1. Unit pixel colors (current milestone)
 
-Until fog of war lands, living units are always shown on the minimap as small pixels (or compact dots) using the same ownership / team colors as the selection circles:
+Until fog of war lands, living units are always shown on the minimap as small equal-sized pixels. Colors are **viewer-relative** (`Unit.minimap_marker_color`), not identical to selection-circle affinity in every case:
 
-| Unit | Minimap pixel |
-| --- | --- |
-| Local player's own unit | Green |
-| Other Runner-team units | Blue |
-| Hunter | Red |
+| Viewer | Own unit | Allied Runners | Enemy / Hunter |
+| --- | --- | --- | --- |
+| Runner | Green | Blue | Hunter = Red |
+| Hunter | Green | — | Every Runner = Red |
 
-Runners are one team, so every Runner that is not the local player uses blue. The local controllable figure is always green, including when the local player is the Hunter.
+Own and other units use the same pixel size. Selection circles may still use team affinity colors separately.
+
+### 2.2. Camera frustum
+
+The minimap draws a light outline of the current camera viewport so the player can see where they are looking relative to the map.
+
+### 2.3. Click to recenter
+
+Left-click on the minimap recenters the match camera on the corresponding world position (`MatchCamera.center_on`). The minimap uses `MOUSE_FILTER_STOP` so the click is captured and edge-scroll stays off while hovering it.
+
+### 2.4. Scene / style resources
+
+Layout and frame StyleBox live in:
+
+```text
+ui/hud/minimap/minimap.tscn
+ui/hud/minimap/minimap_frame_style.tres
+```
+
+Instanced by `game/match/hud.tscn`. Runtime only binds map bounds / redraws unit dots.
 
 ## 3. Vision States
 

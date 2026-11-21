@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-21** (UI / audio / settings dock + camera bound padding + lobby ENet presentation).
+Last reviewed: **2026-11-21** (editor-preview HUD/UI scenes + minimap/camera UX + center spawn ring).
 
 ---
 
@@ -33,6 +33,8 @@ Last reviewed: **2026-11-21** (UI / audio / settings dock + camera bound padding
 | 2026-11-20 | **CP-10** Selection panel + minimap HUD | Bottom selection strip (circular portrait + stats); bottom-left minimap with lava map asset + unit pixels; `C` always centers on own unit |
 | 2026-11-20 | **CP-11** Grid building foundation | `building.README.md`; physics layers; BuildGrid / PlacementValidator / Building footprint=hitbox; interactive + headless construction tests |
 | 2026-11-21 | **CP-12** UI, audio, settings, camera padding | `SettingsManager` / `SoundManager`; Music+SFX buses; persistent playlist; settings dock on every scene; lobby ENet-only UX; sandbox chrome layout; `MatchCamera.bound_padding` (zoom-aware overscroll) |
+| 2026-11-21 | **CP-13** Editor-preview scenes + style resources | Match HUD / selection panel / minimap / lobby / role selection as `.tscn` shells; shared `ui/styles/*.tres` StyleBoxes; unit default sprites in Hunter/Runner scenes; arena props + spawn gizmos; optional `ui/widgets/ui_kit/ui_kit.tscn` |
+| 2026-11-21 | CP-03 / CP-04 / CP-10 camera + minimap UX | Center spawn ring (`PlateauMap.spawn_ring_positions`); viewer-relative minimap colors; camera frustum + LMB jump on minimap; no edge-scroll over UI; no auto-recenter on eliminations / roster noise |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -81,10 +83,11 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Wait until all peers report scene ready | Done | `report_scene_ready`, `all_players_loaded` |
 | Runners spawn in preparation | Done | `game/match/match.gd` |
 | Hunter spawns only after preparation ends | Done | `_spawn_pending` + `HUNTER_ACTIVE` |
-| Role-specific selectable Runner / Hunter sprites | Done | `ui/role_selection/`, `src/units/unit/unit.gd`, `GameManager` sprite index |
+| All players spawn on a ring around map center (no stacking) | Done | `PlateauMap.spawn_ring_positions` + `Match.spawn_ring_radius` (default 160) |
+| Role-specific selectable Runner / Hunter sprites | Done | `ui/role_selection/`, `src/units/unit/unit.gd`, `GameManager` sprite index; default textures in `hunter.tscn` / `runner.tscn` (runtime still overrides by `sprite_index`; no RoleConfig tint on sprites) |
 | Shared health bar on each Runner / Hunter | Done | `src/units/unit/unit.tscn`, `ui/hud/health_bar/` |
-| Lava map background (`arena_plateau` / tiles v3) | Done | `game/maps/arena_plateau.tscn`, `game/match/match.tscn` (not space atlas) |
-| Minimal match HUD (phase, timer, local role / HP / observer) | Done | `game/match/hud.gd` (status top-center under sandbox action bar) |
+| Lava map background (`arena_plateau` / tiles v3) | Done | `game/maps/arena_plateau.tscn`, `game/match/match.tscn` (not space atlas); editor spawn preview + optional props layer |
+| Minimal match HUD (phase, timer, local role / HP / observer) | Done | `game/match/hud.tscn` + `hud.gd` (layout in scene; status top-center under sandbox action bar) |
 | Reset match to lobby | Done | `GameManager.reset_match` |
 | Match / network logging | Done | `src/logging/game_log.gd` |
 | Match finished / win-loss (`Phase.ENDED`) | Done | `GameManager._finish_match` when all Runners or Hunter are down |
@@ -107,6 +110,9 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Movement speed driven by stats | Done | `StatSheet` → `UnitMovement.speed` |
 | Free match camera with edge scroll + `C` center, map-aware bounds, configurable zoom (default 1.0), edge margin 300 | Done | `game/camera/match_camera.gd`, `game/match/match.tscn` |
 | Camera overscroll padding (`bound_padding`, default 360 screen px, zoom-aware) | Done | Map corners stay inset; units at map edge remain readable — see `controls.README.md` §2.2 |
+| No edge scroll while cursor is over blocking UI | Done | `gui_get_hovered_control()` gate — settings dock, minimap, sandbox chrome |
+| No auto-recenter on eliminations / roster updates | Done | Free camera stays put; snap only on `_ready`, `C`, or minimap LMB |
+| Minimap LMB recenters camera on clicked world position | Done | `MatchMinimap` + `MatchCamera.center_on` |
 | Right-click move marker (pop + fade) | Done | `src/fx/move_click_marker.gd` (local only) |
 | Move-marker automated tests | Done | `tests/fx/move_click_marker_test.gd` |
 | Straight-line paths (no obstacles) | Partial | `navigation_paths.gd` stub; no walls yet |
@@ -170,18 +176,35 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 | Item | Status | Evidence |
 | --- | --- | --- |
-| Bottom selection strip with circular portrait + stats | Done | `ui/hud/selection_panel/selection_panel.gd` |
+| Bottom selection strip with circular portrait + stats | Done | `ui/hud/selection_panel/selection_panel.tscn` + `.gd` (`@tool` + StyleBox `.tres`) |
 | Portrait ring uses selection affinity colors | Done | Own green / runner blue / hunter red |
 | Shows selected HP / speed / melee / defense + controllable flag | Done | Bound from `SelectionManager` each frame |
 | `C` always centers on local own unit (ignores foreign selection) | Done | `game/camera/match_camera.gd`, `controls.README.md` §1.4 |
-| Bottom-left minimap with current map asset | Done | `ui/hud/minimap/minimap.gd` + lava texture |
+| Bottom-left minimap with current map asset | Done | `ui/hud/minimap/minimap.tscn` + frame StyleBox `.tres` |
 | Unit pixels at relative world positions | Done | Mapped via `Unit.MAP_BOUNDS` |
-| Pixel colors match selection circles | Done | Own green / other runners blue / hunter red |
-| Spec updates | Done | `minimap.README.md` §2.1, `selection_panel.README.md` §2 |
+| Viewer-relative pixel colors (own green; enemies red; allied runners blue) | Done | `Unit.minimap_marker_color` — Hunter sees Runners as red |
+| Camera frustum outline + equal-size own/other dots | Done | `minimap_dots.gd` |
+| Spec updates | Done | `minimap.README.md` §2.1–2.3, `selection_panel.README.md` §2 |
 
 **Still open:** fog-of-war filtering on minimap, context-action buttons, cursors — see WP-04 / WP-05.
 
-**Doc owners:** `selection_panel.README.md`, `minimap.README.md`, `controls.README.md` §1.4
+**Doc owners:** `selection_panel.README.md`, `minimap.README.md`, `controls.README.md` §1.4 / §2
+
+---
+
+## CP-13 — Editor-previewable UI / unit scenes
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Match HUD as scene (status + minimap + selection panel instances) | Done | `game/match/hud.tscn`; `match.tscn` instances it |
+| Selection panel / minimap StyleBox resources | Done | `ui/hud/selection_panel/*_style.tres`, `ui/hud/minimap/minimap_frame_style.tres` |
+| Shared menu StyleBoxes | Done | `ui/styles/` (card, buttons, line edit, item list, side panels) |
+| Lobby / role selection shell layouts in `.tscn` | Done | Dynamic rows / actions still code-filled |
+| Unit default sprites for editor preview | Done | `unit.tscn` / `hunter.tscn` / `runner.tscn` |
+| UI kit gallery for Margin/Scroll + widgets | Done | `ui/widgets/ui_kit/ui_kit.tscn` |
+| Runtime truth stays in scripts / resources | Done | Scenes own layout + visual defaults only — see `project_architecture.README.md` §5.3 |
+
+**Doc owners:** `project_architecture.README.md` §5.3, `ui_audio.README.md`, `selection_panel.README.md`, `minimap.README.md`
 
 ---
 
@@ -232,7 +255,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | `autoloads/` (+ `SettingsManager`, `SoundManager`) | Active |
 | `src/units`, `src/navigation`, `src/stats`, `src/match`, `src/logging`, `src/combat`, `src/components/health`, `src/selection`, `src/construction`, `src/buildings` | Active implementation |
 | `game/match`, `game/maps`, `game/sandbox`, `game/camera` | Active |
-| `ui/lobby`, `ui/role_selection`, `ui/widgets/`, `ui/hud/{health_bar,selection_panel,minimap}` | Active |
+| `ui/lobby`, `ui/role_selection`, `ui/styles/`, `ui/widgets/` (+ `ui_kit`), `ui/hud/{health_bar,selection_panel,minimap}` | Active |
 | `default_bus_layout.tres` (Master → Music / SFX) | Wired in `project.godot` |
 | `tests/{bots,session,stats,navigation,combat}`, `scripts/test/` | Active |
 | `addons/godotsteam`, Web preset in `export_presets.cfg` | Present; export path / CI still open |
@@ -251,7 +274,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Volume + mute persisted | Done | `SettingsManager` → `user://settings.cfg` |
 | Settings dock (gear) on lobby / roles / match | Done | `ui/widgets/settings_menu/` + `SettingsMenu.attach` |
 | Animated buttons + UI click SFX | Done | `ui/widgets/animated_button/`, `SoundManager.play_ui` |
-| Lobby branded card, ENet-only host/join | Done | `ui/lobby/lobby.gd` |
+| Lobby branded card, ENet-only host/join | Done | `ui/lobby/lobby.tscn` + `.gd` + `ui/styles/` |
 | Sandbox chrome non-overlapping layout | Done | Action TL / Tests TR / Status BR; HUD under action bar |
 | Camera bound padding (overscroll) | Done | `MatchCamera.bound_padding` default `360` screen px |
 | Config documented | Done | `docs/ui_audio.README.md`, `README.md` runtime section, `controls.README.md` §2.2 |
@@ -262,6 +285,6 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 ## First milestone verdict
 
-Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, hunter-bot hunting, elimination/observer, free camera edge-scroll with overscroll padding, and persistent UI/audio settings are also in.
+Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, hunter-bot hunting, elimination/observer, free camera edge-scroll with overscroll padding / UI-aware scroll / no kill-recenter, editor-previewable HUD shells (CP-13), and persistent UI/audio settings are also in.
 
-Still open in `working_packages.README.md`: economy, full structure content (mines/walls/towers), attack-move / advanced combat, fog of war (minimap FoW), shop, cursors, and selection context-actions. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12.
+Still open in `working_packages.README.md`: economy, full structure content (mines/walls/towers), attack-move / advanced combat, fog of war (minimap FoW), shop, cursors, and selection context-actions. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13.

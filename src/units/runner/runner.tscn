@@ -1,10 +1,14 @@
-[gd_scene format=3 uid="uid://uk1tc2fuojjd"]
+[gd_scene load_steps=4 format=3 uid="uid://uk1tc2fuojjd"]
 
 [ext_resource type="PackedScene" path="res://src/units/unit/unit.tscn" id="1_unit"]
 [ext_resource type="Resource" uid="uid://byj7nddatb7ul" path="res://src/units/runner/runner_config.tres" id="2_config"]
+[ext_resource type="Texture2D" path="res://assets/sprites/units/Player_1.png" id="3_sprite"]
 
 [node name="Runner" unique_id=1511249192 instance=ExtResource("1_unit")]
 config = ExtResource("2_config")
+
+[node name="Sprite" parent="." index="1"]
+texture = ExtResource("3_sprite")
 
 [node name="HealthBar" parent="." index="3"]
 offset_left = -24.0

@@ -124,11 +124,13 @@ runner_head_start_duration = 60.0
 
 During this period the Runners can establish their economy and defenses. The Hunter has not yet spawned and therefore cannot attack them.
 
+All players (Runners and later the Hunter) spawn on a ring around **map center** so units do not collide on top of each other (`PlateauMap.spawn_ring_positions`, configurable `Match.spawn_ring_radius`, default `160`). Timing is unchanged: Runners appear in preparation; the Hunter only after the head start ends.
+
 When the timer expires:
 
 ```text
 Runner Head Start Ends
--> Hunter Spawns
+-> Hunter Spawns (center-ring slot)
 -> Hunter Gameplay Begins
 ```
 

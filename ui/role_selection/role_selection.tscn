@@ -1,8 +1,13 @@
-[gd_scene format=3 uid="uid://dimco2coj0apm"]
+[gd_scene load_steps=7 format=3 uid="uid://dimco2coj0apm"]
 
 [ext_resource type="Script" uid="uid://byw0dodqrbi0x" path="res://ui/role_selection/role_selection.gd" id="1_selection"]
+[ext_resource type="StyleBoxFlat" path="res://ui/styles/side_panel_runner_style.tres" id="2_runner"]
+[ext_resource type="StyleBoxFlat" path="res://ui/styles/side_panel_waiting_style.tres" id="3_waiting"]
+[ext_resource type="StyleBoxFlat" path="res://ui/styles/side_panel_hunter_style.tres" id="4_hunter"]
+[ext_resource type="StyleBoxFlat" path="res://ui/styles/button_normal_style.tres" id="5_btn"]
+[ext_resource type="StyleBoxFlat" path="res://ui/styles/button_hover_style.tres" id="6_btn_hover"]
 
-[node name="RoleSelection" type="Control" unique_id=136781184]
+[node name="RoleSelection" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -10,3 +15,139 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_selection")
+button_style = ExtResource("5_btn")
+button_hover_style = ExtResource("6_btn_hover")
+
+[node name="Veil" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.05, 0.06, 0.08, 1)
+
+[node name="Accent" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_right = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.95, 0.82, 0.35, 0.08)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 28
+
+[node name="Root" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Margin/Root"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.9, 0.45, 1)
+theme_override_font_sizes/font_size = 34
+text = "Choose a side and sprite"
+horizontal_alignment = 1
+
+[node name="Instructions" type="Label" parent="Margin/Root"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.82, 0.78, 1)
+text = "Runners choose a Player sprite; Hunters choose an Enemy sprite."
+horizontal_alignment = 1
+
+[node name="Result" type="Label" parent="Margin/Root"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+text = "The host resolves the vote."
+
+[node name="Columns" type="HBoxContainer" parent="Margin/Root"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="RunnerPanel" type="PanelContainer" parent="Margin/Root/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = ExtResource("2_runner")
+
+[node name="RunnerCol" type="VBoxContainer" parent="Margin/Root/Columns/RunnerPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="RunnerHeading" type="Label" parent="Margin/Root/Columns/RunnerPanel/RunnerCol"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.96, 0.92, 1)
+theme_override_font_sizes/font_size = 24
+text = "Runners"
+horizontal_alignment = 1
+
+[node name="RunnerBox" type="VBoxContainer" parent="Margin/Root/Columns/RunnerPanel/RunnerCol"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="WaitingPanel" type="PanelContainer" parent="Margin/Root/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = ExtResource("3_waiting")
+
+[node name="WaitingCol" type="VBoxContainer" parent="Margin/Root/Columns/WaitingPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="WaitingHeading" type="Label" parent="Margin/Root/Columns/WaitingPanel/WaitingCol"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.96, 0.92, 1)
+theme_override_font_sizes/font_size = 24
+text = "Waiting"
+horizontal_alignment = 1
+
+[node name="WaitingBox" type="VBoxContainer" parent="Margin/Root/Columns/WaitingPanel/WaitingCol"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="HunterPanel" type="PanelContainer" parent="Margin/Root/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/panel = ExtResource("4_hunter")
+
+[node name="HunterCol" type="VBoxContainer" parent="Margin/Root/Columns/HunterPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HunterHeading" type="Label" parent="Margin/Root/Columns/HunterPanel/HunterCol"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.96, 0.92, 1)
+theme_override_font_sizes/font_size = 24
+text = "Hunter"
+horizontal_alignment = 1
+
+[node name="HunterBox" type="VBoxContainer" parent="Margin/Root/Columns/HunterPanel/HunterCol"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Actions" type="HBoxContainer" parent="Margin/Root"]
+unique_name_in_owner = true
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12

@@ -1,0 +1,105 @@
+[gd_scene load_steps=8 format=3 uid="uid://buikitpreview01"]
+
+[ext_resource type="StyleBoxFlat" path="res://ui/styles/card_panel_style.tres" id="1_card"]
+[ext_resource type="StyleBoxFlat" path="res://ui/styles/button_accent_style.tres" id="2_accent"]
+[ext_resource type="StyleBoxFlat" path="res://ui/styles/button_normal_style.tres" id="3_normal"]
+[ext_resource type="StyleBoxFlat" path="res://ui/styles/line_edit_style.tres" id="4_line"]
+[ext_resource type="PackedScene" path="res://ui/widgets/animated_button/animated_button_32.tscn" id="5_anim"]
+[ext_resource type="PackedScene" path="res://ui/hud/selection_panel/selection_panel.tscn" id="6_sel"]
+[ext_resource type="PackedScene" path="res://ui/hud/minimap/minimap.tscn" id="7_map"]
+
+[node name="UiKit" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.08, 0.09, 0.11, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Scroll" type="ScrollContainer" parent="Margin"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Content" type="VBoxContainer" parent="Margin/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 20
+
+[node name="Title" type="Label" parent="Margin/Scroll/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "UI Kit — StyleBoxes & widgets"
+
+[node name="Hint" type="Label" parent="Margin/Scroll/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.78, 0.82, 1)
+text = "Open StyleBox .tres files or tweak Margin/Scroll here. Runtime screens still use code bindings."
+autowrap_mode = 3
+
+[node name="Card" type="PanelContainer" parent="Margin/Scroll/Content"]
+layout_mode = 2
+theme_override_styles/panel = ExtResource("1_card")
+
+[node name="CardInner" type="VBoxContainer" parent="Margin/Scroll/Content/Card"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CardLabel" type="Label" parent="Margin/Scroll/Content/Card/CardInner"]
+layout_mode = 2
+text = "card_panel_style.tres"
+
+[node name="LineEdit" type="LineEdit" parent="Margin/Scroll/Content/Card/CardInner"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("4_line")
+placeholder_text = "line_edit_style.tres"
+
+[node name="Buttons" type="HBoxContainer" parent="Margin/Scroll/Content/Card/CardInner"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AccentBtn" type="Button" parent="Margin/Scroll/Content/Card/CardInner/Buttons"]
+custom_minimum_size = Vector2(140, 40)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("2_accent")
+text = "Accent"
+
+[node name="NormalBtn" type="Button" parent="Margin/Scroll/Content/Card/CardInner/Buttons"]
+custom_minimum_size = Vector2(140, 40)
+layout_mode = 2
+theme_override_styles/normal = ExtResource("3_normal")
+text = "Normal"
+
+[node name="AnimatedButton" parent="Margin/Scroll/Content" instance=ExtResource("5_anim")]
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+
+[node name="SelectionPanel" parent="Margin/Scroll/Content" instance=ExtResource("6_sel")]
+custom_minimum_size = Vector2(420, 96)
+layout_mode = 2
+
+[node name="Minimap" parent="Margin/Scroll/Content" instance=ExtResource("7_map")]
+custom_minimum_size = Vector2(220, 146)
+layout_mode = 2
