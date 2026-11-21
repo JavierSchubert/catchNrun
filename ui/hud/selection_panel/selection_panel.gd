@@ -1,8 +1,8 @@
 @tool
 class_name SelectionPanel
 extends Control
-## Fixed-size selection strip: portrait, role, combat stats, and health bar.
-## Empty selection shows only the grey panel (no icons/values). Layout in .tscn.
+## Fixed-size selection strip: portrait ring, combat stats, and health bar.
+## Empty selection keeps the grey panel + empty ring (no portrait / stats).
 
 ## Row-major order for the 2-column StatsGrid.
 const PANEL_STATS: Array[StatBlock.Stat] = [
@@ -26,11 +26,10 @@ const PANEL_SIZE := Vector2(520, 148)
 		ring_style = value
 		_apply_styles()
 
-@onready var _root: PanelContainer = %Root
-@onready var _content: Control = %Content
+@onready var _root: Panel = %Root
+@onready var _right_col: Control = %RightCol
 @onready var _portrait: TextureRect = %Portrait
 @onready var _ring: Panel = %Ring
-@onready var _role_label: Label = %RoleLabel
 @onready var _stats_grid: GridContainer = %StatsGrid
 @onready var _health_bar: ProgressBar = %HealthBar
 @onready var _regen_label: Label = %RegenLabel
@@ -103,20 +102,16 @@ func _apply_styles() -> void:
 
 
 func _show_empty() -> void:
-	_content.visible = false
+	_right_col.visible = false
 	_portrait.texture = null
-	_role_label.text = ""
 	_health_bar.value = 0.0
 	_regen_label.text = ""
 	_set_ring_color(Color(1, 1, 1, 0.25))
 
 
-func _show_unit(unit: Unit, controllable: bool) -> void:
-	_content.visible = true
+func _show_unit(unit: Unit, _controllable: bool) -> void:
+	_right_col.visible = true
 	_portrait.texture = unit.sprite.texture if unit.sprite else null
-	var role_name := "Hunter" if unit.role() == RoleConfig.Role.HUNTER else "Runner"
-	var mode := "Controllable" if controllable else "View only"
-	_role_label.text = "%s · %s" % [role_name, mode]
 	_bind_stat_values(unit.stats)
 	_bind_health(unit)
 	var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
@@ -124,9 +119,8 @@ func _show_unit(unit: Unit, controllable: bool) -> void:
 
 
 func _show_generic(_selected: Node) -> void:
-	_content.visible = false
+	_right_col.visible = false
 	_portrait.texture = null
-	_role_label.text = ""
 	_health_bar.value = 0.0
 	_regen_label.text = ""
 	_set_ring_color(Color(1, 1, 1, 0.35))

@@ -31,7 +31,7 @@ script = ExtResource("1_script")
 panel_style = ExtResource("2_panel")
 ring_style = ExtResource("3_ring")
 
-[node name="Root" type="PanelContainer" parent="."]
+[node name="Root" type="Panel" parent="."]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(520, 148)
 layout_mode = 1
@@ -42,28 +42,30 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = ExtResource("2_panel")
+clip_contents = true
 
 [node name="Content" type="VBoxContainer" parent="Root"]
 unique_name_in_owner = true
-visible = false
-layout_mode = 2
-size_flags_vertical = 3
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 10.0
+offset_right = -14.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 4
-
-[node name="RoleLabel" type="Label" parent="Root/Content"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.85, 0.88, 0.92, 0.85)
-text = "Runner · Controllable"
+alignment = 1
 
 [node name="Body" type="HBoxContainer" parent="Root/Content"]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_constants/separation = 12
+alignment = 1
 
 [node name="PortraitWrap" type="Control" parent="Root/Content/Body"]
 custom_minimum_size = Vector2(80, 80)
@@ -100,6 +102,8 @@ expand_mode = 1
 stretch_mode = 6
 
 [node name="RightCol" type="VBoxContainer" parent="Root/Content/Body"]
+unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
