@@ -8,8 +8,8 @@ extends CharacterBody2D
 
 const INTERPOLATION_SPEED := 12.0
 const SNAP_DISTANCE := 200.0
-## Matches PlateauMap.world_bounds() (30x20 tiles at 128px).
-const MAP_BOUNDS := Rect2(-1920.0, -1280.0, 3840.0, 2560.0)
+## Matches PlateauMap.world_bounds() (60x40 tiles at 128px).
+const MAP_BOUNDS := Rect2(-3840.0, -2560.0, 7680.0, 5120.0)
 const MAP_INSET := 20.0
 const SPRITE_COUNT := 5
 const RUNNER_SPRITES := [
