@@ -163,7 +163,7 @@ A newly issued movement command replaces the current movement or attack command.
 
 #### Attack Command
 
-Right-clicking a valid attackable entity sets that entity as the current attack target.
+Right-clicking a valid attackable entity (with a selected unit that can attack, currently the Hunter) sets that entity as the current attack target. A red click ring flashes on the entity (move clicks stay blue).
 
 ```text
 Right Click Attackable Entity
@@ -181,12 +181,12 @@ Right Click Attackable Entity
 
 ### 1.3. Attack Move
 
-Pressing `A` followed by a left click issues an attack-move command.
+Pressing `A` followed by a left click issues an attack-move command. The ground click ring is red (same attack color as a right-click attack). Escape or right-click cancels attack-move mode before the click.
 
 ```text
 A
 -> Left Click Position
--> Attack Move
+-> Attack Move (red ground marker)
 ```
 
 During attack move:

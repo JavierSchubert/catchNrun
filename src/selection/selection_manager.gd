@@ -10,6 +10,8 @@ const CLICKABLE_GROUP := "clickable"
 
 var selected: Node = null
 var hovered: Node = null
+## Armed by pressing A when a local attacker is selected; next LMB issues attack-move.
+var attack_move_armed := false
 
 var _press_screen := Vector2.ZERO
 var _press_world := Vector2.ZERO
@@ -64,6 +66,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if DisplayServer.get_name() == "headless":
 		return
+	if event is InputEventKey:
+		_handle_attack_move_key(event as InputEventKey)
+		return
 	if event is InputEventMouseButton:
 		_handle_mouse_button(event as InputEventMouseButton)
 	elif event is InputEventMouseMotion and _pressing and not _dragging:
@@ -89,10 +94,33 @@ func clear_selection() -> void:
 	_set_selected(null)
 
 
+func _handle_attack_move_key(key: InputEventKey) -> void:
+	if key.echo:
+		return
+	if key.keycode == KEY_ESCAPE and key.pressed and attack_move_armed:
+		_disarm_attack_move()
+		get_viewport().set_input_as_handled()
+		return
+	if key.keycode != KEY_A or not key.pressed:
+		return
+	if not _can_arm_attack_move():
+		return
+	attack_move_armed = true
+	get_viewport().set_input_as_handled()
+
+
 func _handle_mouse_button(click: InputEventMouseButton) -> void:
+	if click.button_index == MOUSE_BUTTON_RIGHT and click.pressed and attack_move_armed:
+		_disarm_attack_move()
+		get_viewport().set_input_as_handled()
+		return
 	if click.button_index != MOUSE_BUTTON_LEFT:
 		return
 	if click.pressed:
+		if attack_move_armed:
+			_issue_armed_attack_move()
+			get_viewport().set_input_as_handled()
+			return
 		_pressing = true
 		_dragging = false
 		_press_screen = click.position
@@ -110,6 +138,31 @@ func _handle_mouse_button(click: InputEventMouseButton) -> void:
 		return
 	_apply_point_selection(_press_world)
 	get_viewport().set_input_as_handled()
+
+
+func _can_arm_attack_move() -> bool:
+	if not is_controllable_selected():
+		return false
+	if selected.has_method("can_attack"):
+		return bool(selected.call("can_attack"))
+	return false
+
+
+func _issue_armed_attack_move() -> void:
+	var destination := get_global_mouse_position()
+	_disarm_attack_move()
+	if selected == null or not is_instance_valid(selected):
+		return
+	if selected.has_method("issue_attack_move"):
+		selected.call("issue_attack_move", destination)
+
+
+func _disarm_attack_move() -> void:
+	attack_move_armed = false
+	_pressing = false
+	if _dragging:
+		_dragging = false
+		_drag_box.end()
 
 
 func _maybe_start_drag(motion: InputEventMouseMotion) -> void:
@@ -172,6 +225,7 @@ func _set_selected(entity: Node) -> void:
 	selected = entity
 	if selected != null and selected.has_method("set_selection_selected"):
 		selected.call("set_selection_selected", true)
+	_disarm_attack_move()
 	_refresh_circle_states()
 	selection_changed.emit(selected)
 

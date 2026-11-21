@@ -15,6 +15,7 @@ func _ready() -> void:
 func _run() -> void:
 	_test_null_parent_is_safe()
 	await _test_spawns_at_world_position()
+	await _test_attack_color_and_spawn_on()
 	await _test_pops_then_frees()
 	await _test_second_click_spawns_another_marker()
 	if _failures.is_empty():
@@ -49,7 +50,40 @@ func _test_spawns_at_world_position() -> void:
 		_fail("marker must be parented under the given host")
 	if marker.scale != Vector2(0.25, 0.25):
 		_fail("marker should start at the pop-in scale (got %s)" % marker.scale)
+	if marker.ring_color != MoveClickMarker.MOVE_COLOR:
+		_fail("default spawn color must be move blue")
 	marker.queue_free()
+	host.queue_free()
+	await get_tree().process_frame
+
+
+func _test_attack_color_and_spawn_on() -> void:
+	var host := Node2D.new()
+	add_child(host)
+	var ground := MoveClickMarker.spawn(host, Vector2(50, 60), MoveClickMarker.ATTACK_COLOR)
+	if ground == null:
+		_fail("attack-colored ground spawn must return a marker")
+		host.queue_free()
+		return
+	if ground.ring_color != MoveClickMarker.ATTACK_COLOR:
+		_fail("attack-move ground marker must use attack red")
+	ground.queue_free()
+	var target := Node2D.new()
+	host.add_child(target)
+	target.global_position = Vector2(200, 100)
+	var on_target := MoveClickMarker.spawn_on(target, MoveClickMarker.ATTACK_COLOR)
+	if on_target == null:
+		_fail("spawn_on must return a marker")
+		host.queue_free()
+		return
+	await get_tree().process_frame
+	if on_target.get_parent() != target:
+		_fail("spawn_on must parent the marker under the target")
+	_near(on_target.global_position, target.global_position, "spawn_on sits on the target")
+	if on_target.ring_color != MoveClickMarker.ATTACK_COLOR:
+		_fail("entity attack marker must use attack red")
+	on_target.queue_free()
+	target.queue_free()
 	host.queue_free()
 	await get_tree().process_frame
 

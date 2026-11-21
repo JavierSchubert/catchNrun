@@ -186,6 +186,17 @@ static func sprite_texture(sprite_index: int, role_id: int) -> Texture2D:
 	return textures[clampi(sprite_index, 0, SPRITE_COUNT - 1)] as Texture2D
 
 
+func can_attack() -> bool:
+	return is_alive() and stats.final_value(StatBlock.Stat.MELEE_DAMAGE) > 0.0
+
+
+func issue_attack_move(destination: Vector2) -> void:
+	if not _can_issue_commands() or not can_attack():
+		return
+	_request_attack_move(destination)
+	_show_attack_click_marker_at(destination)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if peer_id != multiplayer.get_unique_id() or not LaunchOptions.bot_role.is_empty():
 		return
@@ -200,8 +211,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var world_pos := get_global_mouse_position()
 	var target := _clickable_enemy_at(world_pos)
-	if target != null:
+	if target != null and can_attack():
 		_request_attack(target)
+		_show_attack_click_marker_on(target)
 	else:
 		_request_move(world_pos)
 		_show_move_click_marker(world_pos)
@@ -295,11 +307,11 @@ func _server_combat_tick(delta: float) -> void:
 
 	var target := attack.pick_target(global_position, _enemy_candidates())
 	if target == null:
+		_resume_attack_move_if_needed()
 		return
 
 	if not attack.in_attack_range(global_position, target):
-		if not movement.has_order():
-			movement.order_move(global_position, target.global_position)
+		_chase_combat_target(target)
 		return
 
 	movement.clear_order()
@@ -440,17 +452,68 @@ func _request_move(destination: Vector2, clear_attack := true) -> void:
 	if multiplayer.is_server():
 		if clear_attack:
 			attack.clear_target()
+			attack.clear_attack_move()
 		movement.order_move(global_position, _clamp_map_position(destination))
 	else:
 		_submit_move_order.rpc_id(1, destination, clear_attack)
 
 
+func _request_attack_move(destination: Vector2) -> void:
+	var clamped := _clamp_map_position(destination)
+	if multiplayer.is_server():
+		attack.begin_attack_move(clamped)
+		movement.order_move(global_position, clamped)
+	else:
+		_submit_attack_move.rpc_id(1, clamped)
+
+
 func _show_move_click_marker(world_pos: Vector2) -> void:
 	## Local feedback only — not replicated.
+	var host := _marker_host()
+	MoveClickMarker.spawn(host, world_pos, MoveClickMarker.MOVE_COLOR)
+
+
+func _show_attack_click_marker_at(world_pos: Vector2) -> void:
+	var host := _marker_host()
+	MoveClickMarker.spawn(host, world_pos, MoveClickMarker.ATTACK_COLOR)
+
+
+func _show_attack_click_marker_on(target: Unit) -> void:
+	if target == null:
+		return
+	MoveClickMarker.spawn_on(target, MoveClickMarker.ATTACK_COLOR)
+
+
+func _marker_host() -> Node:
 	var host := get_tree().current_scene
 	if host == null:
 		host = get_parent()
-	MoveClickMarker.spawn(host, world_pos)
+	return host
+
+
+func _chase_combat_target(target: Node2D) -> void:
+	if target == null:
+		return
+	if attack.attack_move_active and not attack.attack_move_chasing:
+		## Interrupt the destination path once so we engage instead of walking past.
+		attack.attack_move_chasing = true
+		movement.order_move(global_position, target.global_position)
+		return
+	if not movement.has_order():
+		movement.order_move(global_position, target.global_position)
+
+
+func _resume_attack_move_if_needed() -> void:
+	if not attack.attack_move_active:
+		return
+	attack.attack_move_chasing = false
+	if movement.has_order():
+		return
+	var destination := attack.attack_move_destination
+	if global_position.distance_to(destination) <= 12.0:
+		attack.clear_attack_move()
+		return
+	movement.order_move(global_position, destination)
 
 
 func _request_attack(target: Unit) -> void:
@@ -464,13 +527,14 @@ func _request_attack(target: Unit) -> void:
 
 func _clickable_enemy_at(world_pos: Vector2) -> Unit:
 	var best: Unit = null
-	var best_distance := 40.0
+	var best_distance := INF
 	for node in _enemy_candidates():
 		var unit := node as Unit
 		if unit == null or not unit.is_attackable():
 			continue
+		var hit_radius := maxf(unit.selection_hit_radius(), 40.0)
 		var distance := world_pos.distance_to(unit.global_position)
-		if distance < best_distance:
+		if distance <= hit_radius and distance < best_distance:
 			best_distance = distance
 			best = unit
 	return best
@@ -534,6 +598,7 @@ func _submit_move_order(destination: Vector2, clear_attack := true) -> void:
 		return
 	if clear_attack:
 		attack.clear_target()
+		attack.clear_attack_move()
 	movement.order_move(global_position, _clamp_map_position(destination))
 
 
@@ -545,6 +610,8 @@ func _submit_attack_target(target_peer_id: int) -> void:
 		return
 	if not is_alive() or not _movement_allowed():
 		return
+	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
+		return
 	var target_node := get_parent().get_node_or_null(str(target_peer_id))
 	if target_node == null or not target_node is Unit:
 		return
@@ -554,6 +621,21 @@ func _submit_attack_target(target_peer_id: int) -> void:
 	attack.set_explicit_target(target)
 	if not attack.in_attack_range(global_position, target):
 		movement.order_move(global_position, target.global_position)
+
+
+@rpc("any_peer", "reliable")
+func _submit_attack_move(destination: Vector2) -> void:
+	if not multiplayer.is_server():
+		return
+	if GameManager.sender_id(multiplayer) != peer_id:
+		return
+	if not is_alive() or not _movement_allowed():
+		return
+	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
+		return
+	var clamped := _clamp_map_position(destination)
+	attack.begin_attack_move(clamped)
+	movement.order_move(global_position, clamped)
 
 
 @rpc("any_peer", "unreliable_ordered")
