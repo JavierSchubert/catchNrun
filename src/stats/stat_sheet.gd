@@ -33,6 +33,10 @@ func clear_modifiers() -> void:
 	stats_changed.emit()
 
 
+func base_value(stat: StatBlock.Stat) -> float:
+	return _base.get_base(stat)
+
+
 func final_value(stat: StatBlock.Stat) -> float:
 	var flat := 0.0
 	var percent := 0.0
@@ -46,12 +50,18 @@ func final_value(stat: StatBlock.Stat) -> float:
 	return constrain(stat, (_base.get_base(stat) + flat) * (1.0 + percent))
 
 
+## Difference between final and base after constraints. Used by HUD as `(+delta)`.
+func modifier_delta(stat: StatBlock.Stat) -> float:
+	return final_value(stat) - base_value(stat)
+
+
 static func constrain(stat: StatBlock.Stat, value: float) -> float:
 	match stat:
 		StatBlock.Stat.CRITICAL_CHANCE, StatBlock.Stat.LIFESTEAL_CHANCE:
 			return clampf(value, 0.0, 1.0)
 		StatBlock.Stat.MAX_HEALTH, StatBlock.Stat.HEALTH_REGENERATION, StatBlock.Stat.MOVEMENT_SPEED, \
-				StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER, StatBlock.Stat.LIFESTEAL_AMOUNT:
+				StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER, StatBlock.Stat.LIFESTEAL_AMOUNT, \
+				StatBlock.Stat.ATTACK_SPEED:
 			return maxf(value, 0.0)
 		_:
 			return value

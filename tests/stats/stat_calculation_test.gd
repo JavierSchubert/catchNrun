@@ -9,6 +9,7 @@ func _ready() -> void:
 	_test_formula()
 	_test_documented_damage_example()
 	_test_constraints()
+	_test_hud_display_format()
 	if _failures.is_empty():
 		print("PASS: stat calculation")
 		get_tree().quit(0)
@@ -62,6 +63,29 @@ func _test_constraints() -> void:
 	sheet.clear_modifiers()
 	sheet.add_modifier(_mod(StatModifier.Kind.FLAT, StatModifier.Scope.ONE_STAT, StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER, -10.0))
 	_near(sheet.final_value(StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER), 0.0, "critical damage multiplier cannot fall below 0")
+
+
+func _test_hud_display_format() -> void:
+	var sheet := _sheet(10.0)
+	_near(sheet.base_value(StatBlock.Stat.MELEE_DAMAGE), 10.0, "base_value exposes the unmodded base")
+	_near(sheet.modifier_delta(StatBlock.Stat.MELEE_DAMAGE), 0.0, "no modifiers means zero delta")
+	if StatIcons.format_value(sheet, StatBlock.Stat.MELEE_DAMAGE) != "10":
+		_failures.append("plain base displays without parentheses")
+	sheet.add_modifier(_mod(StatModifier.Kind.FLAT, StatModifier.Scope.ONE_STAT, StatBlock.Stat.MELEE_DAMAGE, 5.0))
+	sheet.add_modifier(_mod(StatModifier.Kind.PERCENT, StatModifier.Scope.ONE_STAT, StatBlock.Stat.MELEE_DAMAGE, 0.20))
+	sheet.add_modifier(_mod(StatModifier.Kind.PERCENT, StatModifier.Scope.ALL_DAMAGE, StatBlock.Stat.MELEE_DAMAGE, 0.10))
+	_near(sheet.modifier_delta(StatBlock.Stat.MELEE_DAMAGE), 9.5, "delta is final minus base")
+	var shown := StatIcons.format_value(sheet, StatBlock.Stat.MELEE_DAMAGE)
+	if shown != "10 ([color=#6fdf8a]+9.5[/color])":
+		_failures.append("positive delta HUD format (got %s)" % shown)
+	var lower := StatSheet.new()
+	var block := StatBlock.new()
+	block.melee_damage = 10.0
+	lower.set_base(block)
+	lower.add_modifier(_mod(StatModifier.Kind.FLAT, StatModifier.Scope.ONE_STAT, StatBlock.Stat.MELEE_DAMAGE, -4.0))
+	var negative := StatIcons.format_value(lower, StatBlock.Stat.MELEE_DAMAGE)
+	if negative != "10 ([color=#f07178]-4[/color])":
+		_failures.append("negative delta HUD format (got %s)" % negative)
 
 
 func _sheet(melee_damage: float) -> StatSheet:
