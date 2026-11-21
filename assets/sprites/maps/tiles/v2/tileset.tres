@@ -2,29 +2,20 @@
 
 [ext_resource type="Texture2D" uid="uid://cv2plateauatlas01" path="res://assets/sprites/maps/tiles/v2/atlas.png" id="1_atlas"]
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_v2"]
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_main"]
 texture = ExtResource("1_atlas")
 texture_region_size = Vector2i(128, 128)
 0:0/0 = 0
 1:0/0 = 0
 2:0/0 = 0
-2:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 3:0/0 = 0
-3:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 4:0/0 = 0
-4:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 5:0/0 = 0
-5:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 6:0/0 = 0
-6:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 7:0/0 = 0
-7:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 0:1/0 = 0
-0:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 1:1/0 = 0
-1:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 2:1/0 = 0
-2:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
 3:1/0 = 0
 4:1/0 = 0
 5:1/0 = 0
@@ -36,9 +27,7 @@ texture_region_size = Vector2i(128, 128)
 3:2/0 = 0
 4:2/0 = 0
 5:2/0 = 0
-6:2/0 = 0
 
 [resource]
 tile_size = Vector2i(128, 128)
-physics_layer_0/collision_layer = 2
-sources/0 = SubResource("TileSetAtlasSource_v2")
+sources/0 = SubResource("TileSetAtlasSource_main")
