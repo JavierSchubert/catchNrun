@@ -186,7 +186,7 @@ func _test_match_presentation() -> void:
 	)
 	_check(
 		floor_layer != null and floor_layer.tile_set != null
-			and str(floor_layer.tile_set.resource_path).ends_with("plateau_tileset.tres"),
+			and str(floor_layer.tile_set.resource_path).ends_with("tiles/v2/tileset.tres"),
 		"the arena FloorLayer uses the plateau TileSet"
 	)
 	_check(
