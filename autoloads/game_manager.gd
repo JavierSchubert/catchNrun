@@ -541,14 +541,15 @@ func _check_all_loaded() -> void:
 
 
 func reset_match() -> void:
-	if NetworkManager.is_online() and not multiplayer.is_server():
+	if NetworkManager.is_online() and multiplayer != null and not multiplayer.is_server():
 		return
-	if NetworkManager.is_online():
+	## Reset state first, then defer the scene change so units stop processing
+	## before MultiplayerAPI / tree teardown (avoids null multiplayer.is_server crashes).
+	if NetworkManager.is_online() and multiplayer != null:
 		_reset_to_lobby.rpc()
-		SceneTransitionManager.force_open(SceneTransitionManager.LOBBY)
 	else:
 		_reset_to_lobby_local()
-		SceneTransitionManager.force_open(SceneTransitionManager.LOBBY)
+	SceneTransitionManager.call_deferred("force_open", SceneTransitionManager.LOBBY)
 
 
 @rpc("authority", "call_local", "reliable")

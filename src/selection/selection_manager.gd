@@ -150,9 +150,15 @@ func _can_arm_attack_move() -> bool:
 
 func _issue_armed_attack_move() -> void:
 	var destination := get_global_mouse_position()
-	_disarm_attack_move()
+	var shift_held := Input.is_key_pressed(KEY_SHIFT)
 	if selected == null or not is_instance_valid(selected):
+		_disarm_attack_move()
 		return
+	if shift_held and selected.has_method("issue_attack_chain_append"):
+		## Shift+A+LMB appends a red attack-move waypoint; stay armed for more.
+		selected.call("issue_attack_chain_append", destination)
+		return
+	_disarm_attack_move()
 	if selected.has_method("issue_attack_move"):
 		selected.call("issue_attack_move", destination)
 

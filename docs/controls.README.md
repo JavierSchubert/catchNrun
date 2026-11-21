@@ -163,9 +163,11 @@ A newly issued movement command replaces the current movement or attack command.
 
 #### Shift-click move chain
 
-Hold `Shift` and right-click the ground (or the minimap) to queue waypoints. Every controllable unit can chain. Green rings mark each click; a green dotted line runs from the unit to the first waypoint, then between later waypoints. As the unit reaches a waypoint (or travels onto that segment), that ring and its inbound dotted segment disappear.
+Hold `Shift` and right-click the ground (or the minimap) to queue **green** move waypoints. Press `A`, then hold `Shift` and left-click to queue **red** attack-move waypoints (also on the minimap). Green and red legs can be mixed in one chain — for example red attack-move points, then more green Shift+RMB points.
 
-While a chain is active, units still use default in-range attack behavior (hunters engage, then resume the next waypoint). Cancel the whole chain with a plain right-click or an `A` + left-click attack-move.
+Dotted lines and rings use the color of the waypoint they lead into. As the unit reaches a waypoint, that ring and its inbound dotted segment disappear.
+
+While a chain is active, units still use default in-range attack behavior (hunters engage, then resume the next waypoint). Cancel the whole chain with a plain right-click or a plain (non-Shift) `A` + left-click attack-move.
 
 #### Attack Command
 

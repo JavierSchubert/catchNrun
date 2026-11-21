@@ -158,7 +158,7 @@ func refresh_selection_visual() -> void:
 		_selection_circle.set_hover(false)
 		_selection_circle.set_selected(true)
 		return
-	var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	var local_id := _local_unique_id()
 	_selection_circle.configure(selection_circle_radius(), selection_affinity_color(local_id))
 	_selection_circle.set_hover(_selection_hovered and not _selection_selected)
 	_selection_circle.set_selected(_selection_selected)
@@ -216,13 +216,24 @@ func issue_move(destination: Vector2) -> void:
 
 
 func issue_chain_append(destination: Vector2) -> void:
-	## Shift+RMB waypoint. Any controllable unit can chain; hunters still auto-attack in range.
+	## Shift+RMB waypoint (green). Any controllable unit can chain.
 	if not _can_issue_commands():
 		return
 	var clamped := _clamp_map_position(destination)
 	_ensure_chain_visual()
 	if _chain_visual != null:
-		_chain_visual.append_waypoint(clamped)
+		_chain_visual.append_waypoint(clamped, MoveChainVisual.MOVE_COLOR)
+	_request_chain_append(clamped)
+
+
+func issue_attack_chain_append(destination: Vector2) -> void:
+	## Shift+A+LMB waypoint (red). Continues an existing green/red chain.
+	if not _can_issue_commands() or not can_attack():
+		return
+	var clamped := _clamp_map_position(destination)
+	_ensure_chain_visual()
+	if _chain_visual != null:
+		_chain_visual.append_waypoint(clamped, MoveChainVisual.ATTACK_COLOR)
 	_request_chain_append(clamped)
 
 
@@ -234,8 +245,31 @@ func issue_attack_move(destination: Vector2) -> void:
 	_show_attack_click_marker_at(destination)
 
 
+func _exit_tree() -> void:
+	## Stop ticking before the MultiplayerAPI is torn down during scene resets.
+	set_physics_process(false)
+	set_process_unhandled_input(false)
+	_clear_chain_visual()
+
+
+func _multiplayer_ready() -> bool:
+	return is_inside_tree() and multiplayer != null
+
+
+func _is_net_server() -> bool:
+	return _multiplayer_ready() and multiplayer.is_server()
+
+
+func _local_unique_id() -> int:
+	if _multiplayer_ready() and multiplayer.has_multiplayer_peer():
+		return multiplayer.get_unique_id()
+	return 1
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if peer_id != multiplayer.get_unique_id() or not LaunchOptions.bot_role.is_empty():
+	if not _multiplayer_ready():
+		return
+	if peer_id != _local_unique_id() or not LaunchOptions.bot_role.is_empty():
 		return
 	if not is_alive() or not _movement_allowed():
 		return
@@ -267,15 +301,15 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _eliminated:
+	if _eliminated or not _multiplayer_ready():
 		return
 
 	_tick_attack_flash(delta)
 
-	if peer_id == multiplayer.get_unique_id() and not LaunchOptions.bot_role.is_empty():
+	if peer_id == _local_unique_id() and not LaunchOptions.bot_role.is_empty():
 		_bot_tick()
 
-	if multiplayer.is_server():
+	if _is_net_server():
 		if not _movement_allowed() or not is_alive():
 			_intent = Vector2.ZERO
 			movement.clear_order()
@@ -312,7 +346,7 @@ func _bot_tick() -> void:
 		_hunter_bot_chase()
 	else:
 		var direction := _runner_bot_direction()
-		if multiplayer.is_server():
+		if _is_net_server():
 			_intent = direction
 		else:
 			_submit_input.rpc_id(1, direction)
@@ -329,7 +363,7 @@ func _hunter_bot_chase() -> void:
 	_bot_chase_peer_id = target.peer_id
 	if in_range:
 		_bot_repath_in = 0.0
-		if multiplayer.is_server():
+		if _is_net_server():
 			movement.clear_order()
 			_intent = Vector2.ZERO
 			attack.set_explicit_target(target)
@@ -337,11 +371,11 @@ func _hunter_bot_chase() -> void:
 			_submit_attack_target.rpc_id(1, target.peer_id)
 		return
 	var needs_path := retarget or _bot_repath_in <= 0.0 \
-		or (multiplayer.is_server() and not movement.has_order())
+		or (_is_net_server() and not movement.has_order())
 	if not needs_path:
 		return
 	_bot_repath_in = 0.35
-	if multiplayer.is_server():
+	if _is_net_server():
 		attack.set_explicit_target(target)
 		movement.order_move(global_position, target.global_position)
 	else:
@@ -432,7 +466,7 @@ func _on_died() -> void:
 	velocity = Vector2.ZERO
 	sync_health = 0.0
 	_apply_eliminated_visual()
-	if multiplayer.is_server():
+	if _is_net_server():
 		GameManager.eliminate_player(peer_id)
 
 
@@ -516,7 +550,9 @@ func _clamp_map_position(world_position: Vector2) -> Vector2:
 
 
 func _request_move(destination: Vector2, clear_attack := true) -> void:
-	if multiplayer.is_server():
+	if not _multiplayer_ready():
+		return
+	if _is_net_server():
 		_move_chain.clear()
 		if clear_attack:
 			attack.clear_target()
@@ -527,8 +563,10 @@ func _request_move(destination: Vector2, clear_attack := true) -> void:
 
 
 func _request_chain_append(destination: Vector2) -> void:
+	if not _multiplayer_ready():
+		return
 	var clamped := _clamp_map_position(destination)
-	if multiplayer.is_server():
+	if _is_net_server():
 		_server_chain_append(clamped)
 	else:
 		_submit_chain_append.rpc_id(1, clamped)
@@ -545,8 +583,10 @@ func _server_chain_append(destination: Vector2) -> void:
 
 
 func _request_attack_move(destination: Vector2) -> void:
+	if not _multiplayer_ready():
+		return
 	var clamped := _clamp_map_position(destination)
-	if multiplayer.is_server():
+	if _is_net_server():
 		_move_chain.clear()
 		attack.begin_attack_move(clamped)
 		movement.order_move(global_position, clamped)
@@ -621,7 +661,7 @@ func _resume_move_chain_if_needed() -> void:
 
 
 func _ensure_chain_visual() -> void:
-	if peer_id != multiplayer.get_unique_id():
+	if peer_id != _local_unique_id():
 		return
 	if _chain_visual != null and is_instance_valid(_chain_visual):
 		return
@@ -642,7 +682,9 @@ func _clear_chain_visual() -> void:
 
 
 func _request_attack(target: Unit) -> void:
-	if multiplayer.is_server():
+	if not _multiplayer_ready():
+		return
+	if _is_net_server():
 		_move_chain.clear()
 		attack.set_explicit_target(target)
 		if not attack.in_attack_range(global_position, target):
@@ -718,7 +760,7 @@ func _refresh_label() -> void:
 
 @rpc("any_peer", "reliable")
 func _submit_move_order(destination: Vector2, clear_attack := true) -> void:
-	if not multiplayer.is_server():
+	if not _is_net_server():
 		return
 	if GameManager.sender_id(multiplayer) != peer_id:
 		return
@@ -733,7 +775,7 @@ func _submit_move_order(destination: Vector2, clear_attack := true) -> void:
 
 @rpc("any_peer", "reliable")
 func _submit_chain_append(destination: Vector2) -> void:
-	if not multiplayer.is_server():
+	if not _is_net_server():
 		return
 	if GameManager.sender_id(multiplayer) != peer_id:
 		return
@@ -744,7 +786,7 @@ func _submit_chain_append(destination: Vector2) -> void:
 
 @rpc("any_peer", "reliable")
 func _submit_attack_target(target_peer_id: int) -> void:
-	if not multiplayer.is_server():
+	if not _is_net_server():
 		return
 	if GameManager.sender_id(multiplayer) != peer_id:
 		return
@@ -766,7 +808,7 @@ func _submit_attack_target(target_peer_id: int) -> void:
 
 @rpc("any_peer", "reliable")
 func _submit_attack_move(destination: Vector2) -> void:
-	if not multiplayer.is_server():
+	if not _is_net_server():
 		return
 	if GameManager.sender_id(multiplayer) != peer_id:
 		return
@@ -782,7 +824,7 @@ func _submit_attack_move(destination: Vector2) -> void:
 
 @rpc("any_peer", "unreliable_ordered")
 func _submit_input(direction: Vector2) -> void:
-	if not multiplayer.is_server():
+	if not _is_net_server():
 		return
 	if GameManager.sender_id(multiplayer) != peer_id:
 		return

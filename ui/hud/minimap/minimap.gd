@@ -60,7 +60,11 @@ func _gui_input(event: InputEvent) -> void:
 			accept_event()
 		MOUSE_BUTTON_LEFT:
 			if _attack_move_armed():
-				_issue_attack_move_to(world)
+				var shift_held := click.shift_pressed or Input.is_key_pressed(KEY_SHIFT)
+				if shift_held:
+					_issue_attack_chain_append_to(world)
+				else:
+					_issue_attack_move_to(world)
 			else:
 				_recenter_camera(world)
 			accept_event()
@@ -141,6 +145,15 @@ func _issue_attack_move_to(world: Vector2) -> void:
 		return
 	if unit.has_method("issue_attack_move"):
 		unit.call("issue_attack_move", world)
+
+
+func _issue_attack_chain_append_to(world: Vector2) -> void:
+	## Keep attack-move armed so more Shift+A clicks can append.
+	var unit := _selected_controllable()
+	if unit == null:
+		return
+	if unit.has_method("issue_attack_chain_append"):
+		unit.call("issue_attack_chain_append", world)
 
 
 func _selected_controllable() -> Node:
