@@ -10,7 +10,8 @@ extends Camera2D
 @export var camera_speed := 900.0
 @export var bounds := Unit.MAP_BOUNDS
 ## How far the map edge sits inside the viewport when the camera is fully scrolled.
-## Larger = more empty space beyond the map, unit stays farther from screen corners.
+## This value is in screen pixels and remains consistent at every zoom level.
+## Larger = more empty space beyond the map, units stay farther from screen corners.
 @export var bound_padding := 360.0
 @export_range(0.25, 8.0, 0.05) var zoom_factor := 1.0:
 	set(value):
@@ -23,7 +24,8 @@ var _follow_peer_id := -1
 func _ready() -> void:
 	zoom = Vector2.ONE * zoom_factor
 	enabled = LaunchOptions.bot_role.is_empty() and DisplayServer.get_name() != "headless"
-	make_current()
+	if enabled:
+		make_current()
 	_follow_peer_id = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
 	GameManager.players_changed.connect(_on_roster_changed)
 	GameManager.phase_changed.connect(func(_phase: GameManager.Phase) -> void: _on_roster_changed())
@@ -103,12 +105,30 @@ func _local_unit() -> Node2D:
 
 
 func _clamp_to_bounds() -> void:
-	var half_view := get_viewport_rect().size / zoom * 0.5
+	var viewport := get_viewport()
+	if viewport == null:
+		return
+
+	var viewport_size := viewport.get_visible_rect().size
+	var zoom_x := absf(zoom.x)
+	var zoom_y := absf(zoom.y)
+	if zoom_x <= 0.001 or zoom_y <= 0.001:
+		return
+
+	var half_view := Vector2(viewport_size.x / zoom_x, viewport_size.y / zoom_y) * 0.5
 	var pad := maxf(bound_padding, 0.0)
-	# Allow the view to overscroll past the map so corners stay inset from the screen.
-	var min_center := bounds.position + half_view - pad
-	var max_center := bounds.end - half_view + pad
-	global_position.x = bounds.get_center().x if min_center.x > max_center.x \
-		else clampf(global_position.x, min_center.x, max_center.x)
-	global_position.y = bounds.get_center().y if min_center.y > max_center.y \
-		else clampf(global_position.y, min_center.y, max_center.y)
+	var pad_world := Vector2(pad / zoom_x, pad / zoom_y)
+
+	# Allow the view to cross the map edge, but keep the edge inset by bound_padding
+	# on screen. If the view is wider than the map, center it on the map.
+	var min_center := bounds.position + half_view - pad_world
+	var max_center := bounds.end - half_view + pad_world
+
+	if min_center.x > max_center.x:
+		global_position.x = bounds.get_center().x
+	else:
+		global_position.x = clampf(global_position.x, min_center.x, max_center.x)
+	if min_center.y > max_center.y:
+		global_position.y = bounds.get_center().y
+	else:
+		global_position.y = clampf(global_position.y, min_center.y, max_center.y)

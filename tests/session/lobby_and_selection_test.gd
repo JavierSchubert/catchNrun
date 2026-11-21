@@ -214,6 +214,23 @@ func _test_match_presentation() -> void:
 		_check(camera.zoom.is_equal_approx(Vector2(2.0, 2.0)), "changing zoom_factor updates camera zoom")
 		camera.zoom_factor = 1.0
 		_check(camera.zoom.is_equal_approx(Vector2.ONE), "a zoom factor of 1 resets the camera zoom")
+
+	add_child(default_camera)
+	default_camera.bounds = Rect2(-1000.0, -500.0, 2000.0, 1000.0)
+	default_camera.bound_padding = 100.0
+	default_camera.zoom = Vector2.ONE
+	default_camera.global_position = Vector2(-10000.0, 10000.0)
+	default_camera._clamp_to_bounds()
+	var viewport_size := default_camera.get_viewport().get_visible_rect().size
+	var half_view := viewport_size * 0.5
+	var expected := Vector2(
+		clampf(-10000.0, -1000.0 + half_view.x - 100.0, 1000.0 - half_view.x + 100.0),
+		clampf(10000.0, -500.0 + half_view.y - 100.0, 500.0 - half_view.y + 100.0)
+	)
+	_check(
+		default_camera.global_position.is_equal_approx(expected),
+		"the match camera clamps with a screen-pixel edge offset"
+	)
 	default_camera.free()
 	match_root.free()
 
