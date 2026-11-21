@@ -108,8 +108,8 @@ Files: `ui/lobby/lobby.tscn` + `lobby.gd`
 
 - Shell layout (wallpaper, veil, card, connect / lobby boxes) lives in the `.tscn`.
 - Shared StyleBoxes under `ui/styles/` (`card_panel_style`, button / line-edit / item-list styles).
-- Script wires host/join, roster refresh, and continue — **ENet only** (no Steam host / invite buttons in the lobby UI).
-- Steam may still exist in `NetworkManager` for future use; the lobby path users see is Godot multiplayer API / ENet.
+- Script wires host/join, roster refresh, and continue — **ENet only**.
+- `NetworkManager` is ENet-only (GodotSteam removed); lobby uses Godot multiplayer API / ENet.
 
 Role selection follows the same pattern: `ui/role_selection/role_selection.tscn` shell + side-panel StyleBoxes; dynamic player rows and action buttons remain code-filled.
 

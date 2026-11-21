@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-21** (editor-preview HUD/UI scenes + minimap/camera UX + center spawn ring).
+Last reviewed: **2026-11-21** (selection-panel combat HUD + ENet-only networking; GodotSteam removed).
 
 ---
 
@@ -35,6 +35,8 @@ Last reviewed: **2026-11-21** (editor-preview HUD/UI scenes + minimap/camera UX 
 | 2026-11-21 | **CP-12** UI, audio, settings, camera padding | `SettingsManager` / `SoundManager`; Music+SFX buses; persistent playlist; settings dock on every scene; lobby ENet-only UX; sandbox chrome layout; `MatchCamera.bound_padding` (zoom-aware overscroll) |
 | 2026-11-21 | **CP-13** Editor-preview scenes + style resources | Match HUD / selection panel / minimap / lobby / role selection as `.tscn` shells; shared `ui/styles/*.tres` StyleBoxes; unit default sprites in Hunter/Runner scenes; arena props + spawn gizmos; optional `ui/widgets/ui_kit/ui_kit.tscn` |
 | 2026-11-21 | CP-03 / CP-04 / CP-10 camera + minimap UX | Center spawn ring (`PlateauMap.spawn_ring_positions`); viewer-relative minimap colors; camera frustum + LMB jump on minimap; no edge-scroll over UI; no auto-recenter on eliminations / roster noise |
+| 2026-11-21 | CP-10 selection panel combat HUD | Fixed-size panel; clean stat icons; 2×3 combat grid; health bar + regen; empty = grey box + empty ring |
+| 2026-11-21 | CP-02 networking cleanup | Removed `addons/godotsteam` and all Steam lobby / invite paths; `NetworkManager` is ENet-only |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -48,7 +50,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Autoload stack | Done | `LaunchOptions`, `NetworkManager`, `GameManager`, `SceneTransitionManager`, `SettingsManager`, `SoundManager`, `BotClient`, `Sandbox` |
 | Scene transitions only via manager (`from` → `to`) | Done | `autoloads/scene_transition_manager.gd` |
 | Direct scene open for isolated tests | Done | `--scene=lobby\|selection\|game`, empty `from` supported |
-| Lobby (s0) host / join / roster / continue (ENet UI) | Done | `ui/lobby/` — Host/Join local; Steam host buttons removed from lobby |
+| Lobby (s0) host / join / roster / continue (ENet UI) | Done | `ui/lobby/` — Host/Join local; ENet-only |
 | Role selection (s1) left Runners / right Hunter | Done | `ui/role_selection/` |
 | Exactly one Hunter; random among Hunter requests; random if none | Done | `GameManager.choose_hunter_id` |
 | Game (s2) match scene | Done | `game/match/` |
@@ -66,7 +68,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Host-authoritative roster and RPCs | Done | `autoloads/game_manager.gd` |
 | Clients send intent, host applies | Done | Movement orders, side votes, skip prep |
 | Peer disconnect handling → lobby | Done | `_on_peer_left`, `_on_disconnected` |
-| Steam lobby / invite path | Partial | Still in `network_manager.gd`; **not** exposed in lobby UI (ENet-only presentation) |
+| Steam / GodotSteam | Removed | Addon deleted; `NetworkManager` has no Steam APIs |
 | Public matchmaking / lobby browser | Not in scope yet | Explicit exclusion in architecture §7.4 |
 
 **Doc owners:** `project_architecture.README.md` §7, `instructions.README.md` §2
@@ -176,9 +178,12 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 | Item | Status | Evidence |
 | --- | --- | --- |
-| Bottom selection strip with circular portrait + stats | Done | `ui/hud/selection_panel/selection_panel.tscn` + `.gd` (`@tool` + StyleBox `.tres`) |
+| Fixed-size bottom selection strip | Done | `520×148`; empty vs selected does not resize the panel |
+| Portrait ring always present | Done | Empty ring when nothing selected; sprite when a unit is selected |
 | Portrait ring uses selection affinity colors | Done | Own green / runner blue / hunter red |
-| Shows selected HP / speed / melee / defense + controllable flag | Done | Bound from `SelectionManager` each frame |
+| Combat stats grid (2×3) with clean icons | Done | Damage / crit / defense / lifesteal / attack speed / move; `StatIcons` + `assets/sprites/stats/clean/` |
+| Stat values as `base (+delta)` | Done | Green / red BBCode modifier delta from `StatSheet` |
+| Health bar under stats + regen `+X` when not full | Done | Fill = current / max; regen label hidden at full HP |
 | `C` always centers on local own unit (ignores foreign selection) | Done | `game/camera/match_camera.gd`, `controls.README.md` §1.4 |
 | Bottom-left minimap with current map asset | Done | `ui/hud/minimap/minimap.tscn` + frame StyleBox `.tres` |
 | Unit pixels at relative world positions | Done | Mapped via `Unit.MAP_BOUNDS` |
@@ -258,7 +263,8 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | `ui/lobby`, `ui/role_selection`, `ui/styles/`, `ui/widgets/` (+ `ui_kit`), `ui/hud/{health_bar,selection_panel,minimap}` | Active |
 | `default_bus_layout.tres` (Master → Music / SFX) | Wired in `project.godot` |
 | `tests/{bots,session,stats,navigation,combat}`, `scripts/test/` | Active |
-| `addons/godotsteam`, Web preset in `export_presets.cfg` | Present; export path / CI still open |
+| Web preset in `export_presets.cfg` | Present; export path / CI still open |
+| GodotSteam addon | Removed | Networking is ENet-only |
 | Empty leftover dirs (`components/`, `common/`, `data/`, …) | Legacy experimental code removed; not gameplay features |
 
 ---

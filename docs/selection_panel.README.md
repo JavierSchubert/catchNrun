@@ -15,38 +15,37 @@ The Selection Panel does not own gameplay rules. It reads entity state, capabili
 
 ## 2. Layout
 
-The Selection Panel sits at the bottom of the screen while an entity is selected.
+The Selection Panel is a **fixed-size** bottom HUD strip (`520×148`). Selection vs empty must not change the panel size.
 
 | Section | Position | Purpose |
 | --- | --- | --- |
-| Portrait | Left | Circular crop of the selected entity's image / sprite |
-| Entity Info | Right of portrait | Name, type, health, and relevant stats |
-| Context Action Panel | Further right (later) | Available contextual actions |
+| Portrait ring | Left | Circular crop of the selected unit sprite; empty ring when nothing is selected |
+| Combat stats | Right of portrait | Two columns of icon + value rows |
+| Health bar | Under stats | Fill = current / max health; `+regen` only when not full |
 
 ```text
-Selection Panel (bottom of screen)
-├── Circular Portrait
-│   └── Selected entity sprite / icon
-├── Entity Info
-│   ├── Name
-│   ├── Entity Type
-│   ├── Health
-│   └── Relevant Stats / Properties
-│
-└── Context Action Panel (optional / later)
-    └── Actions available for the selected entity
+Selection Panel (fixed size)
+├── Portrait ring (always; sprite only when a unit is selected)
+└── Right column (only when a unit is selected)
+    ├── Stats grid (2 columns)
+    │   ├── Damage          Crit Chance
+    │   ├── Defense         Lifesteal Chance
+    │   └── Attack Speed    Movement Speed
+    └── Health bar [////////////] +regen
 ```
 
-Minimal visual-test layout: circular portrait + stats. Context actions can be added without changing the portrait / info strip.
+Stat values use `base (+delta)` with green / red BBCode for the modifier. Icons come from `assets/sprites/stats/clean/` via `StatIcons`.
+
+Empty selection: grey panel + empty portrait ring only (no stats, no health bar).
 
 ### 2.1. Scene / style resources
-
-Layout and StyleBoxes are editor-editable scenes/resources; scripts only bind selection data at runtime:
 
 ```text
 ui/hud/selection_panel/selection_panel.tscn
 ui/hud/selection_panel/selection_panel_style.tres
 ui/hud/selection_panel/selection_ring_style.tres
+src/stats/stat_icons.gd
+assets/sprites/stats/clean/
 ```
 
 Instanced by `game/match/hud.tscn`. The panel script is `@tool` so StyleBox `@export` changes refresh in the editor.
@@ -82,9 +81,10 @@ Additional values depend on the entity.
 ### Character Example
 
 ```text
-Runner
-Health          85 / 100
-Movement Speed  5.0
+[portrait]  Damage 10          Crit 0%
+            Defense 0          Lifesteal 0%
+            Atk Spd 1.3        Move 220
+            [======== HP bar ========] +2
 ```
 
 ### Wall Example
@@ -184,8 +184,9 @@ Used for actions or modes that are currently active or toggled.
 
 If no entity is selected:
 
-- Hide the Selection Panel or show an empty state.
-- Show no entity information.
+- Keep the fixed-size grey panel visible.
+- Show the empty portrait ring (no sprite).
+- Hide stats and the health bar.
 - Show no contextual actions.
 
 ### Single Selection

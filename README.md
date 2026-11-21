@@ -154,7 +154,7 @@ Settings load `user://settings.cfg`, push volumes onto SoundManager, then call `
 | Piece | Configuration |
 | --- | --- |
 | Settings gear | Right edge on lobby, role selection, and match (`SettingsMenu.attach`) |
-| Lobby | Wallpaper + card; **ENet only** Host/Join (Steam host UI not shown) |
+| Lobby | Wallpaper + card; **ENet only** Host/Join |
 | Match map | `game/maps/arena_plateau.tscn` (lava / tiles v3), not space |
 | Sandbox | Action bar top-left; Tests top-right; status bottom-right; headless default **on** |
 | Match HUD status | Top-center, under the sandbox action bar |
