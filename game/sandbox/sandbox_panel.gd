@@ -11,10 +11,13 @@ const HUNTER_ICON := preload("res://assets/sprites/units/Enemy_1.png")
 var _status: Label
 var _state: Label
 var _peers: Label
+var _log_view: RichTextLabel
+var _log_scroll: ScrollContainer
 var _bin_edit: LineEdit
 var _headless: CheckBox
 var _runner_count := 0
 var _hunter_count := 0
+var _log_listener: Callable
 
 
 func _ready() -> void:
@@ -40,7 +43,15 @@ func _ready() -> void:
 	_build_action_bar(root)
 	_build_tests_panel(root)
 	_build_status_panel(root)
+	_log_listener = _on_game_log_line
+	GameLog.add_listener(_log_listener)
+	_seed_log_view()
 	_refresh()
+
+
+func _exit_tree() -> void:
+	if _log_listener.is_valid():
+		GameLog.remove_listener(_log_listener)
 
 
 func _process(_delta: float) -> void:
@@ -126,16 +137,17 @@ func _build_status_panel(root: Control) -> void:
 	# Bottom-right keeps minimap (bottom-left) and selection (bottom-center) clear.
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	panel.offset_left = -360.0
-	panel.offset_top = -150.0
-	panel.offset_right = -100.0
+	panel.offset_left = -420.0
+	panel.offset_top = -280.0
+	panel.offset_right = -16.0
 	panel.offset_bottom = -16.0
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.06, 0.07, 0.09, 0.85)))
 	root.add_child(panel)
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel.add_child(box)
 
 	_state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -145,6 +157,30 @@ func _build_status_panel(root: Control) -> void:
 	box.add_child(_state)
 	box.add_child(_peers)
 	box.add_child(_status)
+
+	var log_title := Label.new()
+	log_title.text = "Log"
+	log_title.add_theme_font_size_override("font_size", 14)
+	log_title.add_theme_color_override("font_color", Color(0.95, 0.82, 0.35))
+	box.add_child(log_title)
+
+	_log_scroll = ScrollContainer.new()
+	_log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_log_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_log_scroll.custom_minimum_size = Vector2(0, 140)
+	_log_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_log_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	box.add_child(_log_scroll)
+
+	_log_view = RichTextLabel.new()
+	_log_view.bbcode_enabled = false
+	_log_view.fit_content = true
+	_log_view.scroll_active = false
+	_log_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_log_view.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_log_view.add_theme_font_size_override("normal_font_size", 12)
+	_log_view.add_theme_color_override("default_color", Color(0.78, 0.86, 0.92))
+	_log_scroll.add_child(_log_view)
 
 
 func _panel_style(bg: Color) -> StyleBoxFlat:
@@ -282,11 +318,37 @@ func _skip_preparation() -> void:
 
 
 func _reset_match() -> void:
-	if not NetworkManager.is_online() or not multiplayer.is_server():
+	if NetworkManager.is_online() and not multiplayer.is_server():
 		_status.text = "Only the host can reset the match."
 		return
+	_runner_count = 0
+	_hunter_count = 0
 	GameManager.reset_match()
 	_status.text = "Match reset."
+
+
+func _seed_log_view() -> void:
+	if _log_view == null:
+		return
+	_log_view.clear()
+	for line in GameLog.history:
+		_log_view.append_text(line + "\n")
+	_scroll_log_to_end()
+
+
+func _on_game_log_line(line: String) -> void:
+	if _log_view == null:
+		return
+	_log_view.append_text(line + "\n")
+	_scroll_log_to_end()
+
+
+func _scroll_log_to_end() -> void:
+	if _log_scroll == null:
+		return
+	await get_tree().process_frame
+	if _log_scroll != null:
+		_log_scroll.scroll_vertical = int(_log_scroll.get_v_scroll_bar().max_value)
 
 
 func _launch_bot(role: String, bot_name: String) -> bool:

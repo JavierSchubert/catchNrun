@@ -51,6 +51,10 @@ var _selection_circle: SelectionCircle
 var _selection_hovered := false
 var _selection_selected := false
 var _attack_flash_remaining := 0.0
+## Server-authoritative shift-click waypoint queue (world positions).
+var _move_chain: Array[Vector2] = []
+## Local-only green dotted path / waypoint rings for the commanding player.
+var _chain_visual: MoveChainVisual
 
 
 func _enter_tree() -> void:
@@ -203,16 +207,29 @@ func can_attack() -> bool:
 
 
 func issue_move(destination: Vector2) -> void:
-	## Player move: cancels attack / attack-move and shows the blue ground marker.
+	## Player move: cancels attack / attack-move / chain and shows the blue ground marker.
 	if not _can_issue_commands():
 		return
+	_clear_chain_visual()
 	_request_move(destination)
 	_show_move_click_marker(destination)
+
+
+func issue_chain_append(destination: Vector2) -> void:
+	## Shift+RMB waypoint. Any controllable unit can chain; hunters still auto-attack in range.
+	if not _can_issue_commands():
+		return
+	var clamped := _clamp_map_position(destination)
+	_ensure_chain_visual()
+	if _chain_visual != null:
+		_chain_visual.append_waypoint(clamped)
+	_request_chain_append(clamped)
 
 
 func issue_attack_move(destination: Vector2) -> void:
 	if not _can_issue_commands() or not can_attack():
 		return
+	_clear_chain_visual()
 	_request_attack_move(destination)
 	_show_attack_click_marker_at(destination)
 
@@ -230,13 +247,20 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not click.pressed or click.button_index != MOUSE_BUTTON_RIGHT:
 		return
 	var world_pos := get_global_mouse_position()
+	var shift_held := click.shift_pressed or Input.is_key_pressed(KEY_SHIFT)
+	if shift_held:
+		issue_chain_append(world_pos)
+		get_viewport().set_input_as_handled()
+		return
 	var target := _clickable_enemy_at(world_pos)
 	if target != null and can_attack():
-		## Attack only — never also flash the blue move ring on the target.
+		## Attack only — cancels any active move chain.
+		_clear_chain_visual()
 		_request_attack(target)
 		_show_attack_click_marker_on(target)
 	else:
-		## Ground RMB always wins over an in-progress attack / auto-acquire.
+		## Ground RMB cancels chain / attack and walks to the click.
+		_clear_chain_visual()
 		_request_move(world_pos)
 		_show_move_click_marker(world_pos)
 	get_viewport().set_input_as_handled()
@@ -256,11 +280,14 @@ func _physics_process(delta: float) -> void:
 			_intent = Vector2.ZERO
 			movement.clear_order()
 			attack.clear_target()
+			_move_chain.clear()
 		else:
 			_server_combat_tick(delta)
 			if not movement.has_order():
 				movement.intent = _intent
 			movement.apply(self)
+			## After applying motion, queue the next shift-click leg if the current one finished.
+			_resume_move_chain_if_needed()
 			_clamp_to_map()
 		sync_position = position
 		sync_health = health.current
@@ -340,10 +367,13 @@ func _server_combat_tick(delta: float) -> void:
 	var target := attack.pick_target(global_position, _enemy_candidates())
 	if target == null:
 		_resume_attack_move_if_needed()
+		_resume_move_chain_if_needed()
 		return
 
-	var player_engage := attack.explicit_target != null or attack.attack_move_active
-	## A player move command always outranks opportunistic auto-attack.
+	var player_engage := attack.explicit_target != null \
+		or attack.attack_move_active \
+		or not _move_chain.is_empty()
+	## A plain player move outranks opportunistic auto-attack; chains act like attack-move.
 	if not player_engage and movement.has_order():
 		return
 
@@ -487,6 +517,7 @@ func _clamp_map_position(world_position: Vector2) -> Vector2:
 
 func _request_move(destination: Vector2, clear_attack := true) -> void:
 	if multiplayer.is_server():
+		_move_chain.clear()
 		if clear_attack:
 			attack.clear_target()
 			attack.clear_attack_move()
@@ -495,9 +526,28 @@ func _request_move(destination: Vector2, clear_attack := true) -> void:
 		_submit_move_order.rpc_id(1, destination, clear_attack)
 
 
+func _request_chain_append(destination: Vector2) -> void:
+	var clamped := _clamp_map_position(destination)
+	if multiplayer.is_server():
+		_server_chain_append(clamped)
+	else:
+		_submit_chain_append.rpc_id(1, clamped)
+
+
+func _server_chain_append(destination: Vector2) -> void:
+	attack.clear_target()
+	attack.clear_attack_move()
+	var was_empty := _move_chain.is_empty()
+	_move_chain.append(destination)
+	## Start walking the first leg immediately; further clicks only queue.
+	if was_empty or not movement.has_order():
+		movement.order_move(global_position, _move_chain[0])
+
+
 func _request_attack_move(destination: Vector2) -> void:
 	var clamped := _clamp_map_position(destination)
 	if multiplayer.is_server():
+		_move_chain.clear()
 		attack.begin_attack_move(clamped)
 		movement.order_move(global_position, clamped)
 	else:
@@ -533,8 +583,9 @@ func _marker_host() -> Node:
 func _chase_combat_target(target: Node2D) -> void:
 	if target == null:
 		return
-	if attack.attack_move_active and not attack.attack_move_chasing:
-		## Interrupt the destination path once so we engage instead of walking past.
+	var chaining := attack.attack_move_active or not _move_chain.is_empty()
+	if chaining and not attack.attack_move_chasing:
+		## Interrupt the destination / chain path once so we engage instead of walking past.
 		attack.attack_move_chasing = true
 		movement.order_move(global_position, target.global_position)
 		return
@@ -555,8 +606,44 @@ func _resume_attack_move_if_needed() -> void:
 	movement.order_move(global_position, destination)
 
 
+func _resume_move_chain_if_needed() -> void:
+	if _move_chain.is_empty():
+		return
+	attack.attack_move_chasing = false
+	if movement.has_order():
+		return
+	## Drop waypoints the unit has already reached, then walk the next leg.
+	while not _move_chain.is_empty() and global_position.distance_to(_move_chain[0]) <= 12.0:
+		_move_chain.pop_front()
+	if _move_chain.is_empty():
+		return
+	movement.order_move(global_position, _move_chain[0])
+
+
+func _ensure_chain_visual() -> void:
+	if peer_id != multiplayer.get_unique_id():
+		return
+	if _chain_visual != null and is_instance_valid(_chain_visual):
+		return
+	var host := _marker_host()
+	if host == null:
+		return
+	_chain_visual = MoveChainVisual.new()
+	_chain_visual.name = "MoveChainVisual_%d" % peer_id
+	host.add_child(_chain_visual)
+	_chain_visual.set_follow_unit(self)
+
+
+func _clear_chain_visual() -> void:
+	if _chain_visual != null and is_instance_valid(_chain_visual):
+		_chain_visual.clear()
+		_chain_visual.queue_free()
+	_chain_visual = null
+
+
 func _request_attack(target: Unit) -> void:
 	if multiplayer.is_server():
+		_move_chain.clear()
 		attack.set_explicit_target(target)
 		if not attack.in_attack_range(global_position, target):
 			movement.order_move(global_position, target.global_position)
@@ -637,10 +724,22 @@ func _submit_move_order(destination: Vector2, clear_attack := true) -> void:
 		return
 	if not is_alive() or not _movement_allowed():
 		return
+	_move_chain.clear()
 	if clear_attack:
 		attack.clear_target()
 		attack.clear_attack_move()
 	movement.order_move(global_position, _clamp_map_position(destination))
+
+
+@rpc("any_peer", "reliable")
+func _submit_chain_append(destination: Vector2) -> void:
+	if not multiplayer.is_server():
+		return
+	if GameManager.sender_id(multiplayer) != peer_id:
+		return
+	if not is_alive() or not _movement_allowed():
+		return
+	_server_chain_append(_clamp_map_position(destination))
 
 
 @rpc("any_peer", "reliable")
@@ -659,6 +758,7 @@ func _submit_attack_target(target_peer_id: int) -> void:
 	var target := target_node as Unit
 	if not target.is_attackable():
 		return
+	_move_chain.clear()
 	attack.set_explicit_target(target)
 	if not attack.in_attack_range(global_position, target):
 		movement.order_move(global_position, target.global_position)
@@ -674,6 +774,7 @@ func _submit_attack_move(destination: Vector2) -> void:
 		return
 	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
 		return
+	_move_chain.clear()
 	var clamped := _clamp_map_position(destination)
 	attack.begin_attack_move(clamped)
 	movement.order_move(global_position, clamped)

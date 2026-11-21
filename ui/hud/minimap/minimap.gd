@@ -52,7 +52,11 @@ func _gui_input(event: InputEvent) -> void:
 	var world := minimap_to_world(click.position)
 	match click.button_index:
 		MOUSE_BUTTON_RIGHT:
-			_issue_move_to(world)
+			var shift_held := click.shift_pressed or Input.is_key_pressed(KEY_SHIFT)
+			if shift_held:
+				_issue_chain_append_to(world)
+			else:
+				_issue_move_to(world)
 			accept_event()
 		MOUSE_BUTTON_LEFT:
 			if _attack_move_armed():
@@ -115,6 +119,17 @@ func _issue_move_to(world: Vector2) -> void:
 		return
 	if unit.has_method("issue_move"):
 		unit.call("issue_move", world)
+
+
+func _issue_chain_append_to(world: Vector2) -> void:
+	var manager := _selection_manager()
+	if manager != null and manager.attack_move_armed:
+		manager.attack_move_armed = false
+	var unit := _selected_controllable()
+	if unit == null:
+		return
+	if unit.has_method("issue_chain_append"):
+		unit.call("issue_chain_append", world)
 
 
 func _issue_attack_move_to(world: Vector2) -> void:

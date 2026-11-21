@@ -159,7 +159,13 @@ Right Click Ground
 -> Calculate shortest valid path
 -> Move along path
 
-A newly issued movement command replaces the current movement or attack command. Right-click on empty ground always takes priority: it cancels the current attack / attack-move and walks to the click. Opportunistic auto-attack must not interrupt that player move while the path is still active.
+A newly issued movement command replaces the current movement or attack command. Right-click on empty ground always takes priority: it cancels the current attack / attack-move / shift-click chain and walks to the click. Opportunistic auto-attack must not interrupt that plain player move while the path is still active.
+
+#### Shift-click move chain
+
+Hold `Shift` and right-click the ground (or the minimap) to queue waypoints. Every controllable unit can chain. Green rings mark each click; a green dotted line runs from the unit to the first waypoint, then between later waypoints. As the unit reaches a waypoint (or travels onto that segment), that ring and its inbound dotted segment disappear.
+
+While a chain is active, units still use default in-range attack behavior (hunters engage, then resume the next waypoint). Cancel the whole chain with a plain right-click or an `A` + left-click attack-move.
 
 #### Attack Command
 

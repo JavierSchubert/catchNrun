@@ -25,6 +25,16 @@ func transition(from_path: String, to_path: String) -> void:
 		_open_everywhere.rpc(from_path, to_path)
 
 
+func force_open(to_path: String) -> void:
+	## Open a scene on every peer, ignoring the current-path guard.
+	## Used by match reset so a stuck / mismatched from-path cannot block return to lobby.
+	if not NetworkManager.is_online():
+		_open("", to_path)
+		return
+	if multiplayer.is_server():
+		_force_open_everywhere.rpc(to_path)
+
+
 func current_scene_path() -> String:
 	var current := get_tree().current_scene
 	if current == null:
@@ -35,6 +45,11 @@ func current_scene_path() -> String:
 @rpc("authority", "call_local", "reliable")
 func _open_everywhere(from_path: String, to_path: String) -> void:
 	_open(from_path, to_path)
+
+
+@rpc("authority", "call_local", "reliable")
+func _force_open_everywhere(to_path: String) -> void:
+	_open("", to_path)
 
 
 func _open(from_path: String, to_path: String) -> void:

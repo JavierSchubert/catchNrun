@@ -44,8 +44,9 @@ The minimap draws a light outline of the current camera viewport so the player c
 | Input | Result |
 | --- | --- |
 | Left-click | Recenter the match camera on the corresponding world position (`MatchCamera.center_on`) |
-| Right-click | Issue a move command for the selected controllable unit to that world position (blue marker) |
-| `A` then left-click | Issue an attack-move to that world position (red marker); requires an attacker selected |
+| Right-click | Issue a move command for the selected controllable unit to that world position (blue marker); cancels any shift-click chain |
+| Shift + right-click | Append a green chain waypoint at that world position |
+| `A` then left-click | Issue an attack-move to that world position (red marker); requires an attacker selected; cancels any chain |
 
 World mapping uses the same `minimap_to_world` / `world_to_minimap` helpers as the unit dots. The minimap uses `MOUSE_FILTER_STOP` so clicks are captured and edge-scroll stays off while hovering it.
 
