@@ -173,26 +173,37 @@ func _test_match_presentation() -> void:
 		_fail("the match scene loads")
 		return
 	var match_root := match_scene.instantiate()
-	var background := match_root.get_node_or_null("Background") as Sprite2D
+	var arena := match_root.get_node_or_null("ArenaPlateau")
+	var floor_layer := arena.get_node_or_null("FloorLayer") as TileMapLayer if arena != null else null
+	var overlay_layer := arena.get_node_or_null("OverlayLayer") as TileMapLayer if arena != null else null
 	var camera := match_root.get_node_or_null("MatchCamera") as Camera2D
 	var camera_script := load("res://game/camera/match_camera.gd") as Script
 	var default_camera := Camera2D.new()
 	default_camera.set_script(camera_script)
-	var map_world_size := Vector2.ZERO
-	if background != null and background.texture != null:
-		map_world_size = Vector2(background.texture.get_size()) * background.scale
 	_check(
-		background != null and background.texture.resource_path.ends_with("assets/sprites/maps/lava.png"),
-		"the match scene uses the lava map"
+		arena != null and floor_layer != null and overlay_layer != null,
+		"the match scene uses the painted plateau TileMap arena"
 	)
 	_check(
-		background != null and background.scale.is_equal_approx(Vector2(1.5625, 1.5625)),
-		"the lava map is scaled to the match area"
+		floor_layer != null and floor_layer.tile_set != null
+			and str(floor_layer.tile_set.resource_path).ends_with("tiles/v3/tileset.tres"),
+		"the arena FloorLayer uses the plateau TileSet"
 	)
 	_check(
-		map_world_size.is_equal_approx(Unit.MAP_BOUNDS.size),
-		"movement bounds match the rendered map size"
+		PlateauMap.world_bounds().is_equal_approx(Unit.MAP_BOUNDS),
+		"movement bounds match the plateau map size"
 	)
+	var spawns := PlateauMap.runner_spawn_positions()
+	_check(spawns.size() == 4, "plateau map exposes four elevated runner spawns")
+	var spawn_root := match_root.get_node_or_null("SpawnPoints")
+	_check(spawn_root != null, "match scene has spawn points")
+	if spawn_root != null:
+		for i in 4:
+			var marker := spawn_root.get_node_or_null("RunnerSpawn%d" % (i + 1)) as Node2D
+			_check(
+				marker != null and marker.position.is_equal_approx(spawns[i]),
+				"runner spawn %d sits on an elevated base" % (i + 1)
+			)
 	_check(
 		camera != null and is_equal_approx(camera.zoom_factor, float(default_camera.get("zoom_factor")))
 			and camera.bounds == Unit.MAP_BOUNDS,
