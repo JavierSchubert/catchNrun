@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cv3plateauatlas01"
-path="res://.godot/imported/atlas.png-cv3plateauatlas01.ctex"
+uid="uid://b2vashtogah3q"
+path="res://.godot/imported/atlas.png-0cda23475c4564ca18f0d003d16a09b3.ctex"
 metadata={
 "vram_texture": false
 }
@@ -11,7 +11,7 @@ metadata={
 [deps]
 
 source_file="res://assets/sprites/maps/tiles/v3/atlas.png"
-dest_files=["res://.godot/imported/atlas.png-cv3plateauatlas01.ctex"]
+dest_files=["res://.godot/imported/atlas.png-0cda23475c4564ca18f0d003d16a09b3.ctex"]
 
 [params]
 
@@ -27,7 +27,13 @@ mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
-process/fix_fix=false
+process/channel_remap/red=0
+process/channel_remap/green=1
+process/channel_remap/blue=2
+process/channel_remap/alpha=3
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
