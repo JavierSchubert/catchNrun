@@ -1,8 +1,8 @@
 @tool
 class_name SelectionPanel
 extends Control
-## Fixed-size selection strip: portrait, name/role, combat stats, and health bar.
-## Layout lives in selection_panel.tscn; runtime only binds selection data.
+## Fixed-size selection strip: portrait, role, combat stats, and health bar.
+## Empty selection shows only the grey panel (no icons/values). Layout in .tscn.
 
 ## Row-major order for the 2-column StatsGrid.
 const PANEL_STATS: Array[StatBlock.Stat] = [
@@ -27,9 +27,9 @@ const PANEL_SIZE := Vector2(520, 148)
 		_apply_styles()
 
 @onready var _root: PanelContainer = %Root
+@onready var _content: Control = %Content
 @onready var _portrait: TextureRect = %Portrait
 @onready var _ring: Panel = %Ring
-@onready var _name_label: Label = %NameLabel
 @onready var _role_label: Label = %RoleLabel
 @onready var _stats_grid: GridContainer = %StatsGrid
 @onready var _health_bar: ProgressBar = %HealthBar
@@ -71,7 +71,6 @@ func _cache_stat_rows() -> void:
 		if child is not HBoxContainer:
 			continue
 		var row := child as HBoxContainer
-		row.alignment = BoxContainer.ALIGNMENT_BEGIN
 		var icon := row.get_node_or_null("Icon") as TextureRect
 		var value := row.get_node_or_null("Value") as RichTextLabel
 		if icon == null or value == null:
@@ -104,18 +103,17 @@ func _apply_styles() -> void:
 
 
 func _show_empty() -> void:
+	_content.visible = false
 	_portrait.texture = null
-	_name_label.text = "No selection"
 	_role_label.text = ""
-	_clear_stat_values()
 	_health_bar.value = 0.0
 	_regen_label.text = ""
 	_set_ring_color(Color(1, 1, 1, 0.25))
 
 
 func _show_unit(unit: Unit, controllable: bool) -> void:
+	_content.visible = true
 	_portrait.texture = unit.sprite.texture if unit.sprite else null
-	_name_label.text = unit.name_label.text if unit.name_label else str(unit.name)
 	var role_name := "Hunter" if unit.role() == RoleConfig.Role.HUNTER else "Runner"
 	var mode := "Controllable" if controllable else "View only"
 	_role_label.text = "%s · %s" % [role_name, mode]
@@ -125,11 +123,10 @@ func _show_unit(unit: Unit, controllable: bool) -> void:
 	_set_ring_color(unit.selection_affinity_color(local_id))
 
 
-func _show_generic(selected: Node) -> void:
+func _show_generic(_selected: Node) -> void:
+	_content.visible = false
 	_portrait.texture = null
-	_name_label.text = str(selected.name)
-	_role_label.text = "Entity"
-	_clear_stat_values()
+	_role_label.text = ""
 	_health_bar.value = 0.0
 	_regen_label.text = ""
 	_set_ring_color(Color(1, 1, 1, 0.35))
@@ -139,11 +136,6 @@ func _bind_stat_values(sheet: StatSheet) -> void:
 	var count := mini(PANEL_STATS.size(), _stat_values.size())
 	for i in count:
 		_stat_values[i].text = StatIcons.format_value(sheet, PANEL_STATS[i])
-
-
-func _clear_stat_values() -> void:
-	for value in _stat_values:
-		value.text = "—"
 
 
 func _bind_health(unit: Unit) -> void:

@@ -9,7 +9,7 @@ extends RefCounted
 const POSITIVE_COLOR := "#6fdf8a"
 const NEGATIVE_COLOR := "#f07178"
 ## Pixel size baked for the selection-panel TextureRects (keep in sync with scene).
-const HUD_ICON_PX := 28
+const HUD_ICON_PX := 34
 
 static var _texture_cache: Dictionary = {}
 
