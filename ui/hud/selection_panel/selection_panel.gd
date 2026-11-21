@@ -4,7 +4,7 @@ extends Control
 ## Bottom-of-screen selection strip: circular portrait + stats for the selected entity.
 ## Layout and StyleBoxes live in selection_panel.tscn / *.tres; runtime binds selection data.
 
-## Row-major order for the 2-column StatsGrid in selection_panel.tscn.
+## Row-major order for the 3-column StatsGrid in selection_panel.tscn.
 const PANEL_STATS: Array[StatBlock.Stat] = [
 	StatBlock.Stat.MAX_HEALTH,
 	StatBlock.Stat.MELEE_DAMAGE,

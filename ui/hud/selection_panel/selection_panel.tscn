@@ -9,7 +9,7 @@
 shader = ExtResource("4_shader")
 
 [node name="SelectionPanel" type="Control"]
-custom_minimum_size = Vector2(440, 148)
+custom_minimum_size = Vector2(560, 140)
 layout_mode = 3
 anchors_preset = 0
 mouse_filter = 2
@@ -96,9 +96,9 @@ visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
-theme_override_constants/h_separation = 18
-theme_override_constants/v_separation = 2
-columns = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 4
+columns = 3
 
 [node name="StatHealth" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
 layout_mode = 2
@@ -107,7 +107,7 @@ mouse_filter = 2
 theme_override_constants/separation = 6
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatHealth"]
-custom_minimum_size = Vector2(18, 18)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -133,7 +133,7 @@ mouse_filter = 2
 theme_override_constants/separation = 6
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatDamage"]
-custom_minimum_size = Vector2(18, 18)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -159,7 +159,7 @@ mouse_filter = 2
 theme_override_constants/separation = 6
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatHpRegen"]
-custom_minimum_size = Vector2(18, 18)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -185,7 +185,7 @@ mouse_filter = 2
 theme_override_constants/separation = 6
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatAttackSpeed"]
-custom_minimum_size = Vector2(18, 18)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -211,7 +211,7 @@ mouse_filter = 2
 theme_override_constants/separation = 6
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatDefense"]
-custom_minimum_size = Vector2(18, 18)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -237,7 +237,7 @@ mouse_filter = 2
 theme_override_constants/separation = 6
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatLifesteal"]
-custom_minimum_size = Vector2(18, 18)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -263,7 +263,7 @@ mouse_filter = 2
 theme_override_constants/separation = 6
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatMoveSpeed"]
-custom_minimum_size = Vector2(18, 18)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -289,7 +289,7 @@ mouse_filter = 2
 theme_override_constants/separation = 6
 
 [node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatCrit"]
-custom_minimum_size = Vector2(18, 18)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
