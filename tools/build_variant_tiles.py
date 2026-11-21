@@ -21,7 +21,6 @@ SRC = Path(
 TILE = 128
 ATLAS_COLS = 8
 
-# Must match current atlas order so painted maps stay valid.
 BASE_NAMES = [
 	"floor",
 	"border_bottom_a",
@@ -52,6 +51,69 @@ BASE_NAMES = [
 	"tile_border_rock",
 	"tile_ground_center",
 	"tile_ground_high",
+]
+
+# gen filename -> output tile name
+GEN_MAP = {
+	"gen_plateau_n_mid": "plateau_n_mid",
+	"gen_plateau_n_edge": "plateau_n_edge",
+	"gen_plateau_s_mid": "plateau_s_mid",
+	"gen_plateau_s_edge": "plateau_s_edge",
+	"gen_plateau_e_mid": "plateau_e_mid",
+	"gen_plateau_e_edge": "plateau_e_edge",
+	"gen_plateau_w_mid": "plateau_w_mid",
+	"gen_plateau_w_edge": "plateau_w_edge",
+	"gen_plateau_nw_mid": "plateau_l_nw_mid",
+	"gen_plateau_nw_edge": "plateau_l_nw_edge",
+	"gen_plateau_ne_mid": "plateau_l_ne_mid",
+	"gen_plateau_ne_edge": "plateau_l_ne_edge",
+	"gen_plateau_sw_mid": "plateau_l_sw_mid",
+	"gen_plateau_sw_edge": "plateau_l_sw_edge",
+	"gen_plateau_se_mid": "plateau_l_se_mid",
+	"gen_plateau_se_edge": "plateau_l_se_edge",
+	"gen_border_nw_lava_both": "border_l_nw_lava_both",
+	"gen_border_nw_lava_north": "border_l_nw_lava_primary",
+	"gen_border_nw_lava_west": "border_l_nw_lava_secondary",
+	"gen_border_ne_lava_both": "border_l_ne_lava_both",
+	"gen_border_ne_lava_north": "border_l_ne_lava_primary",
+	"gen_border_ne_lava_east": "border_l_ne_lava_secondary",
+	"gen_border_sw_lava_both": "border_l_sw_lava_both",
+	"gen_border_sw_lava_south": "border_l_sw_lava_primary",
+	"gen_border_sw_lava_west": "border_l_sw_lava_secondary",
+	"gen_border_se_lava_both": "border_l_se_lava_both",
+	"gen_border_se_lava_south": "border_l_se_lava_primary",
+	"gen_border_se_lava_east": "border_l_se_lava_secondary",
+}
+
+NEW_NAMES = [
+	"plateau_n_mid",
+	"plateau_n_edge",
+	"plateau_s_mid",
+	"plateau_s_edge",
+	"plateau_e_mid",
+	"plateau_e_edge",
+	"plateau_w_mid",
+	"plateau_w_edge",
+	"plateau_l_nw_mid",
+	"plateau_l_nw_edge",
+	"plateau_l_ne_mid",
+	"plateau_l_ne_edge",
+	"plateau_l_sw_mid",
+	"plateau_l_sw_edge",
+	"plateau_l_se_mid",
+	"plateau_l_se_edge",
+	"border_l_nw_lava_both",
+	"border_l_nw_lava_primary",
+	"border_l_nw_lava_secondary",
+	"border_l_ne_lava_both",
+	"border_l_ne_lava_primary",
+	"border_l_ne_lava_secondary",
+	"border_l_sw_lava_both",
+	"border_l_sw_lava_primary",
+	"border_l_sw_lava_secondary",
+	"border_l_se_lava_both",
+	"border_l_se_lava_primary",
+	"border_l_se_lava_secondary",
 ]
 
 
@@ -116,36 +178,6 @@ def read_png(path: Path) -> bytes:
 	return bytes(out)
 
 
-def load_gen(name: str) -> bytes:
-	"""Load generated jpg/png from cursor assets, resize to 128, scrub pink."""
-	path = SRC / f"{name}.jpg"
-	if not path.exists():
-		path = SRC / f"{name}.png"
-	tmp = Path(tempfile.gettempdir()) / "cnr_variant_rgba.bin"
-	ps = f"""
-Add-Type -AssemblyName System.Drawing
-$img = [System.Drawing.Image]::FromFile('{(path.as_posix())}')
-$bmp = New-Object System.Drawing.Bitmap {TILE}, {TILE}
-$g = [System.Drawing.Graphics]::FromImage($bmp)
-$g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-$g.DrawImage($img, 0, 0, {TILE}, {TILE})
-$g.Dispose(); $img.Dispose()
-$bytes = New-Object byte[] ({TILE}*{TILE}*4)
-$i = 0
-for ($y=0; $y -lt {TILE}; $y++) {{
-  for ($x=0; $x -lt {TILE}; $x++) {{
-    $c = $bmp.GetPixel($x,$y)
-    $bytes[$i]=$c.R; $bytes[$i+1]=$c.G; $bytes[$i+2]=$c.B; $bytes[$i+3]=255
-    $i += 4
-  }}
-}}
-$bmp.Dispose()
-[IO.File]::WriteAllBytes('{(tmp.as_posix())}', $bytes)
-"""
-	subprocess.check_call(["powershell", "-NoProfile", "-Command", ps])
-	return scrub_pink(tmp.read_bytes(), read_png(V3 / "floor.png"))
-
-
 def is_pink(r: int, g: int, b: int, a: int = 255) -> bool:
 	if a < 250:
 		return True
@@ -171,126 +203,46 @@ def scrub_pink(rgba: bytes, floor: bytes) -> bytes:
 	return bytes(buf)
 
 
-def rot90(rgba: bytes) -> bytes:
-	out = bytearray(TILE * TILE * 4)
-	for y in range(TILE):
-		for x in range(TILE):
-			nx, ny = TILE - 1 - y, x
-			si = (y * TILE + x) * 4
-			di = (ny * TILE + nx) * 4
-			out[di : di + 4] = rgba[si : si + 4]
-	return bytes(out)
-
-
-def flip_h(rgba: bytes) -> bytes:
-	out = bytearray(len(rgba))
-	for y in range(TILE):
-		for x in range(TILE):
-			si = (y * TILE + x) * 4
-			di = (y * TILE + (TILE - 1 - x)) * 4
-			out[di : di + 4] = rgba[si : si + 4]
-	return bytes(out)
-
-
-def flip_v(rgba: bytes) -> bytes:
-	out = bytearray(len(rgba))
-	for y in range(TILE):
-		for x in range(TILE):
-			si = (y * TILE + x) * 4
-			di = ((TILE - 1 - y) * TILE + x) * 4
-			out[di : di + 4] = rgba[si : si + 4]
-	return bytes(out)
-
-
-def save(name: str, rgba: bytes) -> None:
-	write_png(V3 / f"{name}.png", TILE, TILE, rgba)
+def load_gen(name: str, floor: bytes) -> bytes:
+	path = SRC / f"{name}.jpg"
+	if not path.exists():
+		path = SRC / f"{name}.png"
+	if not path.exists():
+		raise FileNotFoundError(name)
+	tmp = Path(tempfile.gettempdir()) / f"cnr_{name}_rgba.bin"
+	ps = f"""
+Add-Type -AssemblyName System.Drawing
+$img = [System.Drawing.Image]::FromFile('{(path.as_posix())}')
+$bmp = New-Object System.Drawing.Bitmap {TILE}, {TILE}
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+$g.DrawImage($img, 0, 0, {TILE}, {TILE})
+$g.Dispose(); $img.Dispose()
+$bytes = New-Object byte[] ({TILE}*{TILE}*4)
+$i = 0
+for ($y=0; $y -lt {TILE}; $y++) {{
+  for ($x=0; $x -lt {TILE}; $x++) {{
+    $c = $bmp.GetPixel($x,$y)
+    $bytes[$i]=$c.R; $bytes[$i+1]=$c.G; $bytes[$i+2]=$c.B; $bytes[$i+3]=255
+    $i += 4
+  }}
+}}
+$bmp.Dispose()
+[IO.File]::WriteAllBytes('{(tmp.as_posix())}', $bytes)
+"""
+	subprocess.check_call(["powershell", "-NoProfile", "-Command", ps])
+	return scrub_pink(tmp.read_bytes(), floor)
 
 
 def main() -> None:
 	floor = read_png(V3 / "floor.png")
 
-	# --- Plateau straight mid/edge ---
-	s_mid = load_gen("gen_plateau_s_mid")
-	s_edge = load_gen("gen_plateau_s_edge")
-	e_mid = load_gen("gen_plateau_e_mid")
-	# derive e_edge from s_edge rotated
-	e_edge = rot90(rot90(rot90(s_edge)))  # S -> E is 270 CW = 3x90
+	for gen_name, out_name in GEN_MAP.items():
+		rgba = load_gen(gen_name, floor)
+		write_png(V3 / f"{out_name}.png", TILE, TILE, rgba)
+		print(f"wrote {out_name}")
 
-	save("plateau_s_mid", s_mid)
-	save("plateau_s_edge", s_edge)
-	save("plateau_n_mid", flip_v(s_mid))
-	save("plateau_n_edge", flip_v(s_edge))
-	save("plateau_e_mid", e_mid)
-	save("plateau_e_edge", e_edge)
-	save("plateau_w_mid", flip_h(e_mid))
-	save("plateau_w_edge", flip_h(e_edge))
-
-	# --- Plateau L mid/edge ---
-	se_mid = load_gen("gen_plateau_se_mid")
-	se_edge = load_gen("gen_plateau_se_edge")
-	save("plateau_l_se_mid", se_mid)
-	save("plateau_l_se_edge", se_edge)
-	sw_mid = rot90(se_mid)
-	sw_edge = rot90(se_edge)
-	nw_mid = rot90(sw_mid)
-	nw_edge = rot90(sw_edge)
-	ne_mid = rot90(nw_mid)
-	ne_edge = rot90(nw_edge)
-	save("plateau_l_sw_mid", sw_mid)
-	save("plateau_l_sw_edge", sw_edge)
-	save("plateau_l_nw_mid", nw_mid)
-	save("plateau_l_nw_edge", nw_edge)
-	save("plateau_l_ne_mid", ne_mid)
-	save("plateau_l_ne_edge", ne_edge)
-
-	# --- Floor border L lava variants (SE masters + rotate) ---
-	both = load_gen("gen_border_se_lava_both")
-	lava_s = load_gen("gen_border_se_lava_south")
-	lava_e = load_gen("gen_border_se_lava_east")
-
-	def save_corner_set(suffix: str, master: bytes) -> None:
-		# SE, SW, NW, NE via CW rotations
-		save(f"border_l_se_{suffix}", master)
-		save(f"border_l_sw_{suffix}", rot90(master))
-		save(f"border_l_nw_{suffix}", rot90(rot90(master)))
-		save(f"border_l_ne_{suffix}", rot90(rot90(rot90(master))))
-
-	save_corner_set("lava_both", both)
-	save_corner_set("lava_primary", lava_s)  # lava on the "bottom-like" side after rotation
-	save_corner_set("lava_secondary", lava_e)  # lava on the "side-like" edge after rotation
-
-	new_names = [
-		"plateau_n_mid",
-		"plateau_n_edge",
-		"plateau_s_mid",
-		"plateau_s_edge",
-		"plateau_e_mid",
-		"plateau_e_edge",
-		"plateau_w_mid",
-		"plateau_w_edge",
-		"plateau_l_nw_mid",
-		"plateau_l_nw_edge",
-		"plateau_l_ne_mid",
-		"plateau_l_ne_edge",
-		"plateau_l_sw_mid",
-		"plateau_l_sw_edge",
-		"plateau_l_se_mid",
-		"plateau_l_se_edge",
-		"border_l_nw_lava_both",
-		"border_l_nw_lava_primary",
-		"border_l_nw_lava_secondary",
-		"border_l_ne_lava_both",
-		"border_l_ne_lava_primary",
-		"border_l_ne_lava_secondary",
-		"border_l_sw_lava_both",
-		"border_l_sw_lava_primary",
-		"border_l_sw_lava_secondary",
-		"border_l_se_lava_both",
-		"border_l_se_lava_primary",
-		"border_l_se_lava_secondary",
-	]
-
-	all_names = [n for n in BASE_NAMES if (V3 / f"{n}.png").exists()] + new_names
+	all_names = [n for n in BASE_NAMES if (V3 / f"{n}.png").exists()] + NEW_NAMES
 	rows = (len(all_names) + ATLAS_COLS - 1) // ATLAS_COLS
 	atlas_w, atlas_h = ATLAS_COLS * TILE, rows * TILE
 	atlas = bytearray(atlas_w * atlas_h * 4)
@@ -312,7 +264,6 @@ def main() -> None:
 
 	write_png(V3 / "atlas.png", atlas_w, atlas_h, bytes(atlas))
 
-	# Keep existing atlas texture uid from .import if present
 	atlas_uid = "uid://b2vashtogah3q"
 	imp = V3 / "atlas.png.import"
 	if imp.exists():
@@ -342,7 +293,6 @@ def main() -> None:
 	]
 	(V3 / "tileset.tres").write_text("\n".join(lines), encoding="utf-8")
 
-	# Legend for the user
 	legend = ["# v3 tile legend (atlas col,row)", ""]
 	for i, name in enumerate(all_names):
 		ax, ay = i % ATLAS_COLS, i // ATLAS_COLS
