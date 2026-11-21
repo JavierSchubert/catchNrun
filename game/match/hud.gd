@@ -42,7 +42,7 @@ func _ready() -> void:
 	root.add_child(_selection_panel)
 
 	SettingsMenu.attach(root)
-	SoundManager.play_music(SoundManager.Sound.BG_MUSIC_3)
+	SoundManager.ensure_music()
 
 	GameManager.match_finished.connect(_on_match_finished)
 	GameManager.phase_changed.connect(_on_phase_changed)

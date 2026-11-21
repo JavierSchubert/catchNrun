@@ -1,5 +1,5 @@
 extends Control
-## Lobby screen: host or join, see who is connected, and (host only) continue to role selection.
+## Lobby screen: host or join via ENet, see who is connected, and (host only) continue.
 
 const WALLPAPER := preload("res://assets/sprites/ui/wallpaper.png")
 
@@ -9,7 +9,6 @@ var _status := Label.new()
 var _player_list := ItemList.new()
 var _connect_box := VBoxContainer.new()
 var _lobby_box := VBoxContainer.new()
-var _invite_button := Button.new()
 var _start_button := Button.new()
 
 
@@ -37,7 +36,7 @@ func _ready() -> void:
 	root.add_child(title)
 
 	var subtitle := Label.new()
-	subtitle.text = "Host a match or join a friend"
+	subtitle.text = "Host a match or join on the local network"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_font_size_override("font_size", 16)
 	subtitle.add_theme_color_override("font_color", Color(0.82, 0.82, 0.78))
@@ -50,13 +49,9 @@ func _ready() -> void:
 
 	_style_line_edit(_name_edit, "Your name")
 	_name_edit.text = GameManager.local_player_name
-	if NetworkManager.steam_enabled:
-		_name_edit.text = Steam.getPersonaName()
 	_connect_box.add_theme_constant_override("separation", 10)
 	_connect_box.add_child(_name_edit)
 
-	var steam_button := _add_button(_connect_box, "Host with Steam (invite friends)", _on_host_steam)
-	steam_button.disabled = not NetworkManager.steam_enabled
 	_add_button(_connect_box, "Host local", _on_host_local)
 	_style_line_edit(_address_edit, "127.0.0.1")
 	_address_edit.text = "127.0.0.1"
@@ -68,13 +63,6 @@ func _ready() -> void:
 	_player_list.custom_minimum_size = Vector2(0, 200)
 	_style_item_list(_player_list)
 	_lobby_box.add_child(_player_list)
-	_invite_button.text = "Invite Steam friends"
-	_style_button(_invite_button, true)
-	_invite_button.pressed.connect(func() -> void:
-		SoundManager.play_ui()
-		NetworkManager.invite_friends()
-	)
-	_lobby_box.add_child(_invite_button)
 	_start_button.text = "Continue to role selection"
 	_style_button(_start_button, true)
 	_start_button.pressed.connect(func() -> void:
@@ -86,7 +74,7 @@ func _ready() -> void:
 	root.add_child(_lobby_box)
 
 	SettingsMenu.attach(self)
-	SoundManager.play_music(SoundManager.Sound.BG_MUSIC_1)
+	SoundManager.ensure_music()
 
 	GameManager.players_changed.connect(_refresh)
 	GameManager.phase_changed.connect(_on_phase_changed)
@@ -94,7 +82,7 @@ func _ready() -> void:
 	NetworkManager.joined_server.connect(_refresh)
 	NetworkManager.connection_failed.connect(_on_connection_failed)
 	NetworkManager.disconnected.connect(_refresh)
-	_status.text = "" if NetworkManager.steam_enabled else "Steam is not running. Local hosting still works."
+	_status.text = ""
 	_refresh()
 
 
@@ -201,12 +189,6 @@ func _apply_name() -> void:
 	GameManager.local_player_name = player_name if not player_name.is_empty() else "Player"
 
 
-func _on_host_steam() -> void:
-	_apply_name()
-	_status.text = "Creating Steam lobby..."
-	NetworkManager.host_steam()
-
-
 func _on_host_local() -> void:
 	_apply_name()
 	var err: Error = NetworkManager.host_enet()
@@ -248,7 +230,6 @@ func _refresh() -> void:
 		var host_tag := " (host)" if id == 1 else ""
 		_player_list.add_item("%s%s" % [entry.get("name", "Player"), host_tag])
 	var is_host: bool = online and multiplayer.is_server()
-	_invite_button.visible = is_host and NetworkManager.lobby_id != 0
 	_start_button.visible = is_host
 	_start_button.disabled = not GameManager.can_continue_to_selection()
 	if _start_button.disabled:
@@ -256,9 +237,7 @@ func _refresh() -> void:
 	else:
 		_start_button.text = "Continue to role selection"
 	if online and not _status.text.begins_with("Could not") and not _status.text.begins_with("Connection"):
-		if is_host and NetworkManager.lobby_id == 0:
+		if is_host:
 			_status.text = "Hosting on port %d" % NetworkManager.ENET_PORT
-		elif is_host:
-			_status.text = "Hosting"
 		else:
 			_status.text = "Connected"

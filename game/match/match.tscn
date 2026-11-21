@@ -5,7 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://uk1tc2fuojjd" path="res://src/units/runner/runner.tscn" id="3_runner"]
 [ext_resource type="Script" uid="uid://dcw1xxn706g7c" path="res://game/match/hud.gd" id="4_hud"]
 [ext_resource type="Script" uid="uid://cnfuwn80uvk73" path="res://game/camera/match_camera.gd" id="5_camera"]
-[ext_resource type="PackedScene" uid="uid://carenaspace0001" path="res://game/maps/arena_space.tscn" id="6_map"]
+[ext_resource type="PackedScene" uid="uid://co2dllw6ejyto" path="res://game/maps/arena_plateau.tscn" id="6_map"]
 [ext_resource type="Script" uid="uid://8ufwu7rhs85m" path="res://src/selection/selection_manager.gd" id="7_selection"]
 
 [node name="Match" type="Node2D" unique_id=1631963897]
@@ -13,7 +13,7 @@ script = ExtResource("1_match")
 hunter_scene = ExtResource("2_hunter")
 runner_scene = ExtResource("3_runner")
 
-[node name="ArenaSpace" parent="." unique_id=54884079 instance=ExtResource("6_map")]
+[node name="ArenaPlateau" parent="." unique_id=54884079 instance=ExtResource("6_map")]
 
 [node name="SpawnPoints" type="Node2D" parent="." unique_id=1414777044]
 

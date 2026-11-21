@@ -59,7 +59,7 @@ func _ready() -> void:
 		_start_button = _add_button(actions, "Start game", func() -> void: GameManager.start_game_from_selection())
 
 	SettingsMenu.attach(self)
-	SoundManager.play_music(SoundManager.Sound.BG_MUSIC_2)
+	SoundManager.ensure_music()
 
 	GameManager.players_changed.connect(_queue_rebuild)
 	GameManager.phase_changed.connect(func(_phase: GameManager.Phase) -> void: _queue_rebuild())

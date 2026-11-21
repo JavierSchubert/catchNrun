@@ -2,7 +2,7 @@ class_name MatchMinimap
 extends Control
 ## Bottom-left minimap: scaled map asset plus living unit pixels at relative world positions.
 
-const DEFAULT_MAP_TEXTURE := preload("res://assets/sprites/maps/tiles/space/floor.png")
+const DEFAULT_MAP_TEXTURE := preload("res://assets/sprites/maps/tiles/v3/floor.png")
 
 @export var map_bounds := Unit.MAP_BOUNDS
 @export var map_texture: Texture2D = DEFAULT_MAP_TEXTURE

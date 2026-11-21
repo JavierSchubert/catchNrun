@@ -1,5 +1,6 @@
 extends Node
 ## Pooled one-shots for SFX plus a dedicated music player. Volumes live on the Music/SFX buses.
+## Music keeps playing across scenes; when a track ends the next playlist entry starts.
 
 enum Sound {
 	UI,
@@ -11,6 +12,7 @@ enum Sound {
 }
 
 const _POOL_SIZE := 8
+const PLAYLIST: Array[Sound] = [Sound.BG_MUSIC_1, Sound.BG_MUSIC_2, Sound.BG_MUSIC_3]
 
 var music_volume: float = 0.75
 var sfx_volume: float = 0.85
@@ -20,6 +22,8 @@ var sfx_muted: bool = false
 var _sfx_players: Array[AudioStreamPlayer] = []
 var _music_player: AudioStreamPlayer
 var _sound_dict: Dictionary = {}
+var _playlist_index := 0
+var _current_music: Sound = Sound.BG_MUSIC_1
 
 
 func _ready() -> void:
@@ -40,6 +44,7 @@ func _ready() -> void:
 	_music_player = AudioStreamPlayer.new()
 	_music_player.bus = &"Music"
 	_music_player.volume_db = -10.0
+	_music_player.finished.connect(_on_music_finished)
 	add_child(_music_player)
 	apply_bus_settings()
 
@@ -60,14 +65,21 @@ func play_sound(type: Sound, pitch_variance: float = 0.15) -> void:
 	stream.play()
 
 
-func play_music(type: Sound = Sound.BG_MUSIC_1, restart: bool = false) -> void:
-	var audio: AudioStream = _sound_dict.get(type) as AudioStream
-	if audio == null:
+## Starts the playlist if nothing is playing. Does not interrupt the current track.
+func ensure_music() -> void:
+	if _music_player.playing:
 		return
-	if _music_player.playing and not restart and _music_player.stream == audio:
+	_play_at_playlist_index(_playlist_index)
+
+
+## Only switches when `type` differs from the current track (or restart is forced).
+func play_music(type: Sound, restart: bool = false) -> void:
+	if _music_player.playing and not restart and type == _current_music:
 		return
-	_music_player.stream = audio
-	_music_player.play()
+	var idx := PLAYLIST.find(type)
+	if idx >= 0:
+		_playlist_index = idx
+	_start_track(type)
 
 
 func stop_music() -> void:
@@ -102,6 +114,27 @@ func set_sfx_muted(m: bool) -> void:
 	sfx_muted = m
 	apply_bus_settings()
 	SettingsManager.persist_audio()
+
+
+func _on_music_finished() -> void:
+	_playlist_index = (_playlist_index + 1) % PLAYLIST.size()
+	_play_at_playlist_index(_playlist_index)
+
+
+func _play_at_playlist_index(index: int) -> void:
+	if PLAYLIST.is_empty():
+		return
+	_playlist_index = clampi(index, 0, PLAYLIST.size() - 1)
+	_start_track(PLAYLIST[_playlist_index])
+
+
+func _start_track(type: Sound) -> void:
+	var audio: AudioStream = _sound_dict.get(type) as AudioStream
+	if audio == null:
+		return
+	_current_music = type
+	_music_player.stream = audio
+	_music_player.play()
 
 
 func _apply_bus(bus_name: String, vol_linear: float, muted: bool) -> void:
