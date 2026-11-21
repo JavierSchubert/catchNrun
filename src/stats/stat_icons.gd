@@ -3,26 +3,26 @@ extends RefCounted
 ## Maps character stats to HUD icons and display labels.
 ## Icon file names under assets/sprites/stats/ drive the mapping.
 ##
-## Source sprites are large (250–1024px). Drawing them raw into a small
-## TextureRect looks soft, so icons are Lanczos-resized once to HUD_ICON_PX.
+## Clean borderless icons live under assets/sprites/stats/clean/ (512px).
+## They are Lanczos-resized once to HUD_ICON_PX for the selection panel.
 
 const POSITIVE_COLOR := "#6fdf8a"
 const NEGATIVE_COLOR := "#f07178"
 ## Pixel size baked for the selection-panel TextureRects (keep in sync with scene).
-const HUD_ICON_PX := 36
+const HUD_ICON_PX := 40
 
 static var _texture_cache: Dictionary = {}
 
-## Defense has no dedicated sprite yet; block_chance is the closest defensive icon.
+## Defense uses the clean block_chance shield until a dedicated defense icon exists.
 const ICON_PATHS := {
-	StatBlock.Stat.MAX_HEALTH: "res://assets/sprites/stats/health.png",
-	StatBlock.Stat.MELEE_DAMAGE: "res://assets/sprites/stats/damage.png",
-	StatBlock.Stat.HEALTH_REGENERATION: "res://assets/sprites/stats/hp_regen.png",
-	StatBlock.Stat.ATTACK_SPEED: "res://assets/sprites/stats/attack_speed.png",
-	StatBlock.Stat.DEFENSE: "res://assets/sprites/stats/block_chance.png",
-	StatBlock.Stat.LIFESTEAL_CHANCE: "res://assets/sprites/stats/lifesteal_chance.png",
-	StatBlock.Stat.MOVEMENT_SPEED: "res://assets/sprites/stats/movement_speed.png",
-	StatBlock.Stat.CRITICAL_CHANCE: "res://assets/sprites/stats/crit_chance.png",
+	StatBlock.Stat.MAX_HEALTH: "res://assets/sprites/stats/clean/health.png",
+	StatBlock.Stat.MELEE_DAMAGE: "res://assets/sprites/stats/clean/damage.png",
+	StatBlock.Stat.HEALTH_REGENERATION: "res://assets/sprites/stats/clean/hp_regen.png",
+	StatBlock.Stat.ATTACK_SPEED: "res://assets/sprites/stats/clean/attack_speed.png",
+	StatBlock.Stat.DEFENSE: "res://assets/sprites/stats/clean/block_chance.png",
+	StatBlock.Stat.LIFESTEAL_CHANCE: "res://assets/sprites/stats/clean/lifesteal_chance.png",
+	StatBlock.Stat.MOVEMENT_SPEED: "res://assets/sprites/stats/clean/movement_speed.png",
+	StatBlock.Stat.CRITICAL_CHANCE: "res://assets/sprites/stats/clean/crit_chance.png",
 	StatBlock.Stat.RANGED_DAMAGE: "res://assets/sprites/stats/attack_range.png",
 	StatBlock.Stat.MAGIC_DAMAGE: "res://assets/sprites/stats/magic.png",
 }

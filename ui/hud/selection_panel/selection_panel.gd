@@ -29,8 +29,6 @@ const PANEL_STATS: Array[StatBlock.Stat] = [
 @onready var _root: PanelContainer = %Root
 @onready var _portrait: TextureRect = %Portrait
 @onready var _ring: Panel = %Ring
-@onready var _name_label: Label = %NameLabel
-@onready var _meta_label: Label = %MetaLabel
 @onready var _stats_grid: GridContainer = %StatsGrid
 @onready var _empty_label: Label = %EmptyLabel
 
@@ -66,10 +64,16 @@ func _cache_stat_rows() -> void:
 	for child in _stats_grid.get_children():
 		if child is not HBoxContainer:
 			continue
-		var icon := child.get_node_or_null("Icon") as TextureRect
-		var value := child.get_node_or_null("Value") as RichTextLabel
+		var row := child as HBoxContainer
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		var icon := row.get_node_or_null("Icon") as TextureRect
+		var value := row.get_node_or_null("Value") as RichTextLabel
 		if icon == null or value == null:
 			continue
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		value.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		value.fit_content = true
+		value.scroll_active = false
 		_stat_icons.append(icon)
 		_stat_values.append(value)
 
@@ -80,7 +84,7 @@ func _apply_stat_icons() -> void:
 		var stat: StatBlock.Stat = PANEL_STATS[i]
 		var icon := _stat_icons[i]
 		icon.texture = StatIcons.icon(stat)
-		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		icon.tooltip_text = StatIcons.display_name(stat)
 
 
@@ -95,23 +99,16 @@ func _apply_styles() -> void:
 
 func _show_empty() -> void:
 	_portrait.texture = null
-	_name_label.visible = false
-	_meta_label.visible = false
 	_stats_grid.visible = false
 	_empty_label.visible = true
+	_empty_label.text = "No selection"
 	_set_ring_color(Color(1, 1, 1, 0.25))
 
 
-func _show_unit(unit: Unit, controllable: bool) -> void:
+func _show_unit(unit: Unit, _controllable: bool) -> void:
 	_empty_label.visible = false
-	_name_label.visible = true
-	_meta_label.visible = true
 	_stats_grid.visible = true
 	_portrait.texture = unit.sprite.texture if unit.sprite else null
-	_name_label.text = unit.name_label.text if unit.name_label else str(unit.name)
-	var role_name := "Hunter" if unit.role() == RoleConfig.Role.HUNTER else "Runner"
-	var mode := "Controllable" if controllable else "View only"
-	_meta_label.text = "%s  ·  %s" % [role_name, mode]
 	_bind_stat_values(unit.stats)
 	var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
 	_set_ring_color(unit.selection_affinity_color(local_id))
@@ -123,14 +120,11 @@ func _bind_stat_values(sheet: StatSheet) -> void:
 		_stat_values[i].text = StatIcons.format_value(sheet, PANEL_STATS[i])
 
 
-func _show_generic(selected: Node) -> void:
-	_empty_label.visible = false
-	_name_label.visible = true
-	_meta_label.visible = true
+func _show_generic(_selected: Node) -> void:
 	_stats_grid.visible = false
 	_portrait.texture = null
-	_name_label.text = str(selected.name)
-	_meta_label.text = "Selected entity"
+	_empty_label.visible = true
+	_empty_label.text = "Selected entity"
 	_set_ring_color(Color(1, 1, 1, 0.35))
 
 
