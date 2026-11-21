@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://bselectionpanel01"]
+[gd_scene load_steps=7 format=3 uid="uid://bselectionpanel01"]
 
 [ext_resource type="Script" path="res://ui/hud/selection_panel/selection_panel.gd" id="1_script"]
 [ext_resource type="StyleBoxFlat" path="res://ui/hud/selection_panel/selection_panel_style.tres" id="2_panel"]
@@ -8,8 +8,22 @@
 [sub_resource type="ShaderMaterial" id="circle_mat"]
 shader = ExtResource("4_shader")
 
+[sub_resource type="StyleBoxFlat" id="hp_bg"]
+bg_color = Color(0.12, 0.05, 0.07, 0.95)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="hp_fill"]
+bg_color = Color(0.92, 0.28, 0.42, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
 [node name="SelectionPanel" type="Control"]
-custom_minimum_size = Vector2(480, 128)
+custom_minimum_size = Vector2(520, 148)
 layout_mode = 3
 anchors_preset = 0
 mouse_filter = 2
@@ -19,6 +33,7 @@ ring_style = ExtResource("3_ring")
 
 [node name="Root" type="PanelContainer" parent="."]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(520, 148)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,18 +43,49 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = ExtResource("2_panel")
 
-[node name="Row" type="HBoxContainer" parent="Root"]
+[node name="Main" type="VBoxContainer" parent="Root"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="HBoxContainer" parent="Root/Main"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 8
 
-[node name="PortraitWrap" type="Control" parent="Root/Row"]
+[node name="NameLabel" type="Label" parent="Root/Main/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+text = "No selection"
+text_overrun_behavior = 3
+
+[node name="RoleLabel" type="Label" parent="Root/Main/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.85, 0.88, 0.92, 0.85)
+text = ""
+horizontal_alignment = 2
+
+[node name="Body" type="HBoxContainer" parent="Root/Main"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 12
+
+[node name="PortraitWrap" type="Control" parent="Root/Main/Body"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 
-[node name="Ring" type="Panel" parent="Root/Row/PortraitWrap"]
+[node name="Ring" type="Panel" parent="Root/Main/Body/PortraitWrap"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -50,7 +96,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_styles/panel = ExtResource("3_ring")
 
-[node name="Portrait" type="TextureRect" parent="Root/Row/PortraitWrap"]
+[node name="Portrait" type="TextureRect" parent="Root/Main/Body/PortraitWrap"]
 unique_name_in_owner = true
 material = SubResource("circle_mat")
 layout_mode = 1
@@ -67,32 +113,30 @@ mouse_filter = 2
 expand_mode = 1
 stretch_mode = 6
 
-[node name="TextCol" type="VBoxContainer" parent="Root/Row"]
+[node name="RightCol" type="VBoxContainer" parent="Root/Main/Body"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_constants/separation = 2
-alignment = 1
+theme_override_constants/separation = 4
 
-[node name="StatsGrid" type="GridContainer" parent="Root/Row/TextCol"]
+[node name="StatsGrid" type="GridContainer" parent="Root/Main/Body/RightCol"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
-theme_override_constants/h_separation = 6
-theme_override_constants/v_separation = 4
-columns = 3
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 2
+columns = 2
 
-[node name="StatHealth" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
+[node name="StatDamage" type="HBoxContainer" parent="Root/Main/Body/RightCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatHealth"]
-custom_minimum_size = Vector2(40, 40)
+[node name="Icon" type="TextureRect" parent="Root/Main/Body/RightCol/StatsGrid/StatDamage"]
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -100,27 +144,27 @@ texture_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatHealth"]
+[node name="Value" type="RichTextLabel" parent="Root/Main/Body/RightCol/StatsGrid/StatDamage"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_font_sizes/normal_font_size = 13
+theme_override_font_sizes/normal_font_size = 12
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 autowrap_mode = 0
-text = "100"
+text = "—"
 
-[node name="StatDamage" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
+[node name="StatCrit" type="HBoxContainer" parent="Root/Main/Body/RightCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatDamage"]
-custom_minimum_size = Vector2(40, 40)
+[node name="Icon" type="TextureRect" parent="Root/Main/Body/RightCol/StatsGrid/StatCrit"]
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -128,27 +172,27 @@ texture_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatDamage"]
+[node name="Value" type="RichTextLabel" parent="Root/Main/Body/RightCol/StatsGrid/StatCrit"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_font_sizes/normal_font_size = 13
+theme_override_font_sizes/normal_font_size = 12
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 autowrap_mode = 0
-text = "10"
+text = "—"
 
-[node name="StatHpRegen" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
+[node name="StatDefense" type="HBoxContainer" parent="Root/Main/Body/RightCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatHpRegen"]
-custom_minimum_size = Vector2(40, 40)
+[node name="Icon" type="TextureRect" parent="Root/Main/Body/RightCol/StatsGrid/StatDefense"]
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -156,27 +200,27 @@ texture_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatHpRegen"]
+[node name="Value" type="RichTextLabel" parent="Root/Main/Body/RightCol/StatsGrid/StatDefense"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_font_sizes/normal_font_size = 13
+theme_override_font_sizes/normal_font_size = 12
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 autowrap_mode = 0
-text = "2"
+text = "—"
 
-[node name="StatAttackSpeed" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
+[node name="StatLifesteal" type="HBoxContainer" parent="Root/Main/Body/RightCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatAttackSpeed"]
-custom_minimum_size = Vector2(40, 40)
+[node name="Icon" type="TextureRect" parent="Root/Main/Body/RightCol/StatsGrid/StatLifesteal"]
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -184,27 +228,27 @@ texture_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatAttackSpeed"]
+[node name="Value" type="RichTextLabel" parent="Root/Main/Body/RightCol/StatsGrid/StatLifesteal"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_font_sizes/normal_font_size = 13
+theme_override_font_sizes/normal_font_size = 12
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 autowrap_mode = 0
-text = "1.3"
+text = "—"
 
-[node name="StatDefense" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
+[node name="StatAttackSpeed" type="HBoxContainer" parent="Root/Main/Body/RightCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatDefense"]
-custom_minimum_size = Vector2(40, 40)
+[node name="Icon" type="TextureRect" parent="Root/Main/Body/RightCol/StatsGrid/StatAttackSpeed"]
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -212,27 +256,27 @@ texture_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatDefense"]
+[node name="Value" type="RichTextLabel" parent="Root/Main/Body/RightCol/StatsGrid/StatAttackSpeed"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_font_sizes/normal_font_size = 13
+theme_override_font_sizes/normal_font_size = 12
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 autowrap_mode = 0
-text = "20"
+text = "—"
 
-[node name="StatLifesteal" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
+[node name="StatMoveSpeed" type="HBoxContainer" parent="Root/Main/Body/RightCol/StatsGrid"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatLifesteal"]
-custom_minimum_size = Vector2(40, 40)
+[node name="Icon" type="TextureRect" parent="Root/Main/Body/RightCol/StatsGrid/StatMoveSpeed"]
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 0
@@ -240,80 +284,45 @@ texture_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatLifesteal"]
+[node name="Value" type="RichTextLabel" parent="Root/Main/Body/RightCol/StatsGrid/StatMoveSpeed"]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_font_sizes/normal_font_size = 13
+theme_override_font_sizes/normal_font_size = 12
 theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
 bbcode_enabled = true
 fit_content = true
 scroll_active = false
 autowrap_mode = 0
-text = "10%"
+text = "—"
 
-[node name="StatMoveSpeed" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
-layout_mode = 2
-size_flags_horizontal = 0
-mouse_filter = 2
-theme_override_constants/separation = 4
-
-[node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatMoveSpeed"]
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 0
-texture_filter = 2
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatMoveSpeed"]
-layout_mode = 2
-size_flags_horizontal = 0
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_font_sizes/normal_font_size = 13
-theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 0
-text = "220"
-
-[node name="StatCrit" type="HBoxContainer" parent="Root/Row/TextCol/StatsGrid"]
-layout_mode = 2
-size_flags_horizontal = 0
-mouse_filter = 2
-theme_override_constants/separation = 4
-
-[node name="Icon" type="TextureRect" parent="Root/Row/TextCol/StatsGrid/StatCrit"]
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 0
-texture_filter = 2
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Value" type="RichTextLabel" parent="Root/Row/TextCol/StatsGrid/StatCrit"]
-layout_mode = 2
-size_flags_horizontal = 0
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_font_sizes/normal_font_size = 13
-theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
-bbcode_enabled = true
-fit_content = true
-scroll_active = false
-autowrap_mode = 0
-text = "20%"
-
-[node name="EmptyLabel" type="Label" parent="Root/Row/TextCol"]
+[node name="HealthRow" type="HBoxContainer" parent="Root/Main/Body/RightCol"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 mouse_filter = 2
-theme_override_font_sizes/font_size = 16
-theme_override_colors/font_color = Color(1, 1, 1, 0.55)
-text = "No selection"
+theme_override_constants/separation = 6
+
+[node name="HealthBar" type="ProgressBar" parent="Root/Main/Body/RightCol/HealthRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_styles/background = SubResource("hp_bg")
+theme_override_styles/fill = SubResource("hp_fill")
+max_value = 1.0
+show_percentage = false
+
+[node name="RegenLabel" type="Label" parent="Root/Main/Body/RightCol/HealthRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(36, 0)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.44, 0.87, 0.54, 1)
+text = ""
 vertical_alignment = 1
