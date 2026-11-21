@@ -13,13 +13,13 @@ func _ready() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_status.add_theme_font_size_override("font_size", 18)
-	_status.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_status.offset_left = -420.0
+	_status.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_status.offset_left = 16.0
 	_status.offset_top = 16.0
-	_status.offset_right = -16.0
+	_status.offset_right = 420.0
 	_status.offset_bottom = 120.0
 	root.add_child(_status)
 
@@ -40,6 +40,9 @@ func _ready() -> void:
 	_selection_panel.offset_right = 210.0
 	_selection_panel.offset_bottom = -16.0
 	root.add_child(_selection_panel)
+
+	SettingsMenu.attach(root)
+	SoundManager.play_music(SoundManager.Sound.BG_MUSIC_3)
 
 	GameManager.match_finished.connect(_on_match_finished)
 	GameManager.phase_changed.connect(_on_phase_changed)

@@ -1,25 +1,24 @@
 [gd_resource type="Resource" script_class="AnimatedButtonStyle" load_steps=2 format=3 uid="uid://bcj603voatugp"]
 
-[ext_resource type="Script" uid="uid://7lcw2g4w6806" path="res://common/ui/widgets/animated_button/animated_button_style.gd" id="1_gqftr"]
+[ext_resource type="Script" path="res://ui/widgets/animated_button/animated_button_style.gd" id="1_gqftr"]
 
 [resource]
 script = ExtResource("1_gqftr")
-change_color_bg = false
+change_color_bg = true
 change_color_btn = true
-hover_scale = 1.06
-press_scale = 0.98
+hover_scale = 1.08
+press_scale = 0.94
 press_offset = Vector2(0, 2)
 anim_time = 0.08
 icon_normal = Color(1, 1, 1, 1)
-icon_hover = Color(0.772549, 0.772549, 0.772549, 1)
-icon_press = Color(0.67451, 0.67451, 0.67451, 1)
+icon_hover = Color(0.9, 0.9, 0.9, 1)
+icon_press = Color(0.75, 0.75, 0.75, 1)
 icon_disabled = Color(0.466667, 0.466667, 0.466667, 1)
-bg_normal = Color(0.258824, 0.258824, 0.258824, 1)
-bg_hover = Color(0.301961, 0.301961, 0.301961, 1)
-bg_press = Color(0.219608, 0.219608, 0.219608, 1)
-border_color = Color(0.121569, 0.121569, 0.121569, 1)
+bg_normal = Color(0.12, 0.12, 0.14, 0.85)
+bg_hover = Color(0.18, 0.18, 0.22, 0.95)
+bg_press = Color(0.08, 0.08, 0.1, 0.95)
+border_color = Color(0.95, 0.82, 0.35, 0.9)
 border_width = 2
-corner_radius = 4
-label_font_size = 16
-label_visible = true
-metadata/_custom_type_script = "uid://7lcw2g4w6806"
+corner_radius = 10
+label_font_size = 14
+label_visible = false

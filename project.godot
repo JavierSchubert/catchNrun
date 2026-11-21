@@ -19,12 +19,18 @@ run/main_scene="uid://cly3lyw5o6gr7"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://assets/textures/icon.svg"
 
+[audio]
+
+buses/default_bus_layout="res://default_bus_layout.tres"
+
 [autoload]
 
 LaunchOptions="*res://autoloads/launch_options.gd"
 NetworkManager="*res://autoloads/network_manager.gd"
 GameManager="*res://autoloads/game_manager.gd"
 SceneTransitionManager="*res://autoloads/scene_transition_manager.gd"
+SettingsManager="*res://autoloads/settings_manager.gd"
+SoundManager="*res://autoloads/sound_manager.gd"
 BotClient="*res://tests/bots/bot_client.gd"
 Sandbox="*res://game/sandbox/sandbox_panel.gd"
 

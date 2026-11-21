@@ -1,42 +1,58 @@
 extends Node
-class_name SettingsManager
+## Persists audio / display preferences and applies them at boot.
 
-# Stored settings
-var volume: float = 1.0
-var fullscreen: bool = false
-var zoom: float = 1.0
-
-# Path for saving (works fine in HTML5)
 const SAVE_PATH := "user://settings.cfg"
+
+var fullscreen: bool = false
+
 
 func _ready() -> void:
 	load_settings()
-	apply_settings()
+	apply_display()
+	# SoundManager may not be ready yet; defer bus sync one frame.
+	call_deferred("_sync_audio_from_disk")
 
-func apply_settings() -> void:
-	AudioServer.set_bus_volume_db(
-		AudioServer.get_bus_index("Master"),
-		linear_to_db(volume)
-	)
-	# Apply fullscreen only on desktop
-	if not OS.has_feature("web"):
-		if fullscreen:
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-		else:
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+
+func apply_display() -> void:
+	if OS.has_feature("web"):
+		return
+	if fullscreen:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+
+
+func persist_audio() -> void:
+	if SoundManager == null:
+		return
+	save_settings()
+
 
 func save_settings() -> void:
 	var config := ConfigFile.new()
-	config.set_value("audio", "volume", volume)
+	if SoundManager != null:
+		config.set_value("audio", "music_volume", SoundManager.music_volume)
+		config.set_value("audio", "sfx_volume", SoundManager.sfx_volume)
+		config.set_value("audio", "music_muted", SoundManager.music_muted)
+		config.set_value("audio", "sfx_muted", SoundManager.sfx_muted)
 	config.set_value("video", "fullscreen", fullscreen)
-	config.set_value("gameplay", "zoom", zoom)
 	config.save(SAVE_PATH)
+
 
 func load_settings() -> void:
 	var config := ConfigFile.new()
-	var err = config.load(SAVE_PATH)
-	if err != OK:
-		return  # First run, nothing to load
-	volume = config.get_value("audio", "volume", volume)
-	fullscreen = config.get_value("video", "fullscreen", fullscreen)
-	zoom = config.get_value("gameplay", "zoom", zoom)
+	if config.load(SAVE_PATH) != OK:
+		return
+	fullscreen = bool(config.get_value("video", "fullscreen", fullscreen))
+
+
+func _sync_audio_from_disk() -> void:
+	var config := ConfigFile.new()
+	if config.load(SAVE_PATH) != OK:
+		SoundManager.apply_bus_settings()
+		return
+	SoundManager.music_volume = float(config.get_value("audio", "music_volume", SoundManager.music_volume))
+	SoundManager.sfx_volume = float(config.get_value("audio", "sfx_volume", SoundManager.sfx_volume))
+	SoundManager.music_muted = bool(config.get_value("audio", "music_muted", SoundManager.music_muted))
+	SoundManager.sfx_muted = bool(config.get_value("audio", "sfx_muted", SoundManager.sfx_muted))
+	SoundManager.apply_bus_settings()
