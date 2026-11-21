@@ -71,7 +71,7 @@ func _ready() -> void:
 	stats.set_base(_base_stats())
 	attack.attack_range = config.attack_range
 	attack.acquisition_range = config.acquisition_range
-	attack.attack_interval = config.attack_interval
+	_apply_derived_stats()
 	health.died.connect(_on_died)
 	health.health_changed.connect(health_bar.update_for_health)
 	health.setup(stats.final_value(StatBlock.Stat.MAX_HEALTH))
@@ -92,11 +92,18 @@ func _base_stats() -> StatBlock:
 		return config.base_stats
 	var block := StatBlock.new()
 	block.movement_speed = config.move_speed
+	if config.attack_interval > 0.0:
+		block.attack_speed = 1.0 / config.attack_interval
 	return block
 
 
 func _apply_derived_stats() -> void:
 	movement.speed = stats.final_value(StatBlock.Stat.MOVEMENT_SPEED)
+	var attack_speed := stats.final_value(StatBlock.Stat.ATTACK_SPEED)
+	if attack_speed > 0.0:
+		attack.attack_interval = 1.0 / attack_speed
+	elif config != null and config.attack_interval > 0.0:
+		attack.attack_interval = config.attack_interval
 
 
 func is_alive() -> bool:

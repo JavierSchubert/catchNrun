@@ -16,6 +16,7 @@ enum Stat {
 	CRITICAL_DAMAGE_MULTIPLIER,
 	LIFESTEAL_CHANCE,
 	LIFESTEAL_AMOUNT,
+	ATTACK_SPEED,
 }
 
 @export var max_health := 100.0
@@ -29,6 +30,7 @@ enum Stat {
 @export var critical_damage_multiplier := 1.50
 @export var lifesteal_chance := 0.10
 @export var lifesteal_amount := 5.0
+@export var attack_speed := 1.25 ## Attacks per second. Interval = 1 / attack_speed.
 
 
 func get_base(stat: Stat) -> float:
@@ -55,6 +57,8 @@ func get_base(stat: Stat) -> float:
 			return lifesteal_chance
 		Stat.LIFESTEAL_AMOUNT:
 			return lifesteal_amount
+		Stat.ATTACK_SPEED:
+			return attack_speed
 	return 0.0
 
 
