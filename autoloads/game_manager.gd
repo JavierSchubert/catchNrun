@@ -182,7 +182,7 @@ func _finish_match(winner_team: String) -> void:
 	match_finished.emit(winner_team)
 
 
-static func sender_id(mp: MultiplayerAPI) -> int:
+func sender_id(mp: MultiplayerAPI) -> int:
 	## Peer that sent the current RPC. Also returns the right id when the host
 	## calls an RPC on itself.
 	var id := mp.get_remote_sender_id()
@@ -326,7 +326,7 @@ func request_side_for(peer_id: int, role: int) -> void:
 func _request_side(role: int) -> void:
 	if not multiplayer.is_server() or phase != Phase.ROLE_SELECTION:
 		return
-	_apply_side(sender_id(multiplayer), role)
+	_apply_side(GameManager.sender_id(multiplayer), role)
 
 
 func _apply_side(peer_id: int, role: int) -> void:
@@ -362,7 +362,7 @@ func set_sprite_for(peer_id: int, sprite_index: int) -> void:
 func _request_sprite(sprite_index: int) -> void:
 	if not multiplayer.is_server() or phase != Phase.ROLE_SELECTION:
 		return
-	_apply_sprite(sender_id(multiplayer), sprite_index)
+	_apply_sprite(GameManager.sender_id(multiplayer), sprite_index)
 
 
 func _apply_sprite(peer_id: int, sprite_index: int) -> void:
@@ -492,7 +492,7 @@ func request_skip_preparation() -> void:
 
 @rpc("any_peer", "reliable")
 func _request_skip_preparation() -> void:
-	if not multiplayer.is_server() or sender_id(multiplayer) != 1:
+	if not multiplayer.is_server() or GameManager.sender_id(multiplayer) != 1:
 		return
 	if phase != Phase.RUNNER_PREPARATION:
 		return
@@ -521,7 +521,7 @@ func _apply_phase(new_phase: int) -> void:
 func report_scene_ready() -> void:
 	if not multiplayer.is_server():
 		return
-	var id := sender_id(multiplayer)
+	var id := GameManager.sender_id(multiplayer)
 	if not players.has(id):
 		GameLog.info("MATCH", "ignoring scene-ready from unknown peer %d" % id)
 		return
