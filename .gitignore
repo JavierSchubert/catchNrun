@@ -1,5 +1,6 @@
 # Godot 4+ specific ignores
 .godot/
+.vscode/
 /android/
 
 # Written by scripts/test/smoke_test.ps1
