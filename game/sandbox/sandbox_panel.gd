@@ -359,8 +359,9 @@ func _launch_bot(role: String, bot_name: String) -> bool:
 	var args := PackedStringArray()
 	if _headless.button_pressed:
 		args.append("--headless")
-	args.append("--path")
-	args.append(ProjectSettings.globalize_path("res://"))
+	if _is_godot_editor_binary(bin):
+		args.append("--path")
+		args.append(ProjectSettings.globalize_path("res://"))
 	args.append("--")
 	args.append("--bot=%s" % role)
 	args.append("--bot-name=%s" % bot_name)
@@ -371,6 +372,30 @@ func _launch_bot(role: String, bot_name: String) -> bool:
 	GameLog.info("SANDBOX", "started %s as %s (pid %d)" % [bot_name, role, pid])
 	_status.text = "Started %s." % bot_name
 	return true
+
+
+func _is_godot_editor_binary(bin: String) -> bool:
+	var bin_dir := bin.get_base_dir()
+	var bin_name := bin.get_file().to_lower()
+
+	var dir := DirAccess.open(bin_dir)
+	if dir != null:
+		for file_name in dir.get_files():
+			if file_name.to_lower().ends_with(".pck"):
+				return false
+
+	if not OS.has_feature("editor") and bin == OS.get_executable_path():
+		return false
+
+	if "godot" in bin_name:
+		return true
+
+	var project_dir := ProjectSettings.globalize_path("res://").trim_suffix("/").trim_suffix("\\")
+	bin_dir = bin_dir.trim_suffix("/").trim_suffix("\\")
+	if bin_dir == project_dir:
+		return FileAccess.file_exists(bin_dir.path_join("project.godot"))
+
+	return false
 
 
 func _refresh() -> void:

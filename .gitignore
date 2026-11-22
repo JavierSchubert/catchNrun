@@ -2,6 +2,7 @@
 .godot/
 .vscode/
 /android/
+build/*
 
 # Written by scripts/test/smoke_test.ps1
 tests/multiplayer/reports/
