@@ -7,6 +7,21 @@ CatchNRun is a 2D top-down asymmetric multiplayer game with two opposing teams:
 - **Runner Team**
 - **Hunter Team**
 
+## Networking
+
+The game uses Godot's high-level multiplayer API over WebSockets. In Partybox, `runbox` starts a separate CatchNRun server on TCP port **9082**; browser builds connect to it using the hostname of the exported game page. The first registered player is the lobby host and controls session transitions, while the headless server remains authoritative for gameplay. If that player disconnects, the next connected player takes over.
+
+```bash
+./buildbox build catchNrun
+./runbox run
+```
+
+In the browser, enter a name and choose **Connect**. Native desktop builds retain local **Host** and **Join** controls for development and LAN tests. For native development without Docker, `bash games/catchNrun/run-server` starts a local headless server on port 9082; do not run it alongside the managed server.
+
+The development sandbox appears in browser builds for the dedicated-server lobby host. Its Runner and Hunter example buttons add bot clients, and **Skip** ends the Runner preparation early so the Hunter spawns. Only the current lobby host can use these controls, and the normal player limit still applies.
+
+The optional `[network] server_url` project setting overrides the browser-derived `ws://` / `wss://` endpoint. The bundled server is plain WebSocket; HTTPS hosting therefore needs a TLS-terminating proxy for `wss://`. Allow TCP **9082** through the host firewall for LAN access. Stop the managed server before running `scripts/test/smoke_test.ps1`, which starts its own WebSocket host and bot clients on that port.
+
 The Runner Team receives a configurable head start of initially `60 seconds`. During this preparation phase, the Runners must escape, generate Crystals, and construct defenses before the Hunter spawns on the map.
 
 The Runners can build Crystal Mines, Walls, and Towers. Walls are used to block or delay the Hunter, while Towers can attack the Hunter from behind the defensive line. All structures have health and can be attacked and destroyed.
@@ -154,7 +169,7 @@ Settings load `user://settings.cfg`, push volumes onto SoundManager, then call `
 | Piece | Configuration |
 | --- | --- |
 | Settings gear | Right edge on lobby, role selection, and match (`SettingsMenu.attach`) |
-| Lobby | Wallpaper + card; **ENet only** Host/Join |
+| Lobby | Browser joins the game-owned WebSocket server; desktop retains local Host/Join |
 | Match map | `game/maps/arena_plateau.tscn` (lava / tiles v3), not space |
 | Sandbox | Action bar top-left; Tests top-right; status bottom-right; headless default **on** |
 | Match HUD status | Top-center, under the sandbox action bar |

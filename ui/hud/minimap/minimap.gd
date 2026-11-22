@@ -52,16 +52,16 @@ func _gui_input(event: InputEvent) -> void:
 	var world := minimap_to_world(click.position)
 	match click.button_index:
 		MOUSE_BUTTON_RIGHT:
-			var shift_held := click.shift_pressed or Input.is_key_pressed(KEY_SHIFT)
-			if shift_held:
+			var chain_modifier_held := SelectionManager.is_chain_modifier_held(click)
+			if chain_modifier_held:
 				_issue_chain_append_to(world)
 			else:
 				_issue_move_to(world)
 			accept_event()
 		MOUSE_BUTTON_LEFT:
 			if _attack_move_armed():
-				var shift_held := click.shift_pressed or Input.is_key_pressed(KEY_SHIFT)
-				if shift_held:
+				var chain_modifier_held := SelectionManager.is_chain_modifier_held(click)
+				if chain_modifier_held:
 					_issue_attack_chain_append_to(world)
 				else:
 					_issue_attack_move_to(world)

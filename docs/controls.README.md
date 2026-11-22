@@ -163,7 +163,7 @@ A newly issued movement command replaces the current movement or attack command.
 
 #### Shift-click move chain
 
-Hold `Shift` and right-click the ground (or the minimap) to queue **green** move waypoints. Press `A`, then hold `Shift` and left-click to queue **red** attack-move waypoints (also on the minimap). Green and red legs can be mixed in one chain — for example red attack-move points, then more green Shift+RMB points.
+Hold `Shift` or `Ctrl` and right-click the ground (or the minimap) to queue **green** move waypoints. `Ctrl` is the browser-friendly alternative because some browsers bypass their context-menu suppression for Shift+right-click. Press `A`, then hold `Shift` or `Ctrl` and left-click to queue **red** attack-move waypoints (also on the minimap). Green and red legs can be mixed in one chain — for example red attack-move points, then more green Ctrl+RMB points.
 
 Dotted lines and rings use the color of the waypoint they lead into. As the unit reaches a waypoint, that ring and its inbound dotted segment disappear.
 

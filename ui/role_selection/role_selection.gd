@@ -13,6 +13,7 @@ extends Control
 @onready var _actions: HBoxContainer = %Actions
 
 var _start_button: Button
+var _resolve_button: Button
 var _rebuild_queued := false
 
 
@@ -21,9 +22,8 @@ func _ready() -> void:
 	_add_button(_actions, "Join Hunter", func() -> void: GameManager.request_side(RoleConfig.Role.HUNTER))
 	if not NetworkManager.is_online():
 		_add_button(_actions, "Add test player", func() -> void: GameManager.add_test_player())
-	if not NetworkManager.is_online() or multiplayer.is_server():
-		_add_button(_actions, "Resolve vote", func() -> void: GameManager.resolve_roles())
-		_start_button = _add_button(_actions, "Start game", func() -> void: GameManager.start_game_from_selection())
+	_resolve_button = _add_button(_actions, "Resolve vote", func() -> void: GameManager.resolve_roles())
+	_start_button = _add_button(_actions, "Start game", func() -> void: GameManager.start_game_from_selection())
 
 	SettingsMenu.attach(self)
 	SoundManager.ensure_music()
@@ -78,28 +78,34 @@ func _rebuild() -> void:
 		var id := int(key)
 		var entry: Dictionary = GameManager.players[id]
 		var preference := int(entry.get("preferred_role", GameManager.ANY_ROLE))
+		var displayed_role := preference
+		if GameManager.resolved_hunter_id >= 0:
+			displayed_role = int(entry.get("role", RoleConfig.Role.RUNNER))
 		var row := _player_row(
 			id,
 			str(entry.get("name", "Player")),
-			preference,
+			displayed_role,
 			int(entry.get("sprite_index", 0))
 		)
-		if preference == RoleConfig.Role.HUNTER:
+		if displayed_role == RoleConfig.Role.HUNTER:
 			_hunter_box.add_child(row)
-		elif preference == RoleConfig.Role.RUNNER:
+		elif displayed_role == RoleConfig.Role.RUNNER:
 			_runner_box.add_child(row)
 		else:
 			_waiting_box.add_child(row)
 	if GameManager.resolved_hunter_id >= 0 and GameManager.players.has(GameManager.resolved_hunter_id):
 		var hunter: Dictionary = GameManager.players[GameManager.resolved_hunter_id]
-		_result.text = "Hunter: %s" % str(hunter.get("name", "Player"))
+		_result.text = "Hunter: %s; everyone else is a Runner." % str(hunter.get("name", "Player"))
 	else:
-		_result.text = "The host resolves the vote. Several Hunter requests are decided at random."
+		_result.text = "Resolve the vote to assign one Hunter; everyone else will be a Runner."
+	var can_control := not NetworkManager.is_online() or GameManager.is_host()
+	_resolve_button.visible = can_control
 	if _start_button != null:
-		_start_button.disabled = NetworkManager.is_online() and not multiplayer.is_server()
+		_start_button.visible = can_control
+		_start_button.disabled = not can_control
 
 
-func _player_row(peer_id: int, player_name: String, preferred_role: int, sprite_index: int) -> HBoxContainer:
+func _player_row(peer_id: int, player_name: String, displayed_role: int, sprite_index: int) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	var label := Label.new()
 	var suffix := " (you)" if peer_id == multiplayer.get_unique_id() else ""
@@ -107,7 +113,7 @@ func _player_row(peer_id: int, player_name: String, preferred_role: int, sprite_
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 
-	var sprite_role := RoleConfig.Role.HUNTER if preferred_role == RoleConfig.Role.HUNTER else RoleConfig.Role.RUNNER
+	var sprite_role := RoleConfig.Role.HUNTER if displayed_role == RoleConfig.Role.HUNTER else RoleConfig.Role.RUNNER
 	var can_choose_sprite := peer_id == multiplayer.get_unique_id() \
 		or (not NetworkManager.is_online() and peer_id >= GameManager.TEST_PLAYER_ID)
 	var sprite_selector := HBoxContainer.new()

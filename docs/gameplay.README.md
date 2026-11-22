@@ -77,6 +77,7 @@ Nobody requests Hunter
 ```
 
 The same connected players must see the same result. After the host resolves the vote, the session transitions to the game.
+The resolved Hunter remains the Hunter when the game starts; every other connected player is assigned to the Runner team.
 
 ### 2.3. Game (s2)
 

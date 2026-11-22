@@ -1,8 +1,8 @@
 extends Node
-## Debug panel for local multiplayer. Visible in debug builds and when launched with
-## --sandbox. Hidden for bots, headless runs, and release exports.
+## Debug panel for local multiplayer and the dedicated-server browser host.
+## Hidden for bots, headless runs, and non-host browser clients.
 ##
-## Layout: compact action bar top-left, tests top-right, status bottom-right.
+## Layout: compact action bar top-left, native tests top-right, status bottom-right.
 ## Leaves the center and bottom-left free for lobby / match HUD / minimap.
 
 const RUNNER_ICON := preload("res://assets/sprites/units/Player_1.png")
@@ -15,6 +15,13 @@ var _log_view: RichTextLabel
 var _log_scroll: ScrollContainer
 var _bin_edit: LineEdit
 var _headless: CheckBox
+var _root: Control
+var _runner_button: Button
+var _hunter_button: Button
+var _continue_button: Button
+var _skip_button: Button
+var _reset_button: Button
+var _is_web_client := false
 var _runner_count := 0
 var _hunter_count := 0
 var _log_listener: Callable
@@ -25,6 +32,7 @@ func _ready() -> void:
 		set_process(false)
 		return
 
+	_is_web_client = OS.has_feature("web")
 	_status = Label.new()
 	_state = Label.new()
 	_peers = Label.new()
@@ -39,12 +47,15 @@ func _ready() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(root)
+	_root = root
 
 	_build_action_bar(root)
-	_build_tests_panel(root)
+	if not _is_web_client:
+		_build_tests_panel(root)
 	_build_status_panel(root)
 	_log_listener = _on_game_log_line
 	GameLog.add_listener(_log_listener)
+	GameManager.test_bot_request_completed.connect(_on_test_bot_request_completed)
 	_seed_log_view()
 	_refresh()
 
@@ -84,14 +95,18 @@ func _build_action_bar(root: Control) -> void:
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	top.add_child(title)
 
-	_add_text_button(top, "Host", _host)
-	_add_icon_button(top, "Runner", RUNNER_ICON, _add_runner)
-	_add_icon_button(top, "Hunter", HUNTER_ICON, _add_hunter)
+	if not _is_web_client:
+		_add_text_button(top, "Host", _host)
+	_runner_button = _add_icon_button(top, "Runner", RUNNER_ICON, _add_runner)
+	_hunter_button = _add_icon_button(top, "Hunter", HUNTER_ICON, _add_hunter)
 	_add_text_button(top, "1H+2R", _quick_start)
-	_add_text_button(top, "Continue", _continue_to_selection)
-	_add_text_button(top, "Skip", _skip_preparation)
-	_add_text_button(top, "Reset", _reset_match)
+	_continue_button = _add_text_button(top, "Continue", _continue_to_selection)
+	_skip_button = _add_text_button(top, "Skip", _skip_preparation)
+	_skip_button.tooltip_text = "Skip Runner preparation and spawn the Hunter."
+	_reset_button = _add_text_button(top, "Reset", _reset_match)
 
+	if _is_web_client:
+		return
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 8)
 	col.add_child(bottom)
@@ -196,7 +211,7 @@ func _panel_style(bg: Color) -> StyleBoxFlat:
 	return style
 
 
-func _add_text_button(parent: Node, text: String, callback: Callable) -> void:
+func _add_text_button(parent: Node, text: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.custom_minimum_size = Vector2(0, 32)
@@ -205,9 +220,10 @@ func _add_text_button(parent: Node, text: String, callback: Callable) -> void:
 		callback.call()
 	)
 	parent.add_child(button)
+	return button
 
 
-func _add_icon_button(parent: Node, label: String, icon: Texture2D, callback: Callable) -> void:
+func _add_icon_button(parent: Node, label: String, icon: Texture2D, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = label
 	button.icon = icon
@@ -219,17 +235,29 @@ func _add_icon_button(parent: Node, label: String, icon: Texture2D, callback: Ca
 		callback.call()
 	)
 	parent.add_child(button)
+	return button
 
 
 func _host() -> void:
-	var err: Error = NetworkManager.host_enet()
+	var err: Error = NetworkManager.start_server()
 	if err == OK:
-		_status.text = "Hosting on port %d." % NetworkManager.ENET_PORT
+		_status.text = "Hosting WebSocket on port %d." % NetworkManager.PORT
 	else:
 		_status.text = "Could not host: %s" % error_string(err)
 
 
 func _quick_start() -> void:
+	if _is_web_client:
+		if not _can_launch_web_bot():
+			return
+		if GameManager.players.size() + 3 > NetworkManager.MAX_PLAYERS:
+			_status.text = "Not enough lobby slots for 1 Hunter and 2 Runner bots."
+			return
+		_launch_bot("hunter", "Hunter")
+		_launch_bot("runner", "Runner 1")
+		_launch_bot("runner", "Runner 2")
+		_status.text = "Starting 1 Hunter and 2 Runner bots."
+		return
 	if NetworkManager.is_online() and not multiplayer.is_server():
 		_status.text = "Leave the current game before starting a scenario."
 		return
@@ -237,7 +265,7 @@ func _quick_start() -> void:
 		_status.text = "Reset the match before starting a new scenario."
 		return
 	if not NetworkManager.is_online():
-		var err: Error = NetworkManager.host_enet()
+		var err: Error = NetworkManager.start_server()
 		if err != OK:
 			_status.text = "Could not host: %s" % error_string(err)
 			return
@@ -296,7 +324,7 @@ func _can_open_scene_directly() -> bool:
 
 
 func _continue_to_selection() -> void:
-	if not NetworkManager.is_online() or not multiplayer.is_server():
+	if not NetworkManager.is_online() or not GameManager.is_host():
 		_status.text = "Only the host can open role selection."
 		return
 	GameManager.continue_to_selection()
@@ -307,7 +335,7 @@ func _continue_to_selection() -> void:
 
 
 func _skip_preparation() -> void:
-	if not NetworkManager.is_online() or not multiplayer.is_server():
+	if not NetworkManager.is_online() or not GameManager.is_host():
 		_status.text = "Only the host can skip preparation."
 		return
 	if GameManager.phase != GameManager.Phase.RUNNER_PREPARATION:
@@ -318,7 +346,7 @@ func _skip_preparation() -> void:
 
 
 func _reset_match() -> void:
-	if NetworkManager.is_online() and not multiplayer.is_server():
+	if NetworkManager.is_online() and not GameManager.is_host():
 		_status.text = "Only the host can reset the match."
 		return
 	_runner_count = 0
@@ -343,6 +371,12 @@ func _on_game_log_line(line: String) -> void:
 	_scroll_log_to_end()
 
 
+func _on_test_bot_request_completed(success: bool, message: String) -> void:
+	_status.text = message
+	var color := Color(0.75, 0.85, 0.95) if success else Color(1.0, 0.62, 0.55)
+	_status.add_theme_color_override("font_color", color)
+
+
 func _scroll_log_to_end() -> void:
 	if _log_scroll == null:
 		return
@@ -352,6 +386,12 @@ func _scroll_log_to_end() -> void:
 
 
 func _launch_bot(role: String, bot_name: String) -> bool:
+	if _is_web_client:
+		if not _can_launch_web_bot():
+			return false
+		GameManager.request_test_bot(role)
+		_status.text = "Requesting %s bot." % role.capitalize()
+		return true
 	var bin := _bin_edit.text.strip_edges().trim_prefix("\"").trim_suffix("\"")
 	if bin.is_empty():
 		_status.text = "Set the Godot executable path before launching bots."
@@ -371,6 +411,22 @@ func _launch_bot(role: String, bot_name: String) -> bool:
 		return false
 	GameLog.info("SANDBOX", "started %s as %s (pid %d)" % [bot_name, role, pid])
 	_status.text = "Started %s." % bot_name
+	return true
+
+
+func _can_launch_web_bot() -> bool:
+	if not NetworkManager.dedicated_server or not GameManager.is_host():
+		_status.text = "Only the dedicated-server lobby host can add bots."
+		return false
+	if not GameManager.test_bots_enabled:
+		_status.text = "Bot controls are not available on this server."
+		return false
+	if GameManager.phase != GameManager.Phase.LOBBY:
+		_status.text = "Bots can only be added in the lobby."
+		return false
+	if GameManager.players.size() >= NetworkManager.MAX_PLAYERS:
+		_status.text = "The lobby is full."
+		return false
 	return true
 
 
@@ -399,12 +455,32 @@ func _is_godot_editor_binary(bin: String) -> bool:
 
 
 func _refresh() -> void:
+	if _is_web_client:
+		var is_host := _should_show_web_panel(
+			NetworkManager.is_online(),
+			NetworkManager.dedicated_server,
+			GameManager.is_host()
+		)
+		_root.visible = is_host
+		_runner_button.disabled = (
+			not GameManager.test_bots_enabled
+			or GameManager.phase != GameManager.Phase.LOBBY
+			or GameManager.players.size() >= NetworkManager.MAX_PLAYERS
+		)
+		_hunter_button.disabled = _runner_button.disabled
+		_continue_button.disabled = not GameManager.can_continue_to_selection()
+		_skip_button.disabled = not is_host or GameManager.phase != GameManager.Phase.RUNNER_PREPARATION
+		_reset_button.disabled = not is_host
 	var seconds := int(ceil(GameManager.time_left))
 	var timer := ""
 	if GameManager.phase == GameManager.Phase.RUNNER_PREPARATION:
 		timer = " (%d:%02d)" % [seconds / 60, seconds % 60]
 	_state.text = "State: %s%s" % [GameManager.phase_label(), timer]
 	_peers.text = _peer_block()
+
+
+func _should_show_web_panel(is_online: bool, is_dedicated_server: bool, is_host: bool) -> bool:
+	return is_online and is_dedicated_server and is_host
 
 
 func _peer_block() -> String:
@@ -420,7 +496,7 @@ func _peer_block() -> String:
 	for key in GameManager.players.keys():
 		var id := int(key)
 		var entry: Dictionary = GameManager.players[id]
-		var who := "host" if id == 1 else "client"
+		var who := "host" if id == GameManager.session_host_id else "client"
 		var player_name := str(entry.get("name", "Player"))
 		if GameManager.phase == GameManager.Phase.ROLE_SELECTION:
 			var preference := GameManager.role_label(int(entry.get("preferred_role", GameManager.ANY_ROLE)))

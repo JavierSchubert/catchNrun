@@ -1,9 +1,9 @@
 extends Node
-## MATCH RULES. The host is the only peer that changes shared state.
+## MATCH RULES. The server is the only peer that changes shared state.
 ##
-## Clients send requests (register, side vote, movement intent, skip, reset). The host
-## checks the request and replicates the result. A session goes Lobby -> Role selection
-## -> Runner preparation -> Hunter active. Scene changes go through SceneTransitionManager.
+## Clients send requests (register, side vote, movement intent, skip, reset). The server
+## validates requests and replicates results; the session host controls lobby actions.
+## Scene changes go through SceneTransitionManager.
 
 signal players_changed
 signal phase_changed(phase: Phase)
@@ -12,6 +12,7 @@ signal player_eliminated(peer_id: int)
 signal match_finished(winner_team: String)
 signal all_players_loaded
 signal auto_host_failed(error_code: Error)
+signal test_bot_request_completed(success: bool, message: String)
 
 enum Phase { LOBBY, ROLE_SELECTION, RUNNER_PREPARATION, HUNTER_ACTIVE, ENDED }
 
@@ -21,6 +22,8 @@ const SPRITE_COUNT := 5
 
 var resolved_hunter_id := -1
 var _next_test_player_id := TEST_PLAYER_ID
+var session_host_id := 0
+var test_bots_enabled := false
 
 var config: MatchConfig
 var phase := Phase.LOBBY
@@ -39,6 +42,8 @@ var players_at_hunter_phase: Array = []
 
 var _loaded_peers: Dictionary = {}
 var _announced_loaded := false
+var _test_bot_processes: Dictionary = {}
+var _next_test_bot_number := 1
 
 
 func _ready() -> void:
@@ -47,6 +52,7 @@ func _ready() -> void:
 		push_error("Match config is missing at res://src/match/match_config.tres")
 		config = MatchConfig.new()
 	head_start_duration = config.runner_head_start_duration
+	test_bots_enabled = LaunchOptions.server_mode
 	if LaunchOptions.head_start >= 0.0:
 		head_start_duration = LaunchOptions.head_start
 		GameLog.info("MATCH", "head start overridden to %.1f s" % head_start_duration)
@@ -62,7 +68,7 @@ func _ready() -> void:
 	NetworkManager.peer_left.connect(_on_peer_left)
 	NetworkManager.disconnected.connect(_on_disconnected)
 	_reset_state()
-	if LaunchOptions.host_on_start:
+	if LaunchOptions.server_mode or LaunchOptions.host_on_start:
 		call_deferred("_auto_host")
 
 
@@ -75,14 +81,27 @@ func _process(delta: float) -> void:
 
 
 func _auto_host() -> void:
-	var err: Error = NetworkManager.host_enet()
+	var err: Error = NetworkManager.start_server()
 	if err != OK:
 		GameLog.info("MATCH", "auto host failed: %s" % error_string(err))
 		auto_host_failed.emit(err)
+		if LaunchOptions.server_mode:
+			get_tree().quit(1)
 
 
 func is_host() -> bool:
-	return multiplayer.is_server()
+	return is_session_host_peer(
+		multiplayer.get_unique_id(),
+		multiplayer.is_server(),
+		NetworkManager.dedicated_server,
+		session_host_id
+	)
+
+
+static func is_session_host_peer(peer_id: int, server_peer: bool, dedicated_server: bool, host_id: int) -> bool:
+	if server_peer:
+		return not dedicated_server
+	return peer_id == host_id
 
 
 func required_players() -> int:
@@ -104,7 +123,7 @@ func role_label(role: int) -> String:
 
 
 func can_continue_to_selection() -> bool:
-	return multiplayer.is_server() and phase == Phase.LOBBY and players.size() >= required_players()
+	return is_host() and phase == Phase.LOBBY and players.size() >= required_players()
 
 
 func everyone_loaded() -> bool:
@@ -206,8 +225,12 @@ func note_unit_spawned(role: int) -> void:
 
 func _on_hosting_started() -> void:
 	_reset_state()
-	players[1] = _new_player(local_player_name, ANY_ROLE)
-	GameLog.info("MATCH", "host registered as %s" % local_player_name)
+	if NetworkManager.dedicated_server:
+		GameLog.info("MATCH", "dedicated WebSocket server started")
+	else:
+		players[1] = _new_player(local_player_name, ANY_ROLE)
+		_set_session_host(1)
+		GameLog.info("MATCH", "host registered as %s" % local_player_name)
 	players_changed.emit()
 	_maybe_auto_start()
 
@@ -228,11 +251,12 @@ func _preferred_role() -> int:
 ## Updates the local preference. If this peer is already hosting the lobby, the roster is updated too.
 func set_preferred_role(role: int) -> void:
 	local_preferred_role = role
-	if not multiplayer.is_server() or phase != Phase.LOBBY or not players.has(1):
+	var local_id := multiplayer.get_unique_id()
+	if not is_host() or phase != Phase.LOBBY or not players.has(local_id):
 		return
-	var entry: Dictionary = players[1]
+	var entry: Dictionary = players[local_id]
 	entry.preferred_role = role
-	players[1] = entry
+	players[local_id] = entry
 	_sync_players.rpc(players)
 
 
@@ -245,19 +269,140 @@ func _register(player_name: String, _preferred_role: int) -> void:
 		GameLog.info("MATCH", "rejected peer %d because the match has already started" % id)
 		multiplayer.multiplayer_peer.disconnect_peer(id)
 		return
+	if players.size() >= NetworkManager.MAX_PLAYERS:
+		GameLog.info("MATCH", "rejected peer %d because the lobby is full" % id)
+		multiplayer.multiplayer_peer.disconnect_peer(id)
+		return
 	var clean := player_name.strip_edges().left(24)
 	if clean.is_empty():
 		clean = "Player %d" % id
+	elif clean == "Player":
+		clean = "Player %d" % id
 	players[id] = _new_player(clean, ANY_ROLE)
+	if session_host_id == 0:
+		_set_session_host(id)
+	if _test_bot_processes.has(clean):
+		_test_bot_processes.erase(clean)
 	GameLog.info("MATCH", "registered peer %d as %s" % [id, clean])
 	_sync_players.rpc(players)
+	_sync_test_bot_access.rpc_id(id, LaunchOptions.server_mode)
 	_maybe_auto_start()
+
+
+func _set_session_host(peer_id: int) -> void:
+	session_host_id = peer_id
+	if NetworkManager.is_online() and multiplayer.is_server():
+		_sync_session_host.rpc(peer_id, NetworkManager.dedicated_server)
+
+
+@rpc("authority", "call_local", "reliable")
+func _sync_session_host(peer_id: int, is_dedicated_server: bool) -> void:
+	session_host_id = peer_id
+	NetworkManager.dedicated_server = is_dedicated_server
+	players_changed.emit()
+
+
+@rpc("authority", "reliable")
+func _sync_test_bot_access(enabled: bool) -> void:
+	test_bots_enabled = enabled
+	players_changed.emit()
+
+
+func request_test_bot(role: String) -> void:
+	if not NetworkManager.dedicated_server or multiplayer.is_server():
+		return
+	_request_add_test_bot.rpc_id(1, role)
+
+
+@rpc("any_peer", "reliable")
+func _request_add_test_bot(role: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var requester_id := sender_id(multiplayer)
+	_prune_test_bot_processes()
+	var error_message := test_bot_request_error(
+		role,
+		requester_id,
+		session_host_id,
+		phase,
+		players.size(),
+		_test_bot_processes.size(),
+		LaunchOptions.server_mode,
+		NetworkManager.MAX_PLAYERS
+	)
+	if not error_message.is_empty():
+		GameLog.info("BOT", "rejected test bot request from peer %d: %s" % [requester_id, error_message])
+		_test_bot_request_result.rpc_id(requester_id, false, error_message)
+		return
+
+	var role_name := "Hunter" if role == "hunter" else "Runner"
+	var bot_name := "Test %s %d" % [role_name, _next_test_bot_number]
+	var args := PackedStringArray(["--headless"])
+	if OS.has_feature("editor"):
+		args.append("--path")
+		args.append(ProjectSettings.globalize_path("res://"))
+	args.append("--")
+	args.append("--bot=%s" % role)
+	args.append("--bot-name=%s" % bot_name)
+	var pid := OS.create_process(OS.get_executable_path(), args)
+	if pid <= 0:
+		var message := "Could not start %s. Check the game server executable." % bot_name
+		GameLog.info("BOT", message)
+		_test_bot_request_result.rpc_id(requester_id, false, message)
+		return
+	_test_bot_processes[bot_name] = pid
+	_next_test_bot_number += 1
+	GameLog.info("BOT", "started %s as a %s (pid %d)" % [bot_name, role_name, pid])
+	_test_bot_request_result.rpc_id(requester_id, true, "Started %s." % bot_name)
+
+
+@rpc("authority", "reliable")
+func _test_bot_request_result(success: bool, message: String) -> void:
+	test_bot_request_completed.emit(success, message)
+
+
+func _prune_test_bot_processes() -> void:
+	for bot_name in _test_bot_processes.keys():
+		if not OS.is_process_running(int(_test_bot_processes[bot_name])):
+			_test_bot_processes.erase(bot_name)
+
+
+static func test_bot_request_error(
+	role: String,
+	requester_id: int,
+	host_id: int,
+	current_phase: int,
+	player_count: int,
+	pending_bot_count: int,
+	enabled: bool,
+	max_players: int
+) -> String:
+	if not enabled:
+		return "Test bots are disabled on this server."
+	if requester_id != host_id:
+		return "Only the lobby host can add test bots."
+	if current_phase != Phase.LOBBY:
+		return "Test bots can only be added in the lobby."
+	if role != "runner" and role != "hunter":
+		return "Unknown bot role."
+	if player_count + pending_bot_count >= max_players:
+		return "The lobby is full."
+	return ""
 
 
 @rpc("authority", "call_local", "reliable")
 func _sync_players(raw_players: Dictionary) -> void:
 	players = _normalize_players(raw_players)
+	resolved_hunter_id = _find_assigned_hunter(players)
 	players_changed.emit()
+
+
+static func _find_assigned_hunter(roster: Dictionary) -> int:
+	for key in roster.keys():
+		var id := int(key)
+		if int(roster[id].get("role", RoleConfig.Role.RUNNER)) == RoleConfig.Role.HUNTER:
+			return id
+	return -1
 
 
 func _maybe_auto_start() -> void:
@@ -266,7 +411,7 @@ func _maybe_auto_start() -> void:
 		return
 	if players.size() >= needed and players.size() >= required_players():
 		GameLog.info("MATCH", "lobby is full (%d players); opening role selection" % players.size())
-		continue_to_selection()
+		_advance_to_selection()
 
 
 func _on_peer_left(peer_id: int) -> void:
@@ -274,6 +419,12 @@ func _on_peer_left(peer_id: int) -> void:
 		return
 	players.erase(peer_id)
 	_loaded_peers.erase(peer_id)
+	if session_host_id == peer_id:
+		var remaining_ids: Array[int] = []
+		for key in players.keys():
+			remaining_ids.append(int(key))
+		remaining_ids.sort()
+		_set_session_host(remaining_ids[0] if not remaining_ids.is_empty() else 0)
 	GameLog.info("MATCH", "removed peer %d from the roster" % peer_id)
 	_sync_players.rpc(players)
 	player_removed.emit(peer_id)
@@ -289,13 +440,30 @@ func _on_disconnected() -> void:
 # --- Match flow ----------------------------------------------------------------------
 
 func continue_to_selection() -> void:
+	if NetworkManager.dedicated_server and not multiplayer.is_server():
+		if can_continue_to_selection():
+			_request_continue_to_selection.rpc_id(1)
+		return
 	if not can_continue_to_selection():
+		return
+	_advance_to_selection()
+
+
+func _advance_to_selection() -> void:
+	if not multiplayer.is_server() or phase != Phase.LOBBY or players.size() < required_players():
 		return
 	if NetworkManager.is_online():
 		_enter_selection.rpc()
 	else:
-		_set_phase(Phase.ROLE_SELECTION)
+		_enter_selection()
 	SceneTransitionManager.transition(SceneTransitionManager.LOBBY, SceneTransitionManager.ROLE_SELECTION)
+
+
+@rpc("any_peer", "reliable")
+func _request_continue_to_selection() -> void:
+	if not multiplayer.is_server() or sender_id(multiplayer) != session_host_id:
+		return
+	_advance_to_selection()
 
 
 @rpc("authority", "call_local", "reliable")
@@ -334,6 +502,10 @@ func _apply_side(peer_id: int, role: int) -> void:
 		return
 	if role != RoleConfig.Role.HUNTER and role != RoleConfig.Role.RUNNER:
 		return
+	for key in players.keys():
+		var assigned_entry: Dictionary = players[key]
+		assigned_entry.role = RoleConfig.Role.RUNNER
+		players[key] = assigned_entry
 	var entry: Dictionary = players[peer_id]
 	entry.preferred_role = role
 	players[peer_id] = entry
@@ -387,9 +559,17 @@ func add_test_player() -> void:
 
 
 func resolve_roles() -> void:
-	if phase != Phase.ROLE_SELECTION or players.is_empty():
+	if NetworkManager.dedicated_server and not multiplayer.is_server():
+		if is_host() and phase == Phase.ROLE_SELECTION:
+			_request_resolve_roles.rpc_id(1)
 		return
 	if NetworkManager.is_online() and not multiplayer.is_server():
+		return
+	_resolve_roles_authoritatively()
+
+
+func _resolve_roles_authoritatively() -> void:
+	if not multiplayer.is_server() or phase != Phase.ROLE_SELECTION or players.is_empty():
 		return
 	_assign_roles()
 	if NetworkManager.is_online():
@@ -398,10 +578,27 @@ func resolve_roles() -> void:
 		players_changed.emit()
 
 
+@rpc("any_peer", "reliable")
+func _request_resolve_roles() -> void:
+	if not multiplayer.is_server() or sender_id(multiplayer) != session_host_id:
+		return
+	_resolve_roles_authoritatively()
+
+
 func start_game_from_selection() -> void:
+	if NetworkManager.dedicated_server and not multiplayer.is_server():
+		if is_host() and phase == Phase.ROLE_SELECTION:
+			_request_start_game.rpc_id(1)
+		return
 	if phase != Phase.ROLE_SELECTION:
 		return
 	if NetworkManager.is_online() and not multiplayer.is_server():
+		return
+	_start_game_authoritatively()
+
+
+func _start_game_authoritatively() -> void:
+	if not multiplayer.is_server() or phase != Phase.ROLE_SELECTION:
 		return
 	_drop_test_players()
 	if players.is_empty():
@@ -412,6 +609,13 @@ func start_game_from_selection() -> void:
 	else:
 		_apply_preparation(players, head_start_duration)
 	SceneTransitionManager.transition(SceneTransitionManager.ROLE_SELECTION, SceneTransitionManager.GAME)
+
+
+@rpc("any_peer", "reliable")
+func _request_start_game() -> void:
+	if not multiplayer.is_server() or sender_id(multiplayer) != session_host_id:
+		return
+	_start_game_authoritatively()
 
 
 func _maybe_auto_resolve() -> void:
@@ -435,8 +639,11 @@ func _drop_test_players() -> void:
 		resolved_hunter_id = -1
 
 
-func _assign_roles() -> void:
-	var hunter_id := choose_hunter_id(players)
+func _assign_roles(rng: RandomNumberGenerator = null) -> void:
+	var hunter_id := resolved_hunter_id
+	if not players.has(hunter_id) \
+	or int(players[hunter_id].get("role", RoleConfig.Role.RUNNER)) != RoleConfig.Role.HUNTER:
+		hunter_id = choose_hunter_id(players, rng)
 	resolved_hunter_id = hunter_id
 	for key in players.keys():
 		var id := int(key)
@@ -466,6 +673,7 @@ static func choose_hunter_id(roster: Dictionary, rng: RandomNumberGenerator = nu
 
 func _apply_preparation(raw_players: Dictionary, duration: float) -> void:
 	players = _normalize_players(raw_players)
+	resolved_hunter_id = _find_assigned_hunter(players)
 	time_left = duration
 	_loaded_peers.clear()
 	_announced_loaded = false
@@ -492,7 +700,7 @@ func request_skip_preparation() -> void:
 
 @rpc("any_peer", "reliable")
 func _request_skip_preparation() -> void:
-	if not multiplayer.is_server() or GameManager.sender_id(multiplayer) != 1:
+	if not multiplayer.is_server() or GameManager.sender_id(multiplayer) != session_host_id:
 		return
 	if phase != Phase.RUNNER_PREPARATION:
 		return
@@ -541,6 +749,10 @@ func _check_all_loaded() -> void:
 
 
 func reset_match() -> void:
+	if NetworkManager.dedicated_server and not multiplayer.is_server():
+		if is_host():
+			_request_reset_match.rpc_id(1)
+		return
 	if NetworkManager.is_online() and multiplayer != null and not multiplayer.is_server():
 		return
 	## Reset state first, then defer the scene change so units stop processing
@@ -550,6 +762,13 @@ func reset_match() -> void:
 	else:
 		_reset_to_lobby_local()
 	SceneTransitionManager.call_deferred("force_open", SceneTransitionManager.LOBBY)
+
+
+@rpc("any_peer", "reliable")
+func _request_reset_match() -> void:
+	if not multiplayer.is_server() or sender_id(multiplayer) != session_host_id:
+		return
+	reset_match()
 
 
 @rpc("authority", "call_local", "reliable")
@@ -646,6 +865,7 @@ func _phase_name(value: int) -> String:
 func _reset_state() -> void:
 	phase = Phase.LOBBY
 	players.clear()
+	session_host_id = 0
 	_loaded_peers.clear()
 	_announced_loaded = false
 	time_left = 0.0
@@ -660,10 +880,12 @@ func _reset_state() -> void:
 
 func prepare_lobby_test() -> void:
 	_reset_state()
+	session_host_id = 1
 
 
 func prepare_selection_test() -> void:
 	_reset_state()
+	session_host_id = 1
 	players[1] = _new_player(local_player_name, ANY_ROLE)
 	_set_phase(Phase.ROLE_SELECTION)
 	players_changed.emit()
@@ -671,6 +893,7 @@ func prepare_selection_test() -> void:
 
 func prepare_game_test() -> void:
 	_reset_state()
+	session_host_id = 1
 	var role := RoleConfig.Role.RUNNER
 	if LaunchOptions.test_role == "hunter":
 		role = RoleConfig.Role.HUNTER

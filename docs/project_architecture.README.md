@@ -459,13 +459,13 @@ arena.tscn
 
 ### 7.1. Networking Model
 
-Use Godot's high-level multiplayer API. The initial implementation supports one host, multiple clients, localhost testing, role assignment, state synchronization, player/structure interaction, and basic disconnect handling.
+Use Godot's high-level multiplayer API over `WebSocketMultiplayerPeer`. The game-owned Godot server listens on TCP port `9082`; `runbox` discovers and manages it from `games/catchNrun/server/compose.yaml`. Browser clients derive `ws://` or `wss://` from the exported page hostname, while native clients can connect to an entered address. Native desktop builds can also start a local server for development.
 
-A complex public lobby is not required initially.
+The WebSocket server has peer ID 1 and is not shown as a player. The first registered player becomes the lobby host and controls lobby/role-selection actions; if they disconnect, the lowest remaining player ID takes over. The game server remains authoritative for gameplay and validates client requests. There is no public matchmaking or authentication.
 
 ### 7.2. Server Authority
 
-The host acts as the authoritative server and validates movement, attacks, damage, Crystal transactions, construction, upgrades, purchases, and match-state changes.
+The dedicated WebSocket server validates movement, attacks, damage, Crystal transactions, construction, upgrades, purchases, and match-state changes. The lobby host is a player-level permission, not the network server.
 
 Clients send intent rather than directly assigning authoritative state.
 
@@ -484,14 +484,14 @@ Server
 ### 7.3. Local Multiplayer Test
 
 ```text
-Host
--> Creates local game
+Game server
+-> Starts the authoritative WebSocket session
 
 Client 1
--> Connects through localhost
+-> Connects and becomes lobby host
 
 Client 2
--> Connects through localhost
+-> Connects to the same WebSocket session
 
 Bot Client
 -> Connects through localhost
@@ -499,7 +499,7 @@ Bot Client
 
 ### 7.4. Initial Scope Exclusions
 
-The initial implementation does not require public matchmaking, accounts, ranked play, persistent online profiles, a complex lobby browser, or dedicated public infrastructure.
+The initial implementation does not require public matchmaking, accounts, ranked play, persistent online profiles, or a complex lobby browser. The game-owned server is self-hosted; the browser export does not host a server itself. The bundled server is plain WebSocket, so HTTPS deployments need external TLS termination for `wss://`.
 
 ---
 
