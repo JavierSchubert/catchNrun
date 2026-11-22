@@ -281,8 +281,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not click.pressed or click.button_index != MOUSE_BUTTON_RIGHT:
 		return
 	var world_pos := get_global_mouse_position()
-	var shift_held := click.shift_pressed or Input.is_key_pressed(KEY_SHIFT)
-	if shift_held:
+	var chain_modifier_held := SelectionManager.is_chain_modifier_held(click)
+	if chain_modifier_held:
 		issue_chain_append(world_pos)
 		get_viewport().set_input_as_handled()
 		return

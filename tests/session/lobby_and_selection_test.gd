@@ -15,6 +15,10 @@ func _ready() -> void:
 
 func _run() -> void:
 	_test_hunter_choice()
+	_test_session_host_permissions()
+	_test_browser_bot_request_policy()
+	_test_chain_modifiers()
+	_test_sandbox_action_bar()
 	_test_sprite_sync_data()
 	_test_health_bar()
 	_test_match_presentation()
@@ -72,6 +76,114 @@ func _test_hunter_choice() -> void:
 		_check(picked_any == 1 or picked_any == 2 or picked_any == 3, "with no Hunter request the choice stays in the roster")
 		anybody[picked_any] = true
 	_check(anybody.size() >= 2, "with no Hunter request more than one player can be chosen")
+
+
+func _test_session_host_permissions() -> void:
+	_check(
+		GameManager.is_session_host_peer(2, false, true, 2),
+		"the registered client can control a dedicated-server lobby"
+	)
+	_check(
+		not GameManager.is_session_host_peer(3, false, true, 2),
+		"other clients cannot control a dedicated-server lobby"
+	)
+	_check(
+		not GameManager.is_session_host_peer(1, true, true, 2),
+		"the dedicated server is not treated as a player host"
+	)
+	_check(
+		GameManager.is_session_host_peer(1, true, false, 1),
+		"a native listen-server host keeps lobby controls"
+	)
+
+
+func _test_browser_bot_request_policy() -> void:
+	_check(
+		LaunchOptions._should_enable_sandbox(false, false, true, false, false),
+		"browser release builds enable the sandbox"
+	)
+	_check(
+		not LaunchOptions._should_enable_sandbox(false, false, true, true, false),
+		"bot clients do not enable the sandbox"
+	)
+	_check(
+		not LaunchOptions._should_enable_sandbox(false, false, true, false, true),
+		"headless clients do not enable the sandbox"
+	)
+	_check(
+		not LaunchOptions.server_mode or GameManager.test_bots_enabled,
+		"dedicated servers enable browser test bots"
+	)
+	_check(
+		GameManager.test_bot_request_error("runner", 2, 2, GameManager.Phase.LOBBY, 2, 0, true, 8).is_empty(),
+		"the enabled lobby host can add a Runner bot"
+	)
+	_check(
+		GameManager.test_bot_request_error("hunter", 2, 2, GameManager.Phase.LOBBY, 2, 0, false, 8)
+			== "Test bots are disabled on this server.",
+		"test bots are rejected unless the server explicitly enables them"
+	)
+	_check(
+		GameManager.test_bot_request_error("runner", 3, 2, GameManager.Phase.LOBBY, 2, 0, true, 8)
+			== "Only the lobby host can add test bots.",
+		"non-host players cannot start bot processes"
+	)
+	_check(
+		GameManager.test_bot_request_error("runner", 2, 2, GameManager.Phase.HUNTER_ACTIVE, 2, 0, true, 8)
+			== "Test bots can only be added in the lobby.",
+		"test bots cannot join after the lobby closes"
+	)
+	_check(
+		GameManager.test_bot_request_error("runner", 2, 2, GameManager.Phase.LOBBY, 7, 1, true, 8)
+			== "The lobby is full.",
+		"pending bot processes count toward the lobby limit"
+	)
+	_check(
+		GameManager.test_bot_request_error("admin", 2, 2, GameManager.Phase.LOBBY, 2, 0, true, 8)
+			== "Unknown bot role.",
+		"only known bot roles can be launched"
+	)
+
+
+func _test_chain_modifiers() -> void:
+	var plain_click := InputEventMouseButton.new()
+	var shift_click := InputEventMouseButton.new()
+	shift_click.shift_pressed = true
+	var ctrl_click := InputEventMouseButton.new()
+	ctrl_click.ctrl_pressed = true
+	_check(not SelectionManager.is_chain_modifier_held(plain_click), "plain clicks do not append chain waypoints")
+	_check(SelectionManager.is_chain_modifier_held(shift_click), "Shift still appends chain waypoints")
+	_check(SelectionManager.is_chain_modifier_held(ctrl_click), "Ctrl appends chain waypoints for browser users")
+
+
+func _test_sandbox_action_bar() -> void:
+	var root := Control.new()
+	add_child(root)
+	var sandbox := Node.new()
+	sandbox.set_script(load("res://game/sandbox/sandbox_panel.gd"))
+	add_child(sandbox)
+	_check(
+		sandbox.call("_should_show_web_panel", true, true, true),
+		"browser sandbox is visible to the dedicated-server lobby host"
+	)
+	_check(
+		not sandbox.call("_should_show_web_panel", true, true, false),
+		"browser sandbox is hidden from other players"
+	)
+	_check(
+		not sandbox.call("_should_show_web_panel", true, false, true),
+		"browser sandbox requires a dedicated server"
+	)
+	sandbox.set("_headless", CheckBox.new())
+	sandbox.set("_bin_edit", LineEdit.new())
+	sandbox.call("_build_action_bar", root)
+	var runner_button := _button_with_text(root, "Runner")
+	var hunter_button := _button_with_text(root, "Hunter")
+	_check(runner_button != null and runner_button.icon != null, "sandbox shows a Runner example icon")
+	_check(hunter_button != null and hunter_button.icon != null, "sandbox shows a Hunter example icon")
+	_check(_button_with_text(root, "Skip") != null, "sandbox has a preparation-skip button")
+	root.free()
+	sandbox.free()
 
 
 func _test_sprite_sync_data() -> void:
@@ -327,14 +439,51 @@ func _test_role_selection() -> void:
 		_check(not _column_names(columns[1]).has("Ada (you)"), "joining Runners leaves the waiting column")
 
 	GameManager.resolve_roles()
-	_check(GameManager.resolved_hunter_id == 3 or GameManager.resolved_hunter_id == 4, "resolving the vote picks one of the Hunter requests")
-	_check(int(GameManager.players[1].role) == RoleConfig.Role.RUNNER, "a Runner stays a Runner after the vote")
-	_check(int(GameManager.players[2].role) == RoleConfig.Role.RUNNER, "the other Runner stays a Runner")
+	var resolved_hunter := GameManager.resolved_hunter_id
+	_check(resolved_hunter == 3 or resolved_hunter == 4, "resolving the vote picks one of the Hunter requests")
+	if not GameManager.players.has(resolved_hunter):
+		_fail("resolving the vote assigns an existing player as Hunter")
+		selection.queue_free()
+		return
+	_check(int(GameManager.players[resolved_hunter].role) == RoleConfig.Role.HUNTER, "the resolved player is assigned to the Hunter team")
 	var hunter_count := 0
 	for key in GameManager.players.keys():
 		if int(GameManager.players[key].role) == RoleConfig.Role.HUNTER:
 			hunter_count += 1
+		else:
+			_check(int(GameManager.players[key].role) == RoleConfig.Role.RUNNER, "every non-selected player is assigned to Runners")
 	_check(hunter_count == 1, "the vote assigns exactly one Hunter")
+	GameManager.resolved_hunter_id = -1
+	GameManager._sync_players(GameManager.players)
+	_check(
+		GameManager.resolved_hunter_id == resolved_hunter,
+		"the resolved Hunter is recovered from the synchronized roles"
+	)
+
+	var reroll_rng := RandomNumberGenerator.new()
+	var reroll_seed := 1
+	while true:
+		reroll_rng.seed = reroll_seed
+		if GameManager.choose_hunter_id(GameManager.players, reroll_rng) != resolved_hunter:
+			break
+		reroll_seed += 1
+	GameManager._assign_roles(reroll_rng)
+	_check(
+		GameManager.resolved_hunter_id == resolved_hunter,
+		"starting after resolving does not choose a different Hunter"
+	)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	columns = _selection_columns(selection)
+	if columns.size() == 3:
+		var hunter_name := str(GameManager.players[resolved_hunter].name)
+		_check(_column_names(columns[2]).has(hunter_name), "the resolved Hunter appears in the Hunter team")
+		for key in GameManager.players.keys():
+			if int(key) != resolved_hunter:
+				_check(
+					_column_names(columns[0]).has(str(GameManager.players[key].name)),
+					"all other players appear in the Runner team"
+				)
 	selection.queue_free()
 
 
@@ -365,6 +514,13 @@ func _button_texts(root: Node) -> PackedStringArray:
 		if node is Button:
 			texts.append((node as Button).text)
 	return texts
+
+
+func _button_with_text(root: Node, text: String) -> Button:
+	for node in _walk(root):
+		if node is Button and (node as Button).text == text:
+			return node as Button
+	return null
 
 
 func _list_texts(root: Node) -> PackedStringArray:

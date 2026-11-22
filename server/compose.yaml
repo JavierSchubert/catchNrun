@@ -1,0 +1,11 @@
+services:
+  catchnrun-server:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+      pull: false
+    ports:
+      - "9082:9082"
+    init: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]

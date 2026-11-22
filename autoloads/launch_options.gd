@@ -4,8 +4,9 @@ extends Node
 ##   godot --headless --path . -- --bot=hunter --bot-name=Hunter
 ## Without options the game starts normally. Used by the sandbox and the test harness.
 
-var sandbox_enabled := false ## Debug sandbox panel: debug builds or --sandbox. Never headless or bots.
+var sandbox_enabled := false ## Debug panel: debug builds, --sandbox, or web builds. Never headless or bots.
 var player_name := "" ## --player-name=NAME. Empty keeps the default name.
+var server_mode := false ## --server: run the game-owned WebSocket server without a player UI.
 var host_on_start := false ## --host: host a local game immediately.
 var auto_start_players := 0 ## --auto-start=N: the host starts the match once N players are in the lobby.
 var head_start := -1.0 ## --head-start=SECONDS: overrides the Runner preparation time when >= 0.
@@ -21,6 +22,7 @@ var test_role := "runner" ## --test-role=runner|hunter. Role used by --scene=gam
 func _ready() -> void:
 	var options := _parse(OS.get_cmdline_user_args())
 	player_name = str(options.get("player-name", ""))
+	server_mode = options.has("server")
 	host_on_start = options.has("host")
 	auto_start_players = int(options.get("auto-start", 0))
 	head_start = float(options.get("head-start", -1.0))
@@ -38,7 +40,23 @@ func _ready() -> void:
 		push_error("Unknown --test-role '%s' (use runner or hunter)." % test_role)
 		test_role = "runner"
 	var headless := DisplayServer.get_name() == "headless"
-	sandbox_enabled = (OS.is_debug_build() or options.has("sandbox")) and bot_role.is_empty() and not headless
+	sandbox_enabled = _should_enable_sandbox(
+		OS.is_debug_build(),
+		options.has("sandbox"),
+		OS.has_feature("web"),
+		not bot_role.is_empty(),
+		headless
+	)
+
+
+static func _should_enable_sandbox(
+	debug_build: bool,
+	sandbox_option: bool,
+	web_build: bool,
+	is_bot: bool,
+	headless: bool
+) -> bool:
+	return (debug_build or sandbox_option or web_build) and not is_bot and not headless
 
 
 static func _parse(args: PackedStringArray) -> Dictionary:

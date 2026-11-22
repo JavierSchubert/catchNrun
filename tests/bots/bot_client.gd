@@ -61,7 +61,7 @@ func _process(_delta: float) -> void:
 func _try_join() -> void:
 	if _quit_started or NetworkManager.is_online():
 		return
-	var err: Error = NetworkManager.join_enet()
+	var err: Error = NetworkManager.join_server()
 	if err != OK:
 		_retry("could not start joining: %s" % error_string(err))
 

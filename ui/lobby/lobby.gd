@@ -1,5 +1,5 @@
 extends Control
-## Lobby screen: host or join via ENet, see who is connected, and (host only) continue.
+## Lobby screen: host or join through WebSockets, see who is connected, and continue.
 ## Shell layout + StyleBoxes live in lobby.tscn / ui/styles/*.tres.
 
 @onready var _name_edit: LineEdit = %NameEdit
@@ -12,6 +12,7 @@ extends Control
 @onready var _host_button: Button = %HostButton
 @onready var _join_button: Button = %JoinButton
 @onready var _leave_button: Button = %LeaveButton
+var _web_client := false
 
 
 func _ready() -> void:
@@ -29,6 +30,11 @@ func _ready() -> void:
 
 	SettingsMenu.attach(self)
 	SoundManager.ensure_music()
+	_web_client = OS.has_feature("web")
+	if _web_client:
+		_host_button.hide()
+		_address_edit.hide()
+		_join_button.text = "Connect"
 
 	GameManager.players_changed.connect(_refresh)
 	GameManager.phase_changed.connect(_on_phase_changed)
@@ -36,7 +42,7 @@ func _ready() -> void:
 	NetworkManager.joined_server.connect(_refresh)
 	NetworkManager.connection_failed.connect(_on_connection_failed)
 	NetworkManager.disconnected.connect(_refresh)
-	_status.text = ""
+	_status.text = "Connect to the game server." if _web_client else ""
 	_refresh()
 
 
@@ -48,18 +54,23 @@ func _apply_name() -> void:
 func _on_host_local() -> void:
 	SoundManager.play_ui()
 	_apply_name()
-	var err: Error = NetworkManager.host_enet()
+	var err: Error = NetworkManager.start_server()
 	if err == OK:
 		_status.text = ""
 	else:
-		_status.text = "Could not host (is port %d in use?): %s" % [NetworkManager.ENET_PORT, error_string(err)]
+		_status.text = "Could not host (is port %d in use?): %s" % [NetworkManager.PORT, error_string(err)]
 
 
 func _on_join_local() -> void:
 	SoundManager.play_ui()
 	_apply_name()
 	var address := _address_edit.text.strip_edges()
-	var err: Error = NetworkManager.join_enet(address)
+	var err: Error
+	if _web_client:
+		err = NetworkManager.connect_web_client()
+		address = "game server"
+	else:
+		err = NetworkManager.join_server(address)
 	if err == OK:
 		_status.text = "Connecting to %s..." % address
 	else:
@@ -82,12 +93,15 @@ func _refresh() -> void:
 	_connect_box.visible = not online
 	_lobby_box.visible = online
 	_player_list.clear()
+	var host_id := GameManager.session_host_id
+	if host_id == 0 and not online:
+		host_id = 1
 	for key in GameManager.players.keys():
 		var id := int(key)
 		var entry: Dictionary = GameManager.players[id]
-		var host_tag := " (host)" if id == 1 else ""
+		var host_tag := " (host)" if id == host_id else ""
 		_player_list.add_item("%s%s" % [entry.get("name", "Player"), host_tag])
-	var is_host: bool = online and multiplayer.is_server()
+	var is_host: bool = online and GameManager.is_host()
 	_start_button.visible = is_host
 	_start_button.disabled = not GameManager.can_continue_to_selection()
 	if _start_button.disabled:
@@ -96,6 +110,6 @@ func _refresh() -> void:
 		_start_button.text = "Continue to role selection"
 	if online and not _status.text.begins_with("Could not") and not _status.text.begins_with("Connection"):
 		if is_host:
-			_status.text = "Hosting on port %d" % NetworkManager.ENET_PORT
+			_status.text = "Lobby host" if NetworkManager.dedicated_server else "Hosting WebSocket on port %d" % NetworkManager.PORT
 		else:
 			_status.text = "Connected"
