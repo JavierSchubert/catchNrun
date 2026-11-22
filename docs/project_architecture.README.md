@@ -193,7 +193,7 @@ Contains movement commands, path creation, path following, moving-target pursuit
 
 ### `src/selection/`
 
-Contains entity selection and selection-state management. It determines what is selected but does not implement the Selection Panel UI.
+Contains entity selection and selection-state management. It determines what is selected but does not implement the Selection Panel UI. Call sites look up the live manager via `SelectionManager.find_in_tree(tree)` (group `selection_manager`).
 
 ### `src/stats/`
 
@@ -399,6 +399,7 @@ Players spawn on a ring around map center (`PlateauMap.spawn_ring_positions`, `M
 ### 6.3. Scene Transition Manager
 
 `SceneTransitionManager` is an autoload. It is the only code that changes the current session scene.
+Sandbox buttons and `--scene=` launches share `open_direct_test(scene_key)` so lobby / selection / game prep stays in one place.
 
 The caller passes both scenes:
 

@@ -267,24 +267,21 @@ func _add_hunter() -> void:
 func _test_lobby() -> void:
 	if not _can_open_scene_directly():
 		return
-	GameManager.prepare_lobby_test()
-	SceneTransitionManager.transition("", SceneTransitionManager.LOBBY)
+	SceneTransitionManager.open_direct_test("lobby")
 	_status.text = "Lobby opened on its own."
 
 
 func _test_selection() -> void:
 	if not _can_open_scene_directly():
 		return
-	GameManager.prepare_selection_test()
-	SceneTransitionManager.transition("", SceneTransitionManager.ROLE_SELECTION)
+	SceneTransitionManager.open_direct_test("selection")
 	_status.text = "Role selection opened on its own."
 
 
 func _test_game() -> void:
 	if not _can_open_scene_directly():
 		return
-	GameManager.prepare_game_test()
-	SceneTransitionManager.transition("", SceneTransitionManager.GAME)
+	SceneTransitionManager.open_direct_test("game")
 	_status.text = "Game opened on its own as a Runner."
 
 

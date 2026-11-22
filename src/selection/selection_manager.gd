@@ -7,6 +7,7 @@ signal selection_changed(selected: Node)
 
 const DRAG_THRESHOLD_PX := 8.0
 const CLICKABLE_GROUP := "clickable"
+const GROUP_NAME := "selection_manager"
 
 var selected: Node = null
 var hovered: Node = null
@@ -21,8 +22,14 @@ var _drag_box: DragSelectBox
 var _rng := RandomNumberGenerator.new()
 
 
+static func find_in_tree(tree: SceneTree) -> SelectionManager:
+	if tree == null:
+		return null
+	return tree.get_first_node_in_group(GROUP_NAME) as SelectionManager
+
+
 func _ready() -> void:
-	add_to_group("selection_manager")
+	add_to_group(GROUP_NAME)
 	_rng.randomize()
 	_drag_box = DragSelectBox.new()
 	add_child(_drag_box)
@@ -163,8 +170,13 @@ func _issue_armed_attack_move() -> void:
 		selected.call("issue_attack_move", destination)
 
 
-func _disarm_attack_move() -> void:
+func clear_attack_move_arm() -> void:
+	## Clears A-move mode only (minimap / world commands). Does not cancel an in-progress LMB drag.
 	attack_move_armed = false
+
+
+func _disarm_attack_move() -> void:
+	clear_attack_move_arm()
 	_pressing = false
 	if _dragging:
 		_dragging = false

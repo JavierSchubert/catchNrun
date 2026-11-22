@@ -35,6 +35,26 @@ func force_open(to_path: String) -> void:
 		_force_open_everywhere.rpc(to_path)
 
 
+func open_direct_test(scene_key: String) -> bool:
+	## Shared entry for sandbox buttons and `--scene=` launches. Prepares GameManager then opens.
+	match scene_key:
+		"lobby":
+			GameManager.prepare_lobby_test()
+			transition("", LOBBY)
+			return true
+		"selection":
+			GameManager.prepare_selection_test()
+			transition("", ROLE_SELECTION)
+			return true
+		"game":
+			GameManager.prepare_game_test()
+			transition("", GAME)
+			return true
+		_:
+			push_error("Unknown test scene '%s' (use lobby, selection, or game)." % scene_key)
+			return false
+
+
 func current_scene_path() -> String:
 	var current := get_tree().current_scene
 	if current == null:
@@ -71,15 +91,4 @@ func _open(from_path: String, to_path: String) -> void:
 
 
 func _open_requested_scene() -> void:
-	match LaunchOptions.open_scene:
-		"lobby":
-			GameManager.prepare_lobby_test()
-			transition("", LOBBY)
-		"selection":
-			GameManager.prepare_selection_test()
-			transition("", ROLE_SELECTION)
-		"game":
-			GameManager.prepare_game_test()
-			transition("", GAME)
-		_:
-			push_error("Unknown --scene '%s' (use lobby, selection, or game)." % LaunchOptions.open_scene)
+	open_direct_test(LaunchOptions.open_scene)

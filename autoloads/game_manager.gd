@@ -564,13 +564,7 @@ func _reset_to_lobby_local() -> void:
 		entry.role = RoleConfig.Role.RUNNER
 		entry.preferred_role = ANY_ROLE
 		players[key] = entry
-	resolved_hunter_id = -1
-	time_left = 0.0
-	_loaded_peers.clear()
-	_announced_loaded = false
-	runner_spawn_count = 0
-	hunter_spawned = false
-	hunter_spawned_during_preparation = false
+	_clear_match_runtime()
 	_set_phase(Phase.LOBBY)
 	players_changed.emit()
 	GameLog.info("MATCH", "match reset to the lobby")
@@ -643,18 +637,23 @@ func _phase_name(value: int) -> String:
 			return "UNKNOWN"
 
 
-func _reset_state() -> void:
-	phase = Phase.LOBBY
-	players.clear()
+func _clear_match_runtime() -> void:
+	## Shared counters / load flags cleared on lobby reset and sandbox scene prep.
 	_loaded_peers.clear()
 	_announced_loaded = false
 	time_left = 0.0
 	runner_spawn_count = 0
 	hunter_spawned = false
 	hunter_spawned_during_preparation = false
+	resolved_hunter_id = -1
+
+
+func _reset_state() -> void:
+	phase = Phase.LOBBY
+	players.clear()
+	_clear_match_runtime()
 	phases_seen.clear()
 	players_at_hunter_phase.clear()
-	resolved_hunter_id = -1
 	_set_phase(Phase.LOBBY)
 
 
