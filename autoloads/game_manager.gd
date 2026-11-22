@@ -541,15 +541,23 @@ func _check_all_loaded() -> void:
 
 
 func reset_match() -> void:
-	if not multiplayer.is_server():
+	if NetworkManager.is_online() and multiplayer != null and not multiplayer.is_server():
 		return
-	var from_path := SceneTransitionManager.current_scene_path()
-	_reset_to_lobby.rpc()
-	SceneTransitionManager.transition(from_path, SceneTransitionManager.LOBBY)
+	## Reset state first, then defer the scene change so units stop processing
+	## before MultiplayerAPI / tree teardown (avoids null multiplayer.is_server crashes).
+	if NetworkManager.is_online() and multiplayer != null:
+		_reset_to_lobby.rpc()
+	else:
+		_reset_to_lobby_local()
+	SceneTransitionManager.call_deferred("force_open", SceneTransitionManager.LOBBY)
 
 
 @rpc("authority", "call_local", "reliable")
 func _reset_to_lobby() -> void:
+	_reset_to_lobby_local()
+
+
+func _reset_to_lobby_local() -> void:
 	for key in players.keys():
 		var entry: Dictionary = players[key]
 		entry.alive = true
@@ -560,6 +568,9 @@ func _reset_to_lobby() -> void:
 	time_left = 0.0
 	_loaded_peers.clear()
 	_announced_loaded = false
+	runner_spawn_count = 0
+	hunter_spawned = false
+	hunter_spawned_during_preparation = false
 	_set_phase(Phase.LOBBY)
 	players_changed.emit()
 	GameLog.info("MATCH", "match reset to the lobby")

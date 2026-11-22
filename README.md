@@ -163,8 +163,9 @@ Settings load `user://settings.cfg`, push volumes onto SoundManager, then call `
 
 | Export | Default | Notes |
 | --- | --- | --- |
-| `edge_margin` | `300` | Screen px for edge scroll |
-| `camera_speed` | `900` | World units / second |
+| `edge_margin` | `48` | Screen px trigger zone for edge scroll (nearer the edge) |
+| `camera_speed` | `1600` | World units / second (edge-scroll velocity) |
+| Middle-mouse drag | hold MMB | Pan camera until release |
 | `zoom_factor` | `1.0` | Sets `Camera2D.zoom` |
 | `bound_padding` | `360` | Screen px overscroll so map corners stay inset; converted with `/ zoom` |
 

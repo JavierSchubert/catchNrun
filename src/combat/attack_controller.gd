@@ -8,6 +8,11 @@ var acquisition_range := 900.0
 var attack_interval := 0.8
 
 var explicit_target: Node2D = null
+## When set, the unit resumes this destination after finishing opportunistic attacks.
+var attack_move_destination := Vector2.ZERO
+var attack_move_active := false
+## True after diverting from the attack-move path to chase an acquired target.
+var attack_move_chasing := false
 var _cooldown := 0.0
 
 
@@ -15,8 +20,22 @@ func clear_target() -> void:
 	explicit_target = null
 
 
+func clear_attack_move() -> void:
+	attack_move_active = false
+	attack_move_destination = Vector2.ZERO
+	attack_move_chasing = false
+
+
 func set_explicit_target(target: Node2D) -> void:
 	explicit_target = target
+	clear_attack_move()
+
+
+func begin_attack_move(destination: Vector2) -> void:
+	explicit_target = null
+	attack_move_active = true
+	attack_move_chasing = false
+	attack_move_destination = destination
 
 
 func tick(delta: float) -> void:

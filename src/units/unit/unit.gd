@@ -50,6 +50,11 @@ var _bot_repath_in := 0.0
 var _selection_circle: SelectionCircle
 var _selection_hovered := false
 var _selection_selected := false
+var _attack_flash_remaining := 0.0
+## Server-authoritative shift-click waypoint queue (world positions).
+var _move_chain: Array[Vector2] = []
+## Local-only green dotted path / waypoint rings for the commanding player.
+var _chain_visual: MoveChainVisual
 
 
 func _enter_tree() -> void:
@@ -148,10 +153,21 @@ func refresh_selection_visual() -> void:
 	_ensure_selection_circle()
 	if _selection_circle == null:
 		return
-	var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	if _attack_flash_remaining > 0.0:
+		_selection_circle.configure(selection_circle_radius(), SelectionCircle.COLOR_HUNTER)
+		_selection_circle.set_hover(false)
+		_selection_circle.set_selected(true)
+		return
+	var local_id := _local_unique_id()
 	_selection_circle.configure(selection_circle_radius(), selection_affinity_color(local_id))
 	_selection_circle.set_hover(_selection_hovered and not _selection_selected)
 	_selection_circle.set_selected(_selection_selected)
+
+
+func flash_attack_target_circle(duration := 0.35) -> void:
+	## Brief red ring when this unit is the target of an attack command.
+	_attack_flash_remaining = maxf(duration, 0.05)
+	refresh_selection_visual()
 
 
 func selection_affinity_color(local_peer_id: int) -> Color:
@@ -186,8 +202,74 @@ static func sprite_texture(sprite_index: int, role_id: int) -> Texture2D:
 	return textures[clampi(sprite_index, 0, SPRITE_COUNT - 1)] as Texture2D
 
 
+func can_attack() -> bool:
+	return is_alive() and stats.final_value(StatBlock.Stat.MELEE_DAMAGE) > 0.0
+
+
+func issue_move(destination: Vector2) -> void:
+	## Player move: cancels attack / attack-move / chain and shows the blue ground marker.
+	if not _can_issue_commands():
+		return
+	_clear_chain_visual()
+	_request_move(destination)
+	_show_move_click_marker(destination)
+
+
+func issue_chain_append(destination: Vector2) -> void:
+	## Shift+RMB waypoint (green). Any controllable unit can chain.
+	if not _can_issue_commands():
+		return
+	var clamped := _clamp_map_position(destination)
+	_ensure_chain_visual()
+	if _chain_visual != null:
+		_chain_visual.append_waypoint(clamped, MoveChainVisual.MOVE_COLOR)
+	_request_chain_append(clamped)
+
+
+func issue_attack_chain_append(destination: Vector2) -> void:
+	## Shift+A+LMB waypoint (red). Continues an existing green/red chain.
+	if not _can_issue_commands() or not can_attack():
+		return
+	var clamped := _clamp_map_position(destination)
+	_ensure_chain_visual()
+	if _chain_visual != null:
+		_chain_visual.append_waypoint(clamped, MoveChainVisual.ATTACK_COLOR)
+	_request_chain_append(clamped)
+
+
+func issue_attack_move(destination: Vector2) -> void:
+	if not _can_issue_commands() or not can_attack():
+		return
+	_clear_chain_visual()
+	_request_attack_move(destination)
+	_show_attack_click_marker_at(destination)
+
+
+func _exit_tree() -> void:
+	## Stop ticking before the MultiplayerAPI is torn down during scene resets.
+	set_physics_process(false)
+	set_process_unhandled_input(false)
+	_clear_chain_visual()
+
+
+func _multiplayer_ready() -> bool:
+	return is_inside_tree() and multiplayer != null
+
+
+func _is_net_server() -> bool:
+	return _multiplayer_ready() and multiplayer.is_server()
+
+
+func _local_unique_id() -> int:
+	if _multiplayer_ready() and multiplayer.has_multiplayer_peer():
+		return multiplayer.get_unique_id()
+	return 1
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if peer_id != multiplayer.get_unique_id() or not LaunchOptions.bot_role.is_empty():
+	if not _multiplayer_ready():
+		return
+	if peer_id != _local_unique_id() or not LaunchOptions.bot_role.is_empty():
 		return
 	if not is_alive() or not _movement_allowed():
 		return
@@ -199,32 +281,47 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not click.pressed or click.button_index != MOUSE_BUTTON_RIGHT:
 		return
 	var world_pos := get_global_mouse_position()
+	var shift_held := click.shift_pressed or Input.is_key_pressed(KEY_SHIFT)
+	if shift_held:
+		issue_chain_append(world_pos)
+		get_viewport().set_input_as_handled()
+		return
 	var target := _clickable_enemy_at(world_pos)
-	if target != null:
+	if target != null and can_attack():
+		## Attack only — cancels any active move chain.
+		_clear_chain_visual()
 		_request_attack(target)
+		_show_attack_click_marker_on(target)
 	else:
+		## Ground RMB cancels chain / attack and walks to the click.
+		_clear_chain_visual()
 		_request_move(world_pos)
 		_show_move_click_marker(world_pos)
 	get_viewport().set_input_as_handled()
 
 
 func _physics_process(delta: float) -> void:
-	if _eliminated:
+	if _eliminated or not _multiplayer_ready():
 		return
 
-	if peer_id == multiplayer.get_unique_id() and not LaunchOptions.bot_role.is_empty():
+	_tick_attack_flash(delta)
+
+	if peer_id == _local_unique_id() and not LaunchOptions.bot_role.is_empty():
 		_bot_tick()
 
-	if multiplayer.is_server():
+	if _is_net_server():
 		if not _movement_allowed() or not is_alive():
 			_intent = Vector2.ZERO
 			movement.clear_order()
 			attack.clear_target()
+			_move_chain.clear()
 		else:
 			_server_combat_tick(delta)
 			if not movement.has_order():
 				movement.intent = _intent
 			movement.apply(self)
+			## After applying motion, queue the next shift-click leg if the current one finished.
+			_resume_move_chain_if_needed()
 			_clamp_to_map()
 		sync_position = position
 		sync_health = health.current
@@ -234,6 +331,14 @@ func _physics_process(delta: float) -> void:
 		_apply_synced_health()
 
 
+func _tick_attack_flash(delta: float) -> void:
+	if _attack_flash_remaining <= 0.0:
+		return
+	_attack_flash_remaining = maxf(_attack_flash_remaining - delta, 0.0)
+	if _attack_flash_remaining <= 0.0:
+		refresh_selection_visual()
+
+
 func _bot_tick() -> void:
 	if not is_alive() or not _movement_allowed():
 		return
@@ -241,7 +346,7 @@ func _bot_tick() -> void:
 		_hunter_bot_chase()
 	else:
 		var direction := _runner_bot_direction()
-		if multiplayer.is_server():
+		if _is_net_server():
 			_intent = direction
 		else:
 			_submit_input.rpc_id(1, direction)
@@ -258,7 +363,7 @@ func _hunter_bot_chase() -> void:
 	_bot_chase_peer_id = target.peer_id
 	if in_range:
 		_bot_repath_in = 0.0
-		if multiplayer.is_server():
+		if _is_net_server():
 			movement.clear_order()
 			_intent = Vector2.ZERO
 			attack.set_explicit_target(target)
@@ -266,11 +371,11 @@ func _hunter_bot_chase() -> void:
 			_submit_attack_target.rpc_id(1, target.peer_id)
 		return
 	var needs_path := retarget or _bot_repath_in <= 0.0 \
-		or (multiplayer.is_server() and not movement.has_order())
+		or (_is_net_server() and not movement.has_order())
 	if not needs_path:
 		return
 	_bot_repath_in = 0.35
-	if multiplayer.is_server():
+	if _is_net_server():
 		attack.set_explicit_target(target)
 		movement.order_move(global_position, target.global_position)
 	else:
@@ -293,13 +398,23 @@ func _server_combat_tick(delta: float) -> void:
 	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
 		return
 
+	## Shift-click chains always outrank in-range / auto-acquire combat.
+	if not _move_chain.is_empty():
+		_resume_move_chain_if_needed()
+		return
+
 	var target := attack.pick_target(global_position, _enemy_candidates())
 	if target == null:
+		_resume_attack_move_if_needed()
+		return
+
+	var player_engage := attack.explicit_target != null or attack.attack_move_active
+	## A plain player move outranks opportunistic auto-attack.
+	if not player_engage and movement.has_order():
 		return
 
 	if not attack.in_attack_range(global_position, target):
-		if not movement.has_order():
-			movement.order_move(global_position, target.global_position)
+		_chase_combat_target(target)
 		return
 
 	movement.clear_order()
@@ -353,7 +468,7 @@ func _on_died() -> void:
 	velocity = Vector2.ZERO
 	sync_health = 0.0
 	_apply_eliminated_visual()
-	if multiplayer.is_server():
+	if _is_net_server():
 		GameManager.eliminate_player(peer_id)
 
 
@@ -437,24 +552,141 @@ func _clamp_map_position(world_position: Vector2) -> Vector2:
 
 
 func _request_move(destination: Vector2, clear_attack := true) -> void:
-	if multiplayer.is_server():
+	if not _multiplayer_ready():
+		return
+	if _is_net_server():
+		_move_chain.clear()
 		if clear_attack:
 			attack.clear_target()
+			attack.clear_attack_move()
 		movement.order_move(global_position, _clamp_map_position(destination))
 	else:
 		_submit_move_order.rpc_id(1, destination, clear_attack)
 
 
+func _request_chain_append(destination: Vector2) -> void:
+	if not _multiplayer_ready():
+		return
+	var clamped := _clamp_map_position(destination)
+	if _is_net_server():
+		_server_chain_append(clamped)
+	else:
+		_submit_chain_append.rpc_id(1, clamped)
+
+
+func _server_chain_append(destination: Vector2) -> void:
+	attack.clear_target()
+	attack.clear_attack_move()
+	var was_empty := _move_chain.is_empty()
+	_move_chain.append(destination)
+	## Start walking the first leg immediately; further clicks only queue.
+	if was_empty or not movement.has_order():
+		movement.order_move(global_position, _move_chain[0])
+
+
+func _request_attack_move(destination: Vector2) -> void:
+	if not _multiplayer_ready():
+		return
+	var clamped := _clamp_map_position(destination)
+	if _is_net_server():
+		_move_chain.clear()
+		attack.begin_attack_move(clamped)
+		movement.order_move(global_position, clamped)
+	else:
+		_submit_attack_move.rpc_id(1, clamped)
+
+
 func _show_move_click_marker(world_pos: Vector2) -> void:
 	## Local feedback only — not replicated.
+	var host := _marker_host()
+	MoveClickMarker.spawn(host, world_pos, MoveClickMarker.MOVE_COLOR)
+
+
+func _show_attack_click_marker_at(world_pos: Vector2) -> void:
+	var host := _marker_host()
+	MoveClickMarker.spawn(host, world_pos, MoveClickMarker.ATTACK_COLOR)
+
+
+func _show_attack_click_marker_on(target: Unit) -> void:
+	if target == null:
+		return
+	MoveClickMarker.spawn_on(target, MoveClickMarker.ATTACK_COLOR)
+	if target.has_method("flash_attack_target_circle"):
+		target.call("flash_attack_target_circle")
+
+
+func _marker_host() -> Node:
 	var host := get_tree().current_scene
 	if host == null:
 		host = get_parent()
-	MoveClickMarker.spawn(host, world_pos)
+	return host
+
+
+func _chase_combat_target(target: Node2D) -> void:
+	if target == null:
+		return
+	if attack.attack_move_active and not attack.attack_move_chasing:
+		## Interrupt the attack-move destination once so we engage instead of walking past.
+		attack.attack_move_chasing = true
+		movement.order_move(global_position, target.global_position)
+		return
+	if not movement.has_order():
+		movement.order_move(global_position, target.global_position)
+
+
+func _resume_attack_move_if_needed() -> void:
+	if not attack.attack_move_active:
+		return
+	attack.attack_move_chasing = false
+	if movement.has_order():
+		return
+	var destination := attack.attack_move_destination
+	if global_position.distance_to(destination) <= 12.0:
+		attack.clear_attack_move()
+		return
+	movement.order_move(global_position, destination)
+
+
+func _resume_move_chain_if_needed() -> void:
+	if _move_chain.is_empty():
+		return
+	attack.attack_move_chasing = false
+	if movement.has_order():
+		return
+	## Drop waypoints the unit has already reached, then walk the next leg.
+	while not _move_chain.is_empty() and global_position.distance_to(_move_chain[0]) <= 12.0:
+		_move_chain.pop_front()
+	if _move_chain.is_empty():
+		return
+	movement.order_move(global_position, _move_chain[0])
+
+
+func _ensure_chain_visual() -> void:
+	if peer_id != _local_unique_id():
+		return
+	if _chain_visual != null and is_instance_valid(_chain_visual):
+		return
+	var host := _marker_host()
+	if host == null:
+		return
+	_chain_visual = MoveChainVisual.new()
+	_chain_visual.name = "MoveChainVisual_%d" % peer_id
+	host.add_child(_chain_visual)
+	_chain_visual.set_follow_unit(self)
+
+
+func _clear_chain_visual() -> void:
+	if _chain_visual != null and is_instance_valid(_chain_visual):
+		_chain_visual.clear()
+		_chain_visual.queue_free()
+	_chain_visual = null
 
 
 func _request_attack(target: Unit) -> void:
-	if multiplayer.is_server():
+	if not _multiplayer_ready():
+		return
+	if _is_net_server():
+		_move_chain.clear()
 		attack.set_explicit_target(target)
 		if not attack.in_attack_range(global_position, target):
 			movement.order_move(global_position, target.global_position)
@@ -464,13 +696,16 @@ func _request_attack(target: Unit) -> void:
 
 func _clickable_enemy_at(world_pos: Vector2) -> Unit:
 	var best: Unit = null
-	var best_distance := 40.0
+	var best_distance := INF
 	for node in _enemy_candidates():
 		var unit := node as Unit
 		if unit == null or not unit.is_attackable():
 			continue
+		## Match selection feel, with a floor so large sprites stay easy to click.
+		var hit_radius := maxf(unit.selection_hit_radius(), unit.selection_circle_radius() * 1.35)
+		hit_radius = maxf(hit_radius, 56.0)
 		var distance := world_pos.distance_to(unit.global_position)
-		if distance < best_distance:
+		if distance <= hit_radius and distance < best_distance:
 			best_distance = distance
 			best = unit
 	return best
@@ -526,24 +761,39 @@ func _refresh_label() -> void:
 
 @rpc("any_peer", "reliable")
 func _submit_move_order(destination: Vector2, clear_attack := true) -> void:
-	if not multiplayer.is_server():
+	if not _is_net_server():
 		return
 	if GameManager.sender_id(multiplayer) != peer_id:
 		return
 	if not is_alive() or not _movement_allowed():
 		return
+	_move_chain.clear()
 	if clear_attack:
 		attack.clear_target()
+		attack.clear_attack_move()
 	movement.order_move(global_position, _clamp_map_position(destination))
 
 
 @rpc("any_peer", "reliable")
-func _submit_attack_target(target_peer_id: int) -> void:
-	if not multiplayer.is_server():
+func _submit_chain_append(destination: Vector2) -> void:
+	if not _is_net_server():
 		return
 	if GameManager.sender_id(multiplayer) != peer_id:
 		return
 	if not is_alive() or not _movement_allowed():
+		return
+	_server_chain_append(_clamp_map_position(destination))
+
+
+@rpc("any_peer", "reliable")
+func _submit_attack_target(target_peer_id: int) -> void:
+	if not _is_net_server():
+		return
+	if GameManager.sender_id(multiplayer) != peer_id:
+		return
+	if not is_alive() or not _movement_allowed():
+		return
+	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
 		return
 	var target_node := get_parent().get_node_or_null(str(target_peer_id))
 	if target_node == null or not target_node is Unit:
@@ -551,14 +801,31 @@ func _submit_attack_target(target_peer_id: int) -> void:
 	var target := target_node as Unit
 	if not target.is_attackable():
 		return
+	_move_chain.clear()
 	attack.set_explicit_target(target)
 	if not attack.in_attack_range(global_position, target):
 		movement.order_move(global_position, target.global_position)
 
 
+@rpc("any_peer", "reliable")
+func _submit_attack_move(destination: Vector2) -> void:
+	if not _is_net_server():
+		return
+	if GameManager.sender_id(multiplayer) != peer_id:
+		return
+	if not is_alive() or not _movement_allowed():
+		return
+	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
+		return
+	_move_chain.clear()
+	var clamped := _clamp_map_position(destination)
+	attack.begin_attack_move(clamped)
+	movement.order_move(global_position, clamped)
+
+
 @rpc("any_peer", "unreliable_ordered")
 func _submit_input(direction: Vector2) -> void:
-	if not multiplayer.is_server():
+	if not _is_net_server():
 		return
 	if GameManager.sender_id(multiplayer) != peer_id:
 		return

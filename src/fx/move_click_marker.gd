@@ -1,17 +1,19 @@
 class_name MoveClickMarker
 extends Node2D
-## Brief local-only ring shown where the player right-clicked to move.
-## Pops in with a short tween, then fades out and frees itself.
+## Brief local-only ring shown for click commands.
+## Blue = move. Red = attack / attack-move.
 
 const RING_RADIUS := 20.0
 const RING_WIDTH := 3.0
 const DOT_RADIUS := 3.5
-const RING_COLOR := Color(0.4, 0.78, 1.0, 1.0)
+const MOVE_COLOR := Color(0.4, 0.78, 1.0, 1.0)
+const ATTACK_COLOR := Color(0.95, 0.28, 0.28, 0.95)
 
 @export var pop_duration := 0.16
 @export var fade_duration := 0.28
 @export var fade_delay := 0.08
 
+var ring_color := MOVE_COLOR
 var _playing := false
 
 
@@ -46,14 +48,25 @@ func _play() -> void:
 
 
 func _draw() -> void:
-	draw_arc(Vector2.ZERO, RING_RADIUS, 0.0, TAU, 48, RING_COLOR, RING_WIDTH, true)
-	draw_circle(Vector2.ZERO, DOT_RADIUS, RING_COLOR)
+	draw_arc(Vector2.ZERO, RING_RADIUS, 0.0, TAU, 48, ring_color, RING_WIDTH, true)
+	draw_circle(Vector2.ZERO, DOT_RADIUS, ring_color)
 
 
-static func spawn(parent: Node, world_position: Vector2) -> MoveClickMarker:
+static func spawn(parent: Node, world_position: Vector2, color: Color = MOVE_COLOR) -> MoveClickMarker:
 	if parent == null:
 		return null
 	var marker := MoveClickMarker.new()
+	marker.ring_color = color
 	parent.add_child(marker)
 	marker.global_position = world_position
+	return marker
+
+
+static func spawn_on(target: Node2D, color: Color = ATTACK_COLOR) -> MoveClickMarker:
+	if target == null or not is_instance_valid(target):
+		return null
+	var marker := MoveClickMarker.new()
+	marker.ring_color = color
+	target.add_child(marker)
+	marker.position = Vector2.ZERO
 	return marker

@@ -1,13 +1,17 @@
 extends Camera2D
 ## Free match camera. Edge scrolling moves the view.
+## Middle-mouse drag pans until the button is released.
 ## C always centers on the local player's own unit (never on a foreign selection).
 ## Dead local players keep this camera as observers.
 ##
 ## Bound padding lets the view scroll a bit past the map edge so map corners are never
 ## glued to screen corners — units at the map edge stay inset and readable.
 
-@export var edge_margin := 300.0
-@export var camera_speed := 900.0
+## How close the cursor must be to a viewport edge (screen px) to start edge-scroll.
+## Smaller = trigger zone nearer the screen edge.
+@export var edge_margin := 48.0
+## Edge-scroll velocity in world units per second.
+@export var camera_speed := 1600.0
 @export var bounds := Unit.MAP_BOUNDS
 ## How far the map edge sits inside the viewport when the camera is fully scrolled.
 ## This value is in screen pixels and remains consistent at every zoom level.
@@ -19,6 +23,8 @@ extends Camera2D
 		zoom = Vector2.ONE * zoom_factor
 
 var _follow_peer_id := -1
+var _mmb_dragging := false
+var _mmb_last_screen := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -43,8 +49,37 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
+func _input(event: InputEvent) -> void:
+	## MMB pan uses _input so drag keeps working across the whole window (including UI edges).
+	if not enabled:
+		return
+	if event is InputEventMouseButton:
+		var click := event as InputEventMouseButton
+		if click.button_index != MOUSE_BUTTON_MIDDLE:
+			return
+		if click.pressed:
+			_mmb_dragging = true
+			_mmb_last_screen = click.position
+		else:
+			_mmb_dragging = false
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventMouseMotion and _mmb_dragging:
+		var motion := event as InputEventMouseMotion
+		var delta_screen := motion.position - _mmb_last_screen
+		_mmb_last_screen = motion.position
+		var zoom_x := maxf(absf(zoom.x), 0.001)
+		var zoom_y := maxf(absf(zoom.y), 0.001)
+		## Drag the map with the cursor (camera moves opposite to mouse delta).
+		global_position -= Vector2(delta_screen.x / zoom_x, delta_screen.y / zoom_y)
+		_clamp_to_bounds()
+		get_viewport().set_input_as_handled()
+
+
 func _process(delta: float) -> void:
 	if not enabled:
+		return
+	if _mmb_dragging:
 		return
 	var direction := _edge_direction()
 	if direction != Vector2.ZERO:
@@ -70,14 +105,15 @@ func _edge_direction() -> Vector2:
 	if viewport.gui_get_hovered_control() != null:
 		return Vector2.ZERO
 
+	var margin := maxf(edge_margin, 0.0)
 	var direction := Vector2.ZERO
-	if mouse.x <= edge_margin:
+	if mouse.x <= margin:
 		direction.x -= 1.0
-	elif mouse.x >= size.x - edge_margin:
+	elif mouse.x >= size.x - margin:
 		direction.x += 1.0
-	if mouse.y <= edge_margin:
+	if mouse.y <= margin:
 		direction.y -= 1.0
-	elif mouse.y >= size.y - edge_margin:
+	elif mouse.y >= size.y - margin:
 		direction.y += 1.0
 	return direction.normalized()
 

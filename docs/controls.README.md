@@ -159,11 +159,19 @@ Right Click Ground
 -> Calculate shortest valid path
 -> Move along path
 
-A newly issued movement command replaces the current movement or attack command.
+A newly issued movement command replaces the current movement or attack command. Right-click on empty ground always takes priority: it cancels the current attack / attack-move / shift-click chain and walks to the click. Opportunistic auto-attack must not interrupt that plain player move while the path is still active.
+
+#### Shift-click move chain
+
+Hold `Shift` and right-click the ground (or the minimap) to queue **green** move waypoints. Press `A`, then hold `Shift` and left-click to queue **red** attack-move waypoints (also on the minimap). Green and red legs can be mixed in one chain — for example red attack-move points, then more green Shift+RMB points.
+
+Dotted lines and rings use the color of the waypoint they lead into. As the unit reaches a waypoint, that ring and its inbound dotted segment disappear.
+
+While a chain is active, the path has priority over enemies in attack range — the unit keeps walking waypoints and does not stop to auto-attack. Cancel the whole chain with a plain right-click or a plain (non-Shift) `A` + left-click attack-move.
 
 #### Attack Command
 
-Right-clicking a valid attackable entity sets that entity as the current attack target.
+Right-clicking a valid attackable entity (with a selected unit that can attack, currently the Hunter) sets that entity as the current attack target. A red click ring flashes on the entity (move clicks stay blue).
 
 ```text
 Right Click Attackable Entity
@@ -181,12 +189,12 @@ Right Click Attackable Entity
 
 ### 1.3. Attack Move
 
-Pressing `A` followed by a left click issues an attack-move command.
+Pressing `A` followed by a left click issues an attack-move command. The ground click ring is red (same attack color as a right-click attack). Escape or right-click cancels attack-move mode before the click.
 
 ```text
 A
 -> Left Click Position
--> Attack Move
+-> Attack Move (red ground marker)
 ```
 
 During attack move:
@@ -227,7 +235,7 @@ Implementation: `game/camera/match_camera.gd` (`MatchCamera`).
 
 Moving the mouse cursor to the edges or corners of the screen moves the camera in the corresponding direction.
 
-The edge detection margin is configurable in the `MatchCamera` inspector through `edge_margin` (in **screen** pixels; current default: `300`).
+The edge detection margin is configurable in the `MatchCamera` inspector through `edge_margin` (in **screen** pixels; current default: `48` — nearer the screen edge). Scroll speed is `camera_speed` (world units / s; current default: `1600`).
 
 ```text
 Top edge          -> Move camera up
@@ -250,7 +258,11 @@ movement = direction * camera_speed
 
 Camera movement does not affect the controlled character.
 
-Edge scroll is **disabled** while the cursor hovers a blocking UI control (`Viewport.gui_get_hovered_control()` is non-null). That covers the settings dock, minimap, sandbox chrome, and similar overlays so scrolling does not fight the UI.
+Edge scroll is **disabled** while the cursor hovers a blocking UI control (`Viewport.gui_get_hovered_control()` is non-null). That covers the settings dock, minimap, sandbox chrome, and similar overlays so scrolling does not fight the UI. Edge scroll is also paused while middle-mouse drag is active.
+
+### 2.1.1. Middle-mouse drag
+
+Hold the middle mouse button and move the mouse to drag the camera. Release middle mouse to stop. The map follows the cursor (camera moves opposite to the drag delta, zoom-aware).
 
 ### 2.2. Map bounds and overscroll padding
 
@@ -258,8 +270,8 @@ The camera clamps to `Unit.MAP_BOUNDS`, but it is allowed to scroll **past** the
 
 | Export | Unit | Current default | Meaning |
 | --- | --- | --- | --- |
-| `edge_margin` | screen px | `300` | How close the cursor must be to a viewport edge to scroll |
-| `camera_speed` | world units / s | `900` | Edge-scroll speed |
+| `edge_margin` | screen px | `48` | Trigger-zone offset from viewport edge for edge-scroll |
+| `camera_speed` | world units / s | `1600` | Edge-scroll velocity |
 | `zoom_factor` | multiplier | `1.0` | Applied to `Camera2D.zoom` |
 | `bound_padding` | screen px | `360` | How far the map edge sits inside the viewport when fully scrolled |
 
