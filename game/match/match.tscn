@@ -3,11 +3,11 @@
 [ext_resource type="Script" uid="uid://c0oqk4usvv6j6" path="res://game/match/match.gd" id="1_match"]
 [ext_resource type="PackedScene" path="res://src/units/hunter/hunter.tscn" id="2_hunter"]
 [ext_resource type="PackedScene" uid="uid://uk1tc2fuojjd" path="res://src/units/runner/runner.tscn" id="3_runner"]
-[ext_resource type="PackedScene" path="res://game/match/hud.tscn" id="4_hud"]
+[ext_resource type="PackedScene" uid="uid://b5un4h7dglmme" path="res://game/match/hud.tscn" id="4_hud"]
 [ext_resource type="Script" uid="uid://cnfuwn80uvk73" path="res://game/camera/match_camera.gd" id="5_camera"]
 [ext_resource type="PackedScene" uid="uid://co2dllw6ejyto" path="res://game/maps/arena_plateau.tscn" id="6_map"]
 [ext_resource type="Script" uid="uid://8ufwu7rhs85m" path="res://src/selection/selection_manager.gd" id="7_selection"]
-[ext_resource type="Texture2D" path="res://assets/sprites/ui/Spawn_mark.png" id="8_spawn_mark"]
+[ext_resource type="Texture2D" uid="uid://ct0x37wc2d5ts" path="res://assets/sprites/ui/Spawn_mark.png" id="8_spawn_mark"]
 
 [node name="Match" type="Node2D" unique_id=1631963897]
 script = ExtResource("1_match")
@@ -21,7 +21,7 @@ runner_scene = ExtResource("3_runner")
 [node name="Spawn0" type="Marker2D" parent="SpawnPoints" unique_id=796442943]
 position = Vector2(0, -160)
 
-[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/Spawn0"]
+[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/Spawn0" unique_id=1534842346]
 modulate = Color(0.45, 0.85, 0.45, 0.85)
 scale = Vector2(0.5, 0.5)
 texture = ExtResource("8_spawn_mark")
@@ -29,7 +29,7 @@ texture = ExtResource("8_spawn_mark")
 [node name="Spawn1" type="Marker2D" parent="SpawnPoints" unique_id=1456219910]
 position = Vector2(160, 0)
 
-[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/Spawn1"]
+[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/Spawn1" unique_id=1678512160]
 modulate = Color(0.45, 0.85, 0.45, 0.85)
 scale = Vector2(0.5, 0.5)
 texture = ExtResource("8_spawn_mark")
@@ -37,7 +37,7 @@ texture = ExtResource("8_spawn_mark")
 [node name="Spawn2" type="Marker2D" parent="SpawnPoints" unique_id=1894451018]
 position = Vector2(0, 160)
 
-[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/Spawn2"]
+[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/Spawn2" unique_id=804947916]
 modulate = Color(0.45, 0.85, 0.45, 0.85)
 scale = Vector2(0.5, 0.5)
 texture = ExtResource("8_spawn_mark")
@@ -45,7 +45,7 @@ texture = ExtResource("8_spawn_mark")
 [node name="Spawn3" type="Marker2D" parent="SpawnPoints" unique_id=187233804]
 position = Vector2(-160, 0)
 
-[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/Spawn3"]
+[node name="Gizmo" type="Sprite2D" parent="SpawnPoints/Spawn3" unique_id=947316436]
 modulate = Color(0.45, 0.85, 0.45, 0.85)
 scale = Vector2(0.5, 0.5)
 texture = ExtResource("8_spawn_mark")
