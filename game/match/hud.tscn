@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://game/match/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" path="res://ui/hud/minimap/minimap.tscn" id="2_minimap"]
 [ext_resource type="PackedScene" path="res://ui/hud/selection_panel/selection_panel.tscn" id="3_selection"]
+[ext_resource type="PackedScene" path="res://ui/hud/building_panel/building_panel.tscn" id="4_building"]
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -57,4 +58,19 @@ offset_top = -164.0
 offset_right = 260.0
 offset_bottom = -16.0
 grow_horizontal = 2
+grow_vertical = 0
+
+[node name="BuildingPanel" parent="Root" instance=ExtResource("4_building")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -276.0
+offset_top = -240.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
 grow_vertical = 0

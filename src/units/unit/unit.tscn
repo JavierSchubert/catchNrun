@@ -21,7 +21,7 @@ properties/1/replication_mode = 1
 [node name="Unit" type="CharacterBody2D" unique_id=679634324]
 z_index = 1
 collision_layer = 4
-collision_mask = 2
+collision_mask = 10
 motion_mode = 1
 script = ExtResource("1_unit")
 

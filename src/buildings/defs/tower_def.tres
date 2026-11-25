@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BuildingDef" format=3]
+
+[ext_resource type="Script" path="res://src/buildings/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+kind = 1
+id = "tower"
+display_name = "Tower"
+footprint = Vector2i(2, 2)
+max_level = 5
+base_cost = 150.0
+cost_growth = 1.6
+base_hp = 300.0
+hp_growth = 1.35
+base_build_seconds = 6.0
+build_time_growth = 1.25
+tower_base_damage = 18.0
+tower_damage_growth = 1.3
+tower_range = 280.0
+tower_attack_interval = 1.0

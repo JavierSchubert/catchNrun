@@ -65,28 +65,28 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 **Owning docs:** `construction.README.md`, `building.README.md`, `gameplay.README.md` §3–§4, `project_architecture.README.md` (`src/buildings/`, `src/construction/`)
 
-### Done (foundation)
+### Done (see CP-11 / CP-15)
 
 - [x] Grid-based placement rules documented (`building.README.md`)
 - [x] Physics layers: world / obstacle / unit / building / destructible / item
 - [x] `BuildGrid` + `PlacementValidator` + footprint hitbox `Building`
 - [x] Interactive grid test scene + headless footprint logic test
+- [x] Match-integrated placement mode (bottom-right build UI → ghost → place in game)
+- [x] Crystal Mine / Wall / Tower scenes (one shared `Building` script, data-driven `BuildingDef`)
+- [x] Wall (and every structure) blocks unit movement (`Unit` collision mask)
+- [x] Structure health and destruction (`HealthComponent`; Hunter melee also damages buildings)
+- [x] Structure upgrades driven by configuration (health / cost / build-time / mine output / tower damage all scale with level via `BuildingDef`)
+- [x] Server-authoritative build / upgrade / destroy transactions (`ConstructionManager`)
+- [x] Runner can destroy their own structures from the build UI
 
 ### Open
 
-- [ ] Match-integrated placement mode (Runner build menu → place in game)
-- [ ] Crystal Mine scene (one per Runner)
-- [ ] Wall scene (blocks movement; updates navigation on destroy)
-- [ ] Tower scene (acquires / attacks Hunter)
-- [ ] Structure health and destruction
-- [ ] Structure upgrades driven by configuration (health / damage / output)
-- [ ] Server-authoritative build / upgrade transactions
-- [ ] Navigation path recalculation when walls appear / disappear
+- [ ] Navigation path recalculation when walls appear / disappear (still straight-line paths — pre-existing CP-04 limitation, more visible now that Walls exist)
 
 ### Depends on
 
-- Economy spend validation (can land as stubs with WP-03, or minimal crystal balance first)
-- Health / combat for structure destruction and tower attacks (WP-01)
+- Economy spend validation — landed together with this package (WP-03 starting-balance subset)
+- Health / combat for structure destruction and tower attacks (WP-01) — done
 
 ---
 
@@ -94,23 +94,26 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 **Owning docs:** `economy.README.md`, `gameplay.README.md` economy sections, `stats.README.md` (shop applies modifiers)
 
-### Open
+### Done (Runner side — see CP-15)
 
-- [ ] Crystal resource owned by authoritative match / player state
-- [ ] Crystal Mine generation interval and `2^(level - 1)` output through level 12
-- [ ] Configurable mine upgrade costs (UI must not own costs)
-- [ ] Runner spending: mine / wall / tower build and upgrades
+- [x] Crystal resource owned by authoritative match / player state (`GameManager.players[].crystals`, host-validated spend/grant)
+- [x] Crystal Mine generation interval and `2^(level - 1)` output through level 12
+- [x] Configurable mine / wall / tower costs and upgrade costs (`BuildingDef` resources; UI only displays them)
+- [x] Runner spending: mine / wall / tower build and upgrades
+- [x] Centralized economy config resource (`src/economy/economy_config.gd` + per-structure `BuildingDef`)
+- [x] Crystal economy automated tests (`tests/construction/building_economy_test.gd`)
+
+### Open (Hunter side — not requested yet)
+
 - [ ] Hunter crystals from damage dealt (`hunter_crystals_per_damage`)
 - [ ] Hunter passive income from Hunter Shop / base (lower than developed mines)
 - [ ] Hunter Shop purchases applying `StatModifier`s
-- [ ] Centralized economy config resources
-- [ ] Crystal / shop automated tests
 
 ### Depends on
 
 - Stats modifiers already exist (CP-05)
 - Damage pipeline (WP-01) for damage income
-- Structures (WP-02) for mine generation and build spend
+- Structures (WP-02) for mine generation and build spend — done (CP-15)
 
 ---
 
@@ -438,8 +441,8 @@ Milestone A — Fight and finish
   WP-15 Skins / shaders / movement animations
 
 Milestone B — Build and earn
-  WP-02 Construction: grid foundation ✅ (CP-11); Crystal Mine / Wall / Tower still open
-  WP-03 Economy (mine ticks + spend + hunter damage income)
+  WP-02 Construction: grid foundation ✅ (CP-11); match-integrated build UI + Wall / Tower / Crystal Mine ✅ (CP-15)
+  WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income / Hunter Shop still open
   WP-14 Player XP / levels + violet portrait XP ring
 
 Milestone C — Command and HUD

@@ -122,6 +122,9 @@ func _handle_mouse_button(click: InputEventMouseButton) -> void:
 		return
 	if click.button_index != MOUSE_BUTTON_LEFT:
 		return
+	if _is_build_mode_armed():
+		## The building UI owns LMB (placement) while a structure is armed.
+		return
 	if click.pressed:
 		if attack_move_armed:
 			_issue_armed_attack_move()
@@ -144,6 +147,11 @@ func _handle_mouse_button(click: InputEventMouseButton) -> void:
 		return
 	_apply_point_selection(_press_world)
 	get_viewport().set_input_as_handled()
+
+
+func _is_build_mode_armed() -> bool:
+	var ui := get_tree().get_first_node_in_group("building_ui")
+	return ui != null and ui.has_method("is_armed") and bool(ui.call("is_armed"))
 
 
 func _can_arm_attack_move() -> bool:

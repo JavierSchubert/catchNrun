@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-22** (attack / attack-move / shift-click chains, minimap commands, camera drag, sandbox reset + scrollable log).
+Last reviewed: **2026-11-25** (match-integrated construction: build UI, Crystal economy, Wall / Tower / Crystal Mine structures, leveling).
 
 ---
 
@@ -38,6 +38,7 @@ Last reviewed: **2026-11-22** (attack / attack-move / shift-click chains, minima
 | 2026-11-21 | CP-10 selection panel combat HUD | Fixed-size panel; clean stat icons; 2×3 combat grid; health bar + regen; empty = grey box + empty ring |
 | 2026-11-21 | CP-02 networking cleanup | Removed `addons/godotsteam` and all Steam lobby / invite paths; `NetworkManager` is ENet-only |
 | 2026-11-22 | **CP-14** Attack UX, chains, camera, sandbox | Right-click attack (red ring); A+LMB attack-move; Shift+RMB green move chain; Shift+A+LMB red attack-move chain (mixable); chain path outranks in-range auto-attack; minimap RMB / Shift+RMB / A+LMB / Shift+A+LMB; MMB camera drag; faster edge-scroll (`camera_speed` 1600, `edge_margin` 48); sandbox Reset fixed (deferred lobby + null-safe multiplayer); scrollable GameLog panel |
+| 2026-11-25 | **CP-15** Match-integrated construction + Crystal economy | Bottom-right build UI (`ui/hud/building_panel/`) with clickable per-structure icons, grid ghost preview, Upgrade / Destroy for owned selection; `ConstructionManager` (host-authoritative build/upgrade/destroy RPCs + `BuildingSpawner`); data-driven `BuildingDef` (cost/HP/build-time scale with level) backing Wall / Tower / Crystal Mine scenes sharing one `Building` script; non-instant construction with a replicated progress bar; `EconomyConfig` + `GameManager` Crystal balance (`crystals_for` / `try_spend_crystals` / `grant_crystals`, reset to 1,000,000 each match); Crystal Mine ticks owner income (`2^(level-1)` per docs/economy.README.md); Tower auto-attacks Hunters in range; Hunter melee now also damages attackable buildings; Walls (and all structures) physically block unit movement (`Unit` collision mask); headless `tests/construction/building_economy_test` + interactive `tests/construction/building_system_test` |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -233,9 +234,35 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Interactive grid placement test scene | Done | `tests/construction/building_grid_test.tscn` |
 | Headless footprint / blocker-mask tests | Done | `tests/construction/build_grid_logic_test.gd` |
 
-**Still open:** Crystal Mine / Wall / Tower content, match build menu, economy spend, nav updates — WP-02.
+**Still open:** see CP-15 below for what landed; navigation still does not route around structures (straight-line paths — CP-04 §"Still open").
 
 **Doc owners:** `building.README.md`, `construction.README.md`
+
+---
+
+## CP-15 — Match-integrated construction and Crystal economy
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Runner-only build UI, bottom-right (mirrors the minimap corner) | Done | `ui/hud/building_panel/` |
+| Clickable per-structure images to pick what to build | Done | `src/buildings/building_icons.gd` (generated at runtime, no art dependency) |
+| Grid ghost preview + collision validation while placing | Done | Reuses `BuildGrid` / `PlacementValidator` / `BuildGhost` from CP-11 |
+| Host-authoritative build / upgrade / destroy requests | Done | `src/construction/construction_manager.gd`, `BuildingSpawner` |
+| Runner can destroy their own structures from the build UI | Done | `BuildingPanel` Destroy button → `ConstructionManager.request_destroy` |
+| Crystal cost to build; default balance 1,000,000 / player | Done | `src/economy/economy_config.gd` + `GameManager.crystals_for/try_spend_crystals/grant_crystals`, reset each `RUNNER_PREPARATION` |
+| Construction is not instant; replicated progress bar | Done | `Building.state` (`UNDER_CONSTRUCTION` / `UPGRADING` / `IDLE`) + `BuildProgressBar` |
+| Wall / Tower / Crystal Mine structures, each with an object scene | Done | `src/buildings/wall.tscn`, `tower.tscn`, `crystal_mine.tscn` (one shared `building.gd`, data-driven by `BuildingDef`) |
+| Structures have HP and are attackable by the Hunter | Done | `HealthComponent` on `Building`; `Unit._enemy_candidates()` includes `"buildings"` group for the Hunter; `Unit._perform_melee_on_building` |
+| Walls (and other structures) physically block unit movement | Done | `Unit` collision mask now includes the `building` layer (`src/units/unit/unit.tscn`) |
+| Level system: cost, HP, and build time all increase per level | Done | `BuildingDef.cost_for_level/hp_for_level/build_seconds_for_level` (exponential growth, configurable per type) |
+| Crystal Mine generation (`2^(level-1)` crystals / tick) | Done | `BuildingDef.mine_output_for_level`, matches docs/economy.README.md §2.1 table through level 12 |
+| Tower acquires and auto-attacks Hunters in range | Done | `Building._tick_tower` (reuses `AttackController`) |
+| Headless logic test (levels, costs, economy spend/grant) | Done | `tests/construction/building_economy_test.gd` + `scripts/test/building_economy_test.ps1` |
+| Interactive test scene (build UI + grid, no lobby required) | Done | `tests/construction/building_system_test.tscn` |
+
+**Deliberately out of scope (not requested):** Hunter Crystal income from damage dealt (`docs/economy.README.md` §3.1 — WP-03); Hunter Shop; explicit right-click targeting of a building (the Hunter still auto-engages a nearby building via normal combat acquisition); real pathfinding around structures (existing straight-line movement limitation, now more visible once Walls exist).
+
+**Doc owners:** `building.README.md`, `construction.README.md`, `economy.README.md`
 
 ---
 
@@ -320,4 +347,4 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 
 Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, attack-move, shift-click move/attack chains, hunter-bot hunting, elimination/observer, free camera (edge-scroll + MMB drag), editor-previewable HUD shells (CP-13), and persistent UI/audio settings are also in.
 
-Still open in `working_packages.README.md`: economy, full structure content (mines/walls/towers), fog of war (minimap FoW), shop, cursors, and selection context-actions. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14.
+Still open in `working_packages.README.md`: Hunter Crystal income / Hunter Shop, fog of war (minimap FoW), cursors, and selection context-actions. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14; match-integrated construction + Crystal economy (build UI, Wall / Tower / Crystal Mine, leveling) is CP-15.

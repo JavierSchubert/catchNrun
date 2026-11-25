@@ -280,6 +280,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	var click := event as InputEventMouseButton
 	if not click.pressed or click.button_index != MOUSE_BUTTON_RIGHT:
 		return
+	if _build_mode_armed():
+		## The building UI owns RMB (cancel placement) while a structure is armed.
+		return
 	var world_pos := get_global_mouse_position()
 	var chain_modifier_held := SelectionManager.is_chain_modifier_held(click)
 	if chain_modifier_held:
@@ -421,13 +424,23 @@ func _server_combat_tick(delta: float) -> void:
 	_intent = Vector2.ZERO
 	if not attack.can_swing():
 		return
-	_perform_melee(target as Unit)
+	_perform_melee(target)
 
 
-func _perform_melee(target: Unit) -> void:
-	if target == null or not target.is_attackable():
+## Target may be an enemy Unit or (Hunter only) a Runner-owned Building (src/buildings/).
+func _perform_melee(target: Node2D) -> void:
+	if target == null or not target.has_method("is_attackable") or not bool(target.call("is_attackable")):
 		attack.clear_target()
 		return
+	if target is Unit:
+		_perform_melee_on_unit(target as Unit)
+	elif target is Building:
+		_perform_melee_on_building(target as Building)
+	else:
+		attack.mark_swung()
+
+
+func _perform_melee_on_unit(target: Unit) -> void:
 	var result := CombatDamage.resolve_melee(stats, target.stats)
 	attack.mark_swung()
 	if result.damage <= 0.0:
@@ -447,6 +460,33 @@ func _perform_melee(target: Unit) -> void:
 	if result.lifesteal > 0.0:
 		var own_max := stats.final_value(StatBlock.Stat.MAX_HEALTH)
 		health.heal(result.lifesteal, own_max)
+		sync_health = health.current
+
+
+func _perform_melee_on_building(target: Building) -> void:
+	attack.mark_swung()
+	var raw := stats.final_value(StatBlock.Stat.MELEE_DAMAGE)
+	if raw <= 0.0:
+		return
+	var critical := false
+	if randf() < stats.final_value(StatBlock.Stat.CRITICAL_CHANCE):
+		raw *= stats.final_value(StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER)
+		critical = true
+	var applied: float = target.health.take_damage(raw, target.max_health)
+	target.sync_current_health = target.health.current
+	GameLog.info(
+		"COMBAT",
+		"%s hit building %s for %.1f%s" % [
+			name_label.text if name_label else str(peer_id),
+			target.name,
+			applied,
+			" (crit)" if critical else "",
+		]
+	)
+	if applied > 0.0 and randf() < stats.final_value(StatBlock.Stat.LIFESTEAL_CHANCE):
+		var lifesteal := stats.final_value(StatBlock.Stat.LIFESTEAL_AMOUNT)
+		var own_max := stats.final_value(StatBlock.Stat.MAX_HEALTH)
+		health.heal(lifesteal, own_max)
 		sync_health = health.current
 
 
@@ -495,6 +535,14 @@ func _selection_manager() -> SelectionManager:
 	if tree == null:
 		return null
 	return tree.get_first_node_in_group("selection_manager") as SelectionManager
+
+
+func _build_mode_armed() -> bool:
+	var tree := get_tree()
+	if tree == null:
+		return false
+	var ui := tree.get_first_node_in_group("building_ui")
+	return ui != null and ui.has_method("is_armed") and bool(ui.call("is_armed"))
 
 
 func _notify_selection_manager_ready() -> void:
@@ -724,6 +772,11 @@ func _enemy_candidates() -> Array[Node2D]:
 		if config.role == RoleConfig.Role.RUNNER and other.role() != RoleConfig.Role.HUNTER:
 			continue
 		result.append(other)
+	if config.role == RoleConfig.Role.HUNTER:
+		## Runner structures (src/buildings/) are also valid Hunter targets.
+		for node in get_tree().get_nodes_in_group("buildings"):
+			if node is Node2D and node.has_method("is_attackable") and bool(node.call("is_attackable")):
+				result.append(node as Node2D)
 	return result
 
 

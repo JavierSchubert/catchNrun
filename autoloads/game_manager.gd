@@ -26,6 +26,7 @@ var session_host_id := 0
 var test_bots_enabled := false
 
 var config: MatchConfig
+var economy_config: EconomyConfig
 var phase := Phase.LOBBY
 ## peer id -> {name, preferred_role, role, sprite_index, alive}. Role is assigned when the match starts.
 var players: Dictionary = {}
@@ -51,6 +52,10 @@ func _ready() -> void:
 	if config == null:
 		push_error("Match config is missing at res://src/match/match_config.tres")
 		config = MatchConfig.new()
+	economy_config = load("res://src/economy/economy_config.tres") as EconomyConfig
+	if economy_config == null:
+		push_error("Economy config is missing at res://src/economy/economy_config.tres")
+		economy_config = EconomyConfig.new()
 	head_start_duration = config.runner_head_start_duration
 	test_bots_enabled = LaunchOptions.server_mode
 	if LaunchOptions.head_start >= 0.0:
@@ -673,6 +678,10 @@ static func choose_hunter_id(roster: Dictionary, rng: RandomNumberGenerator = nu
 
 func _apply_preparation(raw_players: Dictionary, duration: float) -> void:
 	players = _normalize_players(raw_players)
+	for key in players.keys():
+		var entry: Dictionary = players[key]
+		entry["crystals"] = _starting_crystals()
+		players[key] = entry
 	resolved_hunter_id = _find_assigned_hunter(players)
 	time_left = duration
 	_loaded_peers.clear()
@@ -804,6 +813,7 @@ func _new_player(player_name: String, preferred_role: int) -> Dictionary:
 		"role": RoleConfig.Role.RUNNER,
 		"sprite_index": 0,
 		"alive": true,
+		"crystals": _starting_crystals(),
 	}
 
 
@@ -818,8 +828,53 @@ func _normalize_players(raw_players: Dictionary) -> Dictionary:
 			"role": int(entry.get("role", RoleConfig.Role.RUNNER)),
 			"sprite_index": clampi(int(entry.get("sprite_index", 0)), 0, SPRITE_COUNT - 1),
 			"alive": bool(entry.get("alive", true)),
+			"crystals": float(entry.get("crystals", _starting_crystals())),
 		}
 	return normalized
+
+
+func _starting_crystals() -> float:
+	return economy_config.starting_crystals if economy_config != null else 0.0
+
+
+## --- Economy (docs/economy.README.md) -------------------------------------------------
+
+func crystals_for(peer_id: int) -> float:
+	if not players.has(peer_id):
+		return 0.0
+	return float(players[peer_id].get("crystals", 0.0))
+
+
+## Host-only. Returns false (and spends nothing) when the player cannot afford `amount`.
+func try_spend_crystals(peer_id: int, amount: float) -> bool:
+	if not multiplayer.is_server() or amount < 0.0 or not players.has(peer_id):
+		return false
+	if amount == 0.0:
+		return true
+	var entry: Dictionary = players[peer_id]
+	var current := float(entry.get("crystals", 0.0))
+	if current < amount:
+		return false
+	entry["crystals"] = current - amount
+	players[peer_id] = entry
+	_broadcast_players()
+	return true
+
+
+func grant_crystals(peer_id: int, amount: float) -> void:
+	if not multiplayer.is_server() or amount <= 0.0 or not players.has(peer_id):
+		return
+	var entry: Dictionary = players[peer_id]
+	entry["crystals"] = float(entry.get("crystals", 0.0)) + amount
+	players[peer_id] = entry
+	_broadcast_players()
+
+
+func _broadcast_players() -> void:
+	if NetworkManager.is_online():
+		_sync_players.rpc(players)
+	else:
+		players_changed.emit()
 
 
 func _set_phase(new_phase: int) -> void:
