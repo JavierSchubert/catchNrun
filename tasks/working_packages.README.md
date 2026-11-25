@@ -333,13 +333,13 @@ Audit and refactor duplicated code so the game **behaves identically** after cle
 
 ### Open
 
-- [x] Inventory of redundant paths (duplicated clamp / marker host / selection lookup / multiplayer-ready guards / command issue helpers)
-- [x] Extract shared helpers only where call sites stay behavior-identical
-- [x] Deduplicate minimap vs world command issuance (move / chain / attack-move) behind one unit API where safe
-- [x] Review combat tick / chain resume / attack-move resume for repeated “resume path” patterns
-- [x] Review sandbox / GameLog / scene transition reset paths for duplicated lobby reset logic
+- [ ] Inventory of redundant paths (duplicated clamp / marker host / selection lookup / multiplayer-ready guards / command issue helpers)
+- [ ] Extract shared helpers only where call sites stay behavior-identical
+- [ ] Deduplicate minimap vs world command issuance (move / chain / attack-move) behind one unit API where safe
+- [ ] Review combat tick / chain resume / attack-move resume for repeated “resume path” patterns
+- [ ] Review sandbox / GameLog / scene transition reset paths for duplicated lobby reset logic
 - [ ] No intentional gameplay changes; verify with existing headless tests + manual smoke (move, attack, chain, minimap, reset)
-- [x] Document any extracted helpers in architecture notes if they become shared modules
+- [ ] Document any extracted helpers in architecture notes if they become shared modules
 
 ### Depends on
 
@@ -348,7 +348,6 @@ Audit and refactor duplicated code so the game **behaves identically** after cle
 ### Notes
 
 - Goal is DRY and clarity, **not** rewrites. Prefer small extractions over large redesigns.
-- Extracted (no new modules): `SelectionManager.find_in_tree`, `SelectionManager.clear_attack_move_arm`, `Unit.issue_attack` + shared `_server_apply_*` / `_accept_owned_command_rpc`, minimap `_issue_on_selected`, `SceneTransitionManager.open_direct_test`, `GameManager._clear_match_runtime`. Arrival uses `PathFollow.ARRIVE_DISTANCE`.
 
 ---
 

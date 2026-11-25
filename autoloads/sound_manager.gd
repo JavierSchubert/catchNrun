@@ -178,8 +178,14 @@ func _free_sfx_player() -> AudioStreamPlayer:
 
 
 func _load_stream(path: String) -> AudioStream:
-	# MP3 imports in this project are currently invalid=false — load raw bytes so music works.
 	if path.ends_with(".mp3"):
+		# Prefer the imported stream. This is the reliable path inside exported builds.
+		if ResourceLoader.exists(path):
+			var imported := ResourceLoader.load(path)
+			if imported is AudioStream:
+				return imported as AudioStream
+
+		# Fallback for projects whose MP3 import is unavailable.
 		var bytes := FileAccess.get_file_as_bytes(path)
 		if bytes.is_empty():
 			return null

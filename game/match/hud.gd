@@ -54,7 +54,7 @@ func _refresh() -> void:
 func _refresh_selection_panel() -> void:
 	if _selection_panel == null:
 		return
-	var manager := SelectionManager.find_in_tree(get_tree())
+	var manager := get_tree().get_first_node_in_group("selection_manager") as SelectionManager
 	if manager == null:
 		_selection_panel.bind_selection(null, false)
 		return

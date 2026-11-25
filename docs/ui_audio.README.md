@@ -108,8 +108,8 @@ Files: `ui/lobby/lobby.tscn` + `lobby.gd`
 
 - Shell layout (wallpaper, veil, card, connect / lobby boxes) lives in the `.tscn`.
 - Shared StyleBoxes under `ui/styles/` (`card_panel_style`, button / line-edit / item-list styles).
-- Script wires host/join, roster refresh, and continue — **ENet only**.
-- `NetworkManager` is ENet-only (GodotSteam removed); lobby uses Godot multiplayer API / ENet.
+- Script wires WebSocket host/join, roster refresh, and continue.
+- `NetworkManager` uses Godot's high-level multiplayer API over WebSockets. The game-owned server is authoritative; the first registered player is the lobby host.
 
 Role selection follows the same pattern: `ui/role_selection/role_selection.tscn` shell + side-panel StyleBoxes; dynamic player rows and action buttons remain code-filled.
 
@@ -118,12 +118,12 @@ Role selection follows the same pattern: `ui/role_selection/role_selection.tscn`
 ## 6. Sandbox chrome (debug)
 
 File: `game/sandbox/sandbox_panel.gd`  
-Visible when `LaunchOptions.sandbox_enabled` (debug builds or `--sandbox`; never for bots / headless).
+Visible when `LaunchOptions.sandbox_enabled` (debug builds, `--sandbox`, or browser builds; never for bots / headless). In browsers, shown only to the lobby host connected to a dedicated game server. Runner/Hunter actions request server-managed test bots, and Skip is enabled only during Runner preparation.
 
 | Panel | Anchor | Contents |
 | --- | --- | --- |
-| Action bar | Top-left (compact ~780px) | Host, Runner/Hunter icon buttons, quick start, continue, skip, reset; Headless **on by default**; Godot path |
-| Tests | Top-right | Open lobby / roles / game alone |
+| Action bar | Top-left (compact ~780px) | Native: Host, Runner/Hunter icon buttons, quick start, continue, skip, reset; Headless **on by default**; Godot path. Browser host: Runner/Hunter bot requests, quick start, continue, skip, reset |
+| Tests | Top-right (native only) | Open lobby / roles / game alone |
 | Status | Bottom-right | Phase, peers, last action text |
 
 Match HUD status sits **top-center under** the action bar so it does not collide with sandbox chrome. Minimap stays bottom-left; selection strip bottom-center.

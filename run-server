@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+GODOT="${GODOT:-$(command -v godot4 || command -v godot || true)}"
+if [[ -z "$GODOT" ]]; then GODOT="$ROOT/../../bin/godot4"; fi
+"$GODOT" --headless --path "$ROOT" --editor --import
+exec "$GODOT" --headless --path "$ROOT" -- --server

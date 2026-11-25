@@ -7,7 +7,6 @@ signal selection_changed(selected: Node)
 
 const DRAG_THRESHOLD_PX := 8.0
 const CLICKABLE_GROUP := "clickable"
-const GROUP_NAME := "selection_manager"
 
 var selected: Node = null
 var hovered: Node = null
@@ -22,14 +21,14 @@ var _drag_box: DragSelectBox
 var _rng := RandomNumberGenerator.new()
 
 
-static func find_in_tree(tree: SceneTree) -> SelectionManager:
-	if tree == null:
-		return null
-	return tree.get_first_node_in_group(GROUP_NAME) as SelectionManager
+static func is_chain_modifier_held(event: InputEventWithModifiers = null) -> bool:
+	if event != null and (event.shift_pressed or event.ctrl_pressed):
+		return true
+	return Input.is_key_pressed(KEY_SHIFT) or Input.is_key_pressed(KEY_CTRL)
 
 
 func _ready() -> void:
-	add_to_group(GROUP_NAME)
+	add_to_group("selection_manager")
 	_rng.randomize()
 	_drag_box = DragSelectBox.new()
 	add_child(_drag_box)
@@ -157,12 +156,12 @@ func _can_arm_attack_move() -> bool:
 
 func _issue_armed_attack_move() -> void:
 	var destination := get_global_mouse_position()
-	var shift_held := Input.is_key_pressed(KEY_SHIFT)
+	var chain_modifier_held := is_chain_modifier_held()
 	if selected == null or not is_instance_valid(selected):
 		_disarm_attack_move()
 		return
-	if shift_held and selected.has_method("issue_attack_chain_append"):
-		## Shift+A+LMB appends a red attack-move waypoint; stay armed for more.
+	if chain_modifier_held and selected.has_method("issue_attack_chain_append"):
+		## Shift/Ctrl+A+LMB appends a red attack-move waypoint; stay armed for more.
 		selected.call("issue_attack_chain_append", destination)
 		return
 	_disarm_attack_move()
@@ -170,13 +169,8 @@ func _issue_armed_attack_move() -> void:
 		selected.call("issue_attack_move", destination)
 
 
-func clear_attack_move_arm() -> void:
-	## Clears A-move mode only (minimap / world commands). Does not cancel an in-progress LMB drag.
-	attack_move_armed = false
-
-
 func _disarm_attack_move() -> void:
-	clear_attack_move_arm()
+	attack_move_armed = false
 	_pressing = false
 	if _dragging:
 		_dragging = false
