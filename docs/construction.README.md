@@ -16,12 +16,15 @@ Construction rules are separate from economy, combat, stats, and UI presentation
 
 Selecting a structure to build enters placement mode.
 
+**Build UI gating (`HudMode`, WP-17):** placement buttons arm only while the local controllable unit is selected (`UNIT_BUILD`). Upgrade / Destroy / tower picks appear only while an owned structure is selected (`BUILDING_MANAGE`). The two modes are mutually exclusive — never both at once. Rules live in `src/hud/hud_mode.gd`; the bottom-right panel is `ui/hud/building_panel/` (`is_armed` + `"building_ui"` group).
+
 Placement is **grid-based**. Footprint size in cells defines the structure hitbox. Collision layers, snap rules, and blocker checks are specified in `building.README.md`.
 
 ```text
-Select Structure
+Select Structure (UNIT_BUILD — local unit selected)
 -> Enter Placement Mode
 -> Show grid-snapped Placement Preview
+-> LMB places one structure and exits; Shift/Ctrl+LMB places and **stays armed** (chain build, same modifiers as move chains)
 -> Validate footprint (bounds + blocker layers)
 -> Left Click Valid Position
 -> Spend Required Crystals
@@ -132,9 +135,20 @@ current_health <= 0
 
 `apply_damage()` returns the damage actually applied (shield + health); the Hunter's Crystal income is paid on that value (`economy.README.md` §3.1).
 
-### 6.1. Repair
+Hunter melee vs structures uses footprint-aware reach and an approach point outside the hitbox (`StructureMelee`; `controls.README.md` §1.2 / §5.1). Hit feedback includes local floating damage numbers (`FloatingNumber`; `controls.README.md` §5.2).
 
-Runners can **repair** their own structures with the `repair` skill (`src/skills/defs/repair_def.tres`, rules in `src/skills/repair_skill.gd`). Right-clicking an own, damaged structure walks the Runner into reach and restores `value_per_second` HP per second until the structure is full (`controls.README.md` §1.2).
+### 6.1. Voluntary destroy (Runner)
+
+A Runner may destroy their own structures from:
+
+- **BuildingPanel** Destroy (requires `HudMode.BUILDING_MANAGE` — owned building selected), or
+- **`A` + left-click** on an own structure while their controllable unit is selected (`controls.README.md` §1.3).
+
+Both paths call `ConstructionManager.request_destroy`. Host `_server_destroy` also runs `_can_build` (role / eliminated / phase), matching build and upgrade. When the building leaves the tree, `Building._exit_tree` notifies `SelectionManager.notify_entity_removed`, which clears the selection and auto-selects the local unit.
+
+### 6.2. Repair
+
+Runners can **repair** their own structures with the `repair` skill (`src/skills/defs/repair_def.tres`, rules in `src/skills/repair_skill.gd`). Right-clicking an own, damaged structure walks the Runner into reach and restores `value_per_second` HP per second until the structure is full (`controls.README.md` §1.2). Destroy is separate (§6.1).
 
 The host validates every repair: Runner role, alive, owner of the structure, structure alive and damaged, and not under its first construction. Structures that are upgrading can be repaired. Repair restores health only; a wall's shield recharges on its own.
 

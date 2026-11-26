@@ -32,11 +32,18 @@ const HUNTER_SPRITES := [
 var peer_id := 0
 var sync_position := Vector2.ZERO
 var sync_health := 0.0
+## Host-owned progression; replicated for the selection-panel XP ring / level badge.
+var level := 1
+var xp := 0.0
 var stats := StatSheet.new()
 
 var _intent := Vector2.ZERO
 var _eliminated := false
 var _bot_chase_peer_id := -1
+## When the hunter bot chases a structure, track by path (buildings have no peer_id).
+var _bot_chase_building_path := NodePath()
+## Accumulates tiny regen heals so floating numbers do not spam every physics frame.
+var _regen_fx_accum := 0.0
 var _bot_repath_in := 0.0
 
 @onready var sprite: Sprite2D = $Sprite
@@ -81,9 +88,14 @@ func _ready() -> void:
 	attack.acquisition_range = config.acquisition_range
 	_apply_derived_stats()
 	health.died.connect(_on_died)
-	health.health_changed.connect(health_bar.update_for_health)
+	if health_bar != null:
+		## Player characters always show their HP strip; structures hide theirs when full.
+		health_bar.show_when_full = true
+		health.health_changed.connect(health_bar.update_for_health)
 	health.setup(stats.final_value(StatBlock.Stat.MAX_HEALTH))
 	sync_health = health.current
+	if health_bar != null:
+		health_bar.update_for_health(health.current, stats.final_value(StatBlock.Stat.MAX_HEALTH))
 	var player_data: Dictionary = GameManager.players.get(peer_id, {})
 	sprite.texture = sprite_texture(int(player_data.get("sprite_index", 0)), config.role)
 	sprite.modulate = Color.WHITE
@@ -200,6 +212,34 @@ func role() -> int:
 	return config.role if config != null else RoleConfig.Role.RUNNER
 
 
+## Host-only. 1 XP per point of applied damage for Hunters. Runners stay level 1.
+func grant_xp(amount: float) -> void:
+	if not multiplayer.is_server() or amount <= 0.0:
+		return
+	if role() != RoleConfig.Role.HUNTER:
+		return
+	var before_level := level
+	var result := XpProgress.apply_gain(level, xp, amount)
+	level = int(result.level)
+	xp = float(result.xp)
+	if level > before_level:
+		GameLog.info(
+			"XP",
+			"%s reached level %d (%.0f XP into next)" % [
+				name_label.text if name_label else str(peer_id),
+				level,
+				xp,
+			]
+		)
+
+
+## Portrait ring fill 0–1. Runners always show a full violet ring at level 1.
+func xp_fill_ratio() -> float:
+	if role() == RoleConfig.Role.RUNNER:
+		return 1.0
+	return XpProgress.fill_ratio(level, xp)
+
+
 static func sprite_texture(sprite_index: int, role_id: int) -> Texture2D:
 	var textures: Array = HUNTER_SPRITES if role_id == RoleConfig.Role.HUNTER else RUNNER_SPRITES
 	return textures[clampi(sprite_index, 0, SPRITE_COUNT - 1)] as Texture2D
@@ -291,16 +331,24 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	var target := _clickable_enemy_at(world_pos)
+	var building_target: Building = null
+	if can_attack() and target == null:
+		building_target = _clickable_enemy_building_at(world_pos)
 	## An enemy only outranks the structure for a unit that can actually attack it: a Runner
 	## repairing a wall under attack clicks right next to the Hunter.
 	var structure: Building = null
-	if target == null or not can_attack():
+	if (target == null and building_target == null) or not can_attack():
 		structure = _repairable_structure_at(world_pos)
 	if target != null and can_attack():
 		## Attack only — cancels any active move chain.
 		_clear_chain_visual()
 		_request_attack(target)
 		_show_attack_click_marker_on(target)
+	elif building_target != null and can_attack():
+		## Hunter RMB on a structure: explicit target (same combat path as A-move acquire).
+		_clear_chain_visual()
+		_request_attack_building(building_target)
+		_show_attack_click_marker_on(building_target)
 	elif structure != null:
 		## Runner RMB on an own damaged structure = repair (RepairSkill).
 		_clear_chain_visual()
@@ -368,14 +416,24 @@ func _bot_tick() -> void:
 
 
 func _hunter_bot_chase() -> void:
-	var target := _nearest_living_runner()
+	var target := _nearest_hunter_target()
 	if target == null:
 		_bot_chase_peer_id = -1
+		_bot_chase_building_path = NodePath()
 		return
 	_bot_repath_in = maxf(_bot_repath_in - get_physics_process_delta_time(), 0.0)
-	var in_range := global_position.distance_to(target.global_position) <= attack.attack_range * 0.9
-	var retarget := target.peer_id != _bot_chase_peer_id
-	_bot_chase_peer_id = target.peer_id
+	var in_range := attack.in_attack_range(global_position, target)
+	var retarget := false
+	if target is Unit:
+		var unit := target as Unit
+		retarget = unit.peer_id != _bot_chase_peer_id
+		_bot_chase_peer_id = unit.peer_id
+		_bot_chase_building_path = NodePath()
+	else:
+		var path := target.get_path()
+		retarget = path != _bot_chase_building_path
+		_bot_chase_building_path = path
+		_bot_chase_peer_id = -1
 	if in_range:
 		_bot_repath_in = 0.0
 		if _is_net_server():
@@ -383,19 +441,27 @@ func _hunter_bot_chase() -> void:
 			_intent = Vector2.ZERO
 			attack.set_explicit_target(target)
 		elif retarget:
-			_submit_attack_target.rpc_id(1, target.peer_id)
+			_bot_submit_attack(target)
 		return
 	var needs_path := retarget or _bot_repath_in <= 0.0 \
 		or (_is_net_server() and not movement.has_order())
 	if not needs_path:
 		return
 	_bot_repath_in = 0.35
+	var destination := _combat_approach_point(target)
 	if _is_net_server():
 		attack.set_explicit_target(target)
-		movement.order_move(global_position, target.global_position)
+		movement.order_move(global_position, destination)
 	else:
-		_submit_attack_target.rpc_id(1, target.peer_id)
-		_submit_move_order.rpc_id(1, target.global_position, false)
+		_bot_submit_attack(target)
+		_submit_move_order.rpc_id(1, destination, false)
+
+
+func _bot_submit_attack(target: Node2D) -> void:
+	if target is Unit:
+		_submit_attack_target.rpc_id(1, (target as Unit).peer_id)
+	elif target is Building:
+		_submit_attack_building.rpc_id(1, target.get_path())
 
 
 func _runner_bot_direction() -> Vector2:
@@ -430,7 +496,8 @@ func _server_combat_tick(delta: float) -> void:
 		return
 
 	var player_engage := attack.explicit_target != null or attack.attack_move_active
-	## A plain player move outranks opportunistic auto-attack.
+	## Plain RMB move outranks opportunistic auto-attack for the whole path (controls §1.2).
+	## Do not clear the order when already in range — that re-engaged melee and made cancel impossible.
 	if not player_engage and movement.has_order():
 		return
 
@@ -472,6 +539,7 @@ func _perform_melee_on_unit(target: Unit) -> void:
 	target.sync_health = target.health.current
 	if role() == RoleConfig.Role.HUNTER:
 		GameManager.award_damage_crystals(peer_id, applied)
+		grant_xp(applied)
 	GameLog.info(
 		"COMBAT",
 		"%s hit %s for %.1f%s" % [
@@ -481,10 +549,18 @@ func _perform_melee_on_unit(target: Unit) -> void:
 			" (crit)" if result.critical else "",
 		]
 	)
+	if applied > 0.0:
+		var kind := FloatingNumber.Kind.CRIT if result.critical else FloatingNumber.Kind.DAMAGE
+		_spawn_floating_number_on(target, applied, kind)
 	if result.lifesteal > 0.0:
 		var own_max := stats.final_value(StatBlock.Stat.MAX_HEALTH)
+		## heal() is void — measure applied amount so full-HP swings do not fake a green popup.
+		var before := health.current
 		health.heal(result.lifesteal, own_max)
 		sync_health = health.current
+		var healed := health.current - before
+		if healed > 0.0:
+			_spawn_floating_number_on(self, healed, FloatingNumber.Kind.LIFESTEAL)
 
 
 func _perform_melee_on_building(target: Building) -> void:
@@ -499,6 +575,7 @@ func _perform_melee_on_building(target: Building) -> void:
 	var applied := target.apply_damage(raw)
 	if role() == RoleConfig.Role.HUNTER:
 		GameManager.award_damage_crystals(peer_id, applied)
+		grant_xp(applied)
 	GameLog.info(
 		"COMBAT",
 		"%s hit building %s for %.1f%s" % [
@@ -508,11 +585,18 @@ func _perform_melee_on_building(target: Building) -> void:
 			" (crit)" if critical else "",
 		]
 	)
+	if applied > 0.0:
+		var kind := FloatingNumber.Kind.CRIT if critical else FloatingNumber.Kind.DAMAGE
+		_spawn_floating_number_on(target, applied, kind)
 	if applied > 0.0 and randf() < stats.final_value(StatBlock.Stat.LIFESTEAL_CHANCE):
 		var lifesteal := stats.final_value(StatBlock.Stat.LIFESTEAL_AMOUNT)
 		var own_max := stats.final_value(StatBlock.Stat.MAX_HEALTH)
+		var before := health.current
 		health.heal(lifesteal, own_max)
 		sync_health = health.current
+		var healed := health.current - before
+		if healed > 0.0:
+			_spawn_floating_number_on(self, healed, FloatingNumber.Kind.LIFESTEAL)
 
 
 func _regen(delta: float) -> void:
@@ -520,7 +604,17 @@ func _regen(delta: float) -> void:
 	if regen <= 0.0 or not health.is_alive():
 		return
 	var maximum := stats.final_value(StatBlock.Stat.MAX_HEALTH)
+	var before := health.current
 	health.heal(regen * delta, maximum)
+	var healed := health.current - before
+	if healed <= 0.0:
+		return
+	sync_health = health.current
+	_regen_fx_accum += healed
+	## Batch sub-1 HP ticks so the popup stays readable.
+	if _regen_fx_accum >= 1.0:
+		_spawn_floating_number_on(self, _regen_fx_accum, FloatingNumber.Kind.REGEN)
+		_regen_fx_accum = 0.0
 
 
 ## Host-only, Runner only. Walks toward the repair target until in reach, then channels
@@ -711,7 +805,7 @@ func _show_attack_click_marker_at(world_pos: Vector2) -> void:
 	MoveClickMarker.spawn(host, world_pos, MoveClickMarker.ATTACK_COLOR)
 
 
-func _show_attack_click_marker_on(target: Unit) -> void:
+func _show_attack_click_marker_on(target: Node2D) -> void:
 	if target == null:
 		return
 	MoveClickMarker.spawn_on(target, MoveClickMarker.ATTACK_COLOR)
@@ -729,13 +823,32 @@ func _marker_host() -> Node:
 func _chase_combat_target(target: Node2D) -> void:
 	if target == null:
 		return
+	var destination := _combat_approach_point(target)
 	if attack.attack_move_active and not attack.attack_move_chasing:
 		## Interrupt the attack-move destination once so we engage instead of walking past.
 		attack.attack_move_chasing = true
-		movement.order_move(global_position, target.global_position)
+		movement.order_move(global_position, destination)
 		return
 	if not movement.has_order():
-		movement.order_move(global_position, target.global_position)
+		movement.order_move(global_position, destination)
+
+
+func _combat_approach_point(target: Node2D) -> Vector2:
+	if target is Building:
+		return _clamp_map_position(
+			StructureMelee.approach_point(global_position, attack.attack_range, target as Building)
+		)
+	return target.global_position
+
+
+func _spawn_floating_number_on(target: Node2D, value: float, kind: FloatingNumber.Kind) -> void:
+	## Host applies damage; broadcast visuals so clients see the same popups.
+	FloatingNumber.spawn_replicated(self, target, value, kind)
+
+
+@rpc("authority", "unreliable")
+func _rpc_floating_number(target_path: NodePath, value: float, kind: int) -> void:
+	FloatingNumber.receive_rpc(self, target_path, value, kind)
 
 
 func _resume_attack_move_if_needed() -> void:
@@ -797,6 +910,25 @@ func _request_attack(target: Unit) -> void:
 			movement.order_move(global_position, target.global_position)
 	else:
 		_submit_attack_target.rpc_id(1, target.peer_id)
+
+
+func _request_attack_building(target: Building) -> void:
+	if not _multiplayer_ready() or target == null:
+		return
+	if _is_net_server():
+		_server_attack_building(target)
+	else:
+		_submit_attack_building.rpc_id(1, target.get_path())
+
+
+func _server_attack_building(target: Building) -> void:
+	if target == null or not is_instance_valid(target) or not target.is_attackable():
+		return
+	_move_chain.clear()
+	_repair_target = null
+	attack.set_explicit_target(target)
+	if not attack.in_attack_range(global_position, target):
+		movement.order_move(global_position, _combat_approach_point(target))
 
 
 func _request_repair(structure: Building) -> void:
@@ -869,6 +1001,25 @@ func _clickable_enemy_at(world_pos: Vector2) -> Unit:
 	return best
 
 
+func _clickable_enemy_building_at(world_pos: Vector2) -> Building:
+	var best: Building = null
+	var best_distance := INF
+	for node in _enemy_candidates():
+		if not node is Building:
+			continue
+		var building := node as Building
+		if not building.is_attackable():
+			continue
+		## Same floor as unit clicks so 1×1 walls stay easy to RMB.
+		var hit_radius := maxf(building.selection_hit_radius(), building.selection_circle_radius() * 1.15)
+		hit_radius = maxf(hit_radius, 56.0)
+		var distance := world_pos.distance_to(building.global_position)
+		if distance <= hit_radius and distance < best_distance:
+			best_distance = distance
+			best = building
+	return best
+
+
 func _enemy_candidates() -> Array[Node2D]:
 	var result: Array[Node2D] = []
 	for node in get_tree().get_nodes_in_group("units"):
@@ -903,6 +1054,22 @@ func _nearest_living_runner() -> Unit:
 		if distance < best_distance:
 			best_distance = distance
 			best = other
+	return best
+
+
+## Nearest attackable Runner unit or structure for the Hunter bot.
+func _nearest_hunter_target() -> Node2D:
+	var best: Node2D = null
+	var best_distance := INF
+	for node in _enemy_candidates():
+		if node == null or not is_instance_valid(node):
+			continue
+		if not node.has_method("is_attackable") or not bool(node.call("is_attackable")):
+			continue
+		var distance := global_position.distance_to(node.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best = node
 	return best
 
 
@@ -970,6 +1137,20 @@ func _submit_attack_target(target_peer_id: int) -> void:
 	attack.set_explicit_target(target)
 	if not attack.in_attack_range(global_position, target):
 		movement.order_move(global_position, target.global_position)
+
+
+@rpc("any_peer", "reliable")
+func _submit_attack_building(building_path: NodePath) -> void:
+	if not _is_net_server():
+		return
+	if GameManager.sender_id(multiplayer) != peer_id:
+		return
+	if not is_alive() or not _movement_allowed():
+		return
+	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
+		return
+	var target := get_node_or_null(building_path) as Building
+	_server_attack_building(target)
 
 
 @rpc("any_peer", "reliable")

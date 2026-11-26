@@ -78,6 +78,7 @@ catchNrun/
 │   ├── inventory/
 │   ├── items/
 │   ├── navigation/
+│   ├── progression/          # XpProgress curve (WP-14)
 │   ├── selection/
 │   ├── stats/
 │   └── vision/
@@ -94,7 +95,7 @@ catchNrun/
 │   │   ├── health_bar/
 │   │   ├── minimap/
 │   │   ├── resources/
-│   │   ├── selection_panel/
+│   │   ├── selection_panel/          # portrait XP ring + level badge (WP-14)
 │   │   └── stats/
 │   │
 │   ├── menus/
@@ -195,6 +196,10 @@ Contains movement commands, path creation, path following, moving-target pursuit
 
 Contains entity selection and selection-state management. It determines what is selected but does not implement the Selection Panel UI.
 
+### `src/progression/`
+
+Shared XP / level curve helpers (`XpProgress`). Unit state lives on `Unit`; the selection panel draws the portrait XP ring.
+
 ### `src/stats/`
 
 Contains stat definitions, modifiers, constraints, and final-value calculation.
@@ -282,10 +287,14 @@ HUD
 game/match/hud.tscn
 ui/hud/selection_panel/selection_panel.tscn
 ui/hud/minimap/minimap.tscn
+ui/hud/building_panel/building_panel.tscn   # ~300×360; HudMode UNIT_BUILD / BUILDING_MANAGE
+ui/hud/widgets/stat_icon_row.tscn           # shared icon+label row
+ui/hud/resource_bar/                        # top-center Crystal HUD
 ui/lobby/lobby.tscn
 ui/role_selection/role_selection.tscn
 ui/styles/*.tres
-ui/widgets/ui_kit/ui_kit.tscn   # optional gallery
+ui/widgets/ui_kit/ui_kit.tscn   # optional gallery (may instance building panel)
+src/hud/hud_mode.gd             # selection → HUD mode rules (shared)
 src/units/hunter/hunter.tscn   # default Enemy sprite
 src/units/runner/runner.tscn   # default Player sprite
 ```
@@ -390,7 +399,7 @@ Game
 ├── Match
 ├── Arena          (arena_plateau.tscn — TileMaps + props / editor spawn preview)
 ├── Camera
-├── HUD            (hud.tscn — status, minimap, selection panel)
+├── HUD            (hud.tscn — status, resource bar, minimap, selection panel, building panel)
 └── Debug Tools
 ```
 

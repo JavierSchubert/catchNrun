@@ -3,9 +3,9 @@ extends Node
 ## Hidden for bots, headless runs, and non-host browser clients.
 ##
 ## Layout: the action bar and, stacked directly below it, the status + game log panel sit
-## top-left (a minimized bar pulls the log up); native tests top-right. Bottom-left is the
-## minimap, bottom-right the Runner's building panel. Every panel has a Minimize button,
-## and `G` (god mode) minimizes / expands all of them at once.
+## top-left (a minimized bar pulls the log up); native tests top-right. Match HUD corners
+## stay free — minimap BL, selection BC, building BR (WP-17). Every panel has a Minimize
+## button, and `G` (god mode) minimizes / expands all of them at once.
 
 const RUNNER_ICON := preload("res://assets/sprites/units/Player_1.png")
 const HUNTER_ICON := preload("res://assets/sprites/units/Enemy_1.png")
@@ -13,8 +13,9 @@ const HUNTER_ICON := preload("res://assets/sprites/units/Enemy_1.png")
 ## Height of a minimized panel: just its header row plus the panel margins.
 const COLLAPSED_HEIGHT := 48.0
 ## Expanded size of the action bar / log panel inside the top-left stack.
-const ACTION_BAR_WIDTH := 764.0
-const LOG_PANEL_SIZE := Vector2(404.0, 264.0)
+## Keep the log compact so it does not collide with the bottom HUD strip.
+const ACTION_BAR_WIDTH := 640.0
+const LOG_PANEL_SIZE := Vector2(360.0, 220.0)
 
 var _status: Label
 var _state: Label
@@ -35,6 +36,9 @@ var _hunter_count := 0
 var _log_listener: Callable
 ## One entry per minimizable panel: panel, button, hidden nodes, expanded offsets, state.
 var _collapsibles: Array[Dictionary] = []
+## Flat StatModifiers applied via the sandbox Stats panel (cleared with Reset stats).
+var _sandbox_stat_mods: Array[StatModifier] = []
+var _stats_readout: Label
 
 
 func _ready() -> void:
@@ -48,6 +52,7 @@ func _ready() -> void:
 	_peers = Label.new()
 	_bin_edit = LineEdit.new()
 	_headless = CheckBox.new()
+	_stats_readout = Label.new()
 
 	var layer := CanvasLayer.new()
 	layer.layer = 100
@@ -71,6 +76,7 @@ func _ready() -> void:
 	_build_action_bar(stack)
 	if not _is_web_client:
 		_build_tests_panel(root)
+	_build_stats_panel(root)
 	_build_status_panel(stack)
 	_log_listener = _on_game_log_line
 	GameLog.add_listener(_log_listener)
@@ -192,6 +198,54 @@ func _build_tests_panel(root: Control) -> void:
 		_add_text_button(box, "Lobby", _test_lobby),
 		_add_text_button(box, "Roles", _test_selection),
 		_add_text_button(box, "Game", _test_game),
+	]
+	_register_collapsible(panel, toggle, hidden)
+
+
+## Top-right under Tests: bump crit / lifesteal / damage on the active sandbox character
+## so floating combat numbers are easy to verify without editing .tres files.
+func _build_stats_panel(root: Control) -> void:
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	panel.offset_left = -280.0
+	panel.offset_top = 168.0
+	panel.offset_right = -16.0
+	panel.offset_bottom = 430.0
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.08, 0.09, 0.12, 0.94)))
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	panel.add_child(box)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	box.add_child(header)
+	var title := Label.new()
+	title.text = "Stats (active)"
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", Color(0.95, 0.82, 0.35))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+	var toggle := _add_toggle_button(header)
+
+	_stats_readout.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_stats_readout.add_theme_font_size_override("font_size", 12)
+	_stats_readout.add_theme_color_override("font_color", Color(0.78, 0.86, 0.92))
+	_stats_readout.text = "Select a unit in the match"
+	box.add_child(_stats_readout)
+
+	var hidden: Array[Control] = [
+		_stats_readout,
+		_add_text_button(box, "Crit +25%", _sandbox_add_crit_chance),
+		_add_text_button(box, "Crit dmg +50%", _sandbox_add_crit_damage),
+		_add_text_button(box, "Lifesteal +25%", _sandbox_add_lifesteal_chance),
+		_add_text_button(box, "LS amount +10", _sandbox_add_lifesteal_amount),
+		_add_text_button(box, "Damage +15", _sandbox_add_damage),
+		_add_text_button(box, "Regen +5/s", _sandbox_add_regen),
+		_add_text_button(box, "XP +50", _sandbox_add_xp),
+		_add_text_button(box, "Reset stats", _sandbox_clear_stat_mods),
 	]
 	_register_collapsible(panel, toggle, hidden)
 
@@ -358,6 +412,118 @@ func _add_text_button(parent: Node, text: String, callback: Callable) -> Button:
 	)
 	parent.add_child(button)
 	return button
+
+
+func _active_sandbox_unit() -> Unit:
+	if not GameManager.sandbox_mode:
+		return null
+	var peer := GameManager.local_peer_id()
+	for node in get_tree().get_nodes_in_group("units"):
+		if not node is Unit:
+			continue
+		var unit := node as Unit
+		if unit.peer_id == peer and unit.is_alive():
+			return unit
+	return null
+
+
+func _sandbox_add_flat(stat: StatBlock.Stat, value: float, label: String) -> void:
+	var unit := _active_sandbox_unit()
+	if unit == null:
+		_status.text = "No active sandbox unit to buff."
+		return
+	var modifier := StatModifier.new()
+	modifier.kind = StatModifier.Kind.FLAT
+	modifier.scope = StatModifier.Scope.ONE_STAT
+	modifier.stat = stat
+	modifier.value = value
+	unit.stats.add_modifier(modifier)
+	_sandbox_stat_mods.append(modifier)
+	_status.text = "Sandbox: %s on %s" % [label, unit.name_label.text if unit.name_label else str(unit.peer_id)]
+	_refresh_stats_readout()
+
+
+func _sandbox_add_crit_chance() -> void:
+	_sandbox_add_flat(StatBlock.Stat.CRITICAL_CHANCE, 0.25, "Crit chance +25%")
+
+
+func _sandbox_add_crit_damage() -> void:
+	_sandbox_add_flat(StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER, 0.5, "Crit damage +50%")
+
+
+func _sandbox_add_lifesteal_chance() -> void:
+	_sandbox_add_flat(StatBlock.Stat.LIFESTEAL_CHANCE, 0.25, "Lifesteal chance +25%")
+
+
+func _sandbox_add_lifesteal_amount() -> void:
+	_sandbox_add_flat(StatBlock.Stat.LIFESTEAL_AMOUNT, 10.0, "Lifesteal amount +10")
+
+
+func _sandbox_add_damage() -> void:
+	_sandbox_add_flat(StatBlock.Stat.MELEE_DAMAGE, 15.0, "Melee damage +15")
+
+
+func _sandbox_add_regen() -> void:
+	_sandbox_add_flat(StatBlock.Stat.HEALTH_REGENERATION, 5.0, "Regen +5/s")
+
+
+func _sandbox_add_xp() -> void:
+	var unit := _active_sandbox_unit()
+	if unit == null:
+		_status.text = "No active sandbox unit for XP."
+		return
+	if unit.role() != RoleConfig.Role.HUNTER:
+		_status.text = "Only the Hunter earns XP (Runners stay Lv 1, full violet ring)."
+		return
+	unit.grant_xp(50.0)
+	_status.text = "Sandbox: +50 XP → Lv %d (%.0f / %.0f)" % [
+		unit.level,
+		unit.xp,
+		XpProgress.xp_to_next(unit.level),
+	]
+	_refresh_stats_readout()
+
+
+func _sandbox_clear_stat_mods() -> void:
+	var unit := _active_sandbox_unit()
+	if unit != null:
+		for modifier in _sandbox_stat_mods:
+			if modifier != null:
+				unit.stats.remove_modifier(modifier)
+	## Also strip mods that may have been left on the other sandbox character.
+	for node in get_tree().get_nodes_in_group("units"):
+		if not node is Unit:
+			continue
+		var other := node as Unit
+		if not GameManager.is_sandbox_character(other.peer_id):
+			continue
+		for modifier in _sandbox_stat_mods:
+			if modifier != null:
+				other.stats.remove_modifier(modifier)
+	_sandbox_stat_mods.clear()
+	_status.text = "Sandbox stat modifiers cleared."
+	_refresh_stats_readout()
+
+
+func _refresh_stats_readout() -> void:
+	if _stats_readout == null:
+		return
+	var unit := _active_sandbox_unit()
+	if unit == null or unit.stats == null:
+		_stats_readout.text = "No active unit — enter the match and select Runner/Hunter"
+		return
+	var sheet := unit.stats
+	_stats_readout.text = "Lv %d | XP %.0f / %.0f\nDMG %.0f | Crit %.0f%% ×%.1f\nLS %.0f%% +%.0f | Regen %.1f" % [
+		unit.level,
+		unit.xp,
+		XpProgress.xp_to_next(unit.level),
+		sheet.final_value(StatBlock.Stat.MELEE_DAMAGE),
+		sheet.final_value(StatBlock.Stat.CRITICAL_CHANCE) * 100.0,
+		sheet.final_value(StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER),
+		sheet.final_value(StatBlock.Stat.LIFESTEAL_CHANCE) * 100.0,
+		sheet.final_value(StatBlock.Stat.LIFESTEAL_AMOUNT),
+		sheet.final_value(StatBlock.Stat.HEALTH_REGENERATION),
+	]
 
 
 func _add_icon_button(parent: Node, label: String, icon: Texture2D, callback: Callable) -> Button:
@@ -614,6 +780,7 @@ func _refresh() -> void:
 		timer = " (%d:%02d)" % [seconds / 60, seconds % 60]
 	_state.text = "State: %s%s" % [GameManager.phase_label(), timer]
 	_peers.text = _peer_block()
+	_refresh_stats_readout()
 
 
 func _should_show_web_panel(is_online: bool, is_dedicated_server: bool, is_host: bool) -> bool:

@@ -109,6 +109,18 @@ Towers use the same system: each Tower owns a `StatSheet` seeded from `tower_bas
 
 Units currently read their real reach from `RoleConfig.attack_range` and report `attack_range = 0` through their sheet.
 
+### 1.3.1. Player XP and levels (WP-14)
+
+Units carry host-owned `level` and `xp` (replicated). Curve math lives in `XpProgress` (`src/progression/xp_progress.gd`):
+
+```text
+xp_to_next(level) = 100 * 1.35^(level - 1)
+```
+
+- **Hunter:** gains **1 XP per point of applied melee damage** (units and buildings). Filling the portrait XP ring levels up; overflow XP carries into the next level. Level-up **stat rewards** are not applied yet.
+- **Runner:** stays at **level 1**; the selection-panel XP band is always fully violet (no XP gain).
+- HUD: violet fill is counterclockwise from 12 o'clock on the dark band between the grey portrait rings (`PortraitXpRing`).
+
 ---
 
 ### 1.4. Value Semantics and Constraints

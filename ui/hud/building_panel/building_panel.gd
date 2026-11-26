@@ -1,19 +1,16 @@
 class_name BuildingPanel
 extends Control
-## Bottom-right build UI (mirrors the bottom-left minimap). Lets a Runner pick a structure,
-## see a grid-snapped ghost preview, and place it; also shows the details of an owned,
-## selected structure and exposes Upgrade / Destroy for it. The Crystal balance itself
-## lives in the top-center ResourceBar, not here.
+## Bottom-right build / manage UI. Layout mirrors the bottom-left minimap.
 ##
-## Gameplay rules live in ConstructionManager / BuildingDef / Building; this node only
-## presents state and forwards player intent (root README "Implementation Principle").
-## Every cost, level cap and per-level value below is read from the def or the building.
+## Modes (HudMode):
+##   UNIT_BUILD — local Runner unit selected → Wall / Tower / Mine placement
+##   BUILDING_MANAGE — owned structure selected → stats + Upgrade / Destroy
+## Modes are mutually exclusive. Gameplay rules stay in ConstructionManager / BuildingDef.
 
 const BUILD_KEYS := ["wall", "tower", "crystal_mine"]
+const SHORT_NAMES := {"wall": "Wall", "tower": "Tower", "crystal_mine": "Mine"}
 
-## Icon shown on each tower pick button, indexed by BuildingDef.TowerPath. The Damage path
-## borrows the melee "Damage" sword icon: StatIcons maps RANGED_DAMAGE to the attack-range
-## art, which would collide with the Range button.
+## Icon shown on each tower pick button, indexed by BuildingDef.TowerPath.
 const PICK_ICON_STATS := [
 	StatBlock.Stat.MELEE_DAMAGE,
 	StatBlock.Stat.ATTACK_SPEED,
@@ -24,13 +21,17 @@ const PICK_ICON_STATS := [
 @onready var _info_label: Label = %InfoLabel
 @onready var _content: Control = %Content
 @onready var _minimize_button: Button = %MinimizeButton
+@onready var _build_section: Control = %BuildSection
 @onready var _wall_button: Button = %WallButton
 @onready var _tower_button: Button = %TowerButton
 @onready var _mine_button: Button = %MineButton
 @onready var _selected_section: Control = %SelectedSection
+@onready var _selected_icon: TextureRect = %SelectedIcon
 @onready var _selected_name: Label = %SelectedName
-@onready var _selected_hp: Label = %SelectedHp
-@onready var _selected_detail: Label = %SelectedDetail
+@onready var _stat_hp: StatIconRow = %StatHp
+@onready var _stat_secondary: StatIconRow = %StatSecondary
+@onready var _stat_tertiary: StatIconRow = %StatTertiary
+@onready var _stat_quaternary: StatIconRow = %StatQuaternary
 @onready var _max_level_label: Label = %MaxLevelLabel
 @onready var _upgrade_area: Control = %UpgradeArea
 @onready var _upgrade_hint: Label = %UpgradeHint
@@ -49,9 +50,8 @@ var _build_buttons: Dictionary = {}
 var _expanded_top_offset := 0.0
 var _expanded_minimum_height := 0.0
 var _is_minimized := false
-## 2x2 grid, ordered to match BuildingDef.TowerPath. Every tower upgrade spends the level
-## cost and takes exactly one of these paths.
 var _pick_buttons: Array[Button] = []
+var _mode: HudMode.Mode = HudMode.Mode.NONE
 
 
 func _ready() -> void:
@@ -70,6 +70,7 @@ func _ready() -> void:
 	_upgrade_button.pressed.connect(_on_upgrade_pressed)
 	_destroy_button.pressed.connect(_on_destroy_pressed)
 	_selected_section.visible = false
+	_build_section.visible = false
 	set_process(true)
 	set_process_unhandled_input(true)
 
@@ -94,17 +95,29 @@ func _on_minimize_pressed() -> void:
 
 
 func _process(_delta: float) -> void:
-	var show_panel := _local_is_active_runner()
+	var show_panel := HudMode.is_active_runner(_local_peer_id())
 	visible = show_panel
 	if not show_panel:
 		_disarm()
+		_mode = HudMode.Mode.NONE
 		return
+	_refresh_mode()
 	_refresh_build_buttons()
 	_refresh_selected_building()
-	if is_armed():
+	if is_armed() and HudMode.can_build(_mode):
 		_update_ghost()
 	elif _ghost != null:
 		_ghost.visible = false
+
+
+func _refresh_mode() -> void:
+	var manager := _selection_manager()
+	var selected: Node = manager.selected if manager != null else null
+	var next := HudMode.resolve(selected, _local_peer_id(), true)
+	if next != _mode:
+		if not HudMode.can_build(next):
+			_disarm()
+		_mode = next
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -134,27 +147,42 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_build_button_pressed(key: String) -> void:
+	if not HudMode.can_build(_mode):
+		_disarm()
+		return
 	_armed_key = "" if _armed_key == key else key
 	if not is_armed() and _ghost != null:
 		_ghost.visible = false
 
 
 func _on_upgrade_pressed() -> void:
+	if not HudMode.can_manage_building(_mode):
+		return
 	var manager := _construction_manager()
 	if manager != null and not _pending_building_name.is_empty():
 		manager.request_upgrade(_pending_building_name)
 
 
 func _on_pick_pressed(path: int) -> void:
+	if not HudMode.can_manage_building(_mode):
+		return
 	var manager := _construction_manager()
 	if manager != null and not _pending_building_name.is_empty():
 		manager.request_upgrade(_pending_building_name, path)
 
 
 func _on_destroy_pressed() -> void:
+	if not HudMode.can_manage_building(_mode):
+		return
+	var building_name := _pending_building_name
+	if building_name.is_empty():
+		return
 	var manager := _construction_manager()
-	if manager != null and not _pending_building_name.is_empty():
-		manager.request_destroy(_pending_building_name)
+	if manager == null:
+		return
+	manager.request_destroy(building_name)
+	_pending_building_name = ""
+	_selected_section.visible = false
 
 
 func _disarm() -> void:
@@ -164,18 +192,37 @@ func _disarm() -> void:
 
 
 func _refresh_build_buttons() -> void:
+	var can_place := HudMode.can_build(_mode)
+	_build_section.visible = can_place
+	if not can_place:
+		for key in BUILD_KEYS:
+			var button: Button = _build_buttons[key]
+			button.button_pressed = false
+			button.disabled = true
+		if HudMode.can_manage_building(_mode):
+			_info_label.text = "Manage selected structure — Upgrade or Destroy"
+		else:
+			_info_label.text = "Select your Runner to build"
+		return
 	var crystals := GameManager.crystals_for(_local_peer_id())
 	for key in BUILD_KEYS:
 		var def := ConstructionManager.def_for(key)
 		var button: Button = _build_buttons[key]
 		button.button_pressed = _armed_key == key
+		button.icon = BuildingIcons.icon_for(key)
 		if def == null:
+			button.disabled = true
 			continue
-		button.text = "%s\n%d" % [def.display_name, int(def.cost_for_level(1))]
-		button.disabled = crystals < def.cost_for_level(1)
+		var short_name: String = SHORT_NAMES.get(key, def.display_name)
+		var cost := int(def.cost_for_level(1))
+		button.text = "%s\n%d" % [short_name, cost]
+		button.tooltip_text = "%s — %d Crystals" % [def.display_name, cost]
+		button.disabled = crystals < cost
 	if is_armed():
 		var def := ConstructionManager.def_for(_armed_key)
-		_info_label.text = "Placing %s — LMB place, RMB/Esc cancel" % (def.display_name if def else _armed_key)
+		_info_label.text = "Placing %s — LMB place, Shift+LMB chain, RMB/Esc cancel" % (
+			def.display_name if def else _armed_key
+		)
 	else:
 		_info_label.text = "Select a structure to build"
 
@@ -194,6 +241,9 @@ func _update_ghost() -> void:
 
 
 func _try_place() -> void:
+	if not HudMode.can_build(_mode):
+		_disarm()
+		return
 	var manager := _construction_manager()
 	var def := ConstructionManager.def_for(_armed_key)
 	if manager == null or def == null:
@@ -202,17 +252,20 @@ func _try_place() -> void:
 	if not manager.can_place_preview(_armed_key, anchor):
 		return
 	manager.request_build(_armed_key, anchor)
+	## Shift/Ctrl+LMB keeps placement armed so you can chain buildings like move waypoints.
+	if SelectionManager.is_chain_modifier_held():
+		return
 	_disarm()
 
 
 func _refresh_selected_building() -> void:
-	var manager := get_tree().get_first_node_in_group("selection_manager") as SelectionManager
-	var building: Building = null
-	if manager != null and manager.selected is Building:
-		var candidate := manager.selected as Building
-		if candidate.def != null and candidate.owner_peer_id == _local_peer_id():
-			building = candidate
-	if building == null:
+	if not HudMode.can_manage_building(_mode):
+		_selected_section.visible = false
+		_pending_building_name = ""
+		return
+	var manager := _selection_manager()
+	var building := manager.selected as Building
+	if building == null or building.def == null:
 		_selected_section.visible = false
 		_pending_building_name = ""
 		return
@@ -221,51 +274,66 @@ func _refresh_selected_building() -> void:
 	var def := building.def
 	var level_suffix := " (building...)" if building.is_under_construction() and building.level < 2 else ""
 	_selected_name.text = "%s — Lv %d / %d%s" % [def.display_name, building.level, def.max_level, level_suffix]
-	_selected_hp.text = "HP %.0f / %.0f" % [building.health.current, building.max_health]
-	var detail := _selected_detail_text(building)
-	_selected_detail.visible = not detail.is_empty()
-	_selected_detail.text = detail
+	_selected_icon.texture = BuildingIcons.icon_for_def(def)
+	_bind_building_stat_rows(building)
 	_refresh_upgrade_area(building)
 
 
-## Type-specific line under the HP readout.
-func _selected_detail_text(building: Building) -> String:
+func _bind_building_stat_rows(building: Building) -> void:
 	var def := building.def
+	var hp_text := "%.0f / %.0f" % [building.health.current, building.max_health]
+	_stat_hp.bind_text(StatIcons.icon(StatBlock.Stat.MAX_HEALTH), hp_text, "Health")
 	match def.kind:
 		BuildingDef.Kind.WALL:
+			_stat_tertiary.clear_row()
+			_stat_quaternary.clear_row()
+			_stat_tertiary.visible = false
+			_stat_quaternary.visible = false
+			_stat_secondary.visible = true
 			if building.max_shield > 0.0:
-				return "Shield %.0f / %.0f" % [building.shield.current, building.max_shield]
-			return "Shield unlocks at Lv %d" % def.shield_unlock_level
+				var shield_text := "%.0f / %.0f" % [building.shield.current, building.max_shield]
+				_stat_secondary.bind_text(
+					StatIcons.icon(StatBlock.Stat.DEFENSE),
+					shield_text,
+					"Shield",
+				)
+			else:
+				_stat_secondary.bind_text(
+					StatIcons.icon(StatBlock.Stat.DEFENSE),
+					"Shield at Lv %d" % def.shield_unlock_level,
+					"Shield",
+				)
 		BuildingDef.Kind.CRYSTAL_MINE:
-			if def.mine_interval <= 0.0:
-				return ""
+			_stat_tertiary.clear_row()
+			_stat_quaternary.clear_row()
+			_stat_tertiary.visible = false
+			_stat_quaternary.visible = false
+			_stat_secondary.visible = true
 			var output := def.mine_output_for_level(building.level)
-			return "%s crystals / %ss" % [_short_number(output), _short_number(def.mine_interval)]
-		BuildingDef.Kind.TOWER:
-			## Live values straight off the tower's StatSheet, plus the build it was given.
-			var stats := building.stats
-			return "DMG %s | Range %s | %s atk/s | Crit %s%%\n%s" % [
-				_short_number(stats.final_value(StatBlock.Stat.RANGED_DAMAGE)),
-				_short_number(stats.final_value(StatBlock.Stat.ATTACK_RANGE)),
-				_short_number(stats.final_value(StatBlock.Stat.ATTACK_SPEED)),
-				_short_number(stats.final_value(StatBlock.Stat.CRITICAL_CHANCE) * 100.0),
-				_tower_picks_text(building),
+			var rate := "%s / %ss" % [
+				StatIcons.short_number(output),
+				StatIcons.short_number(def.mine_interval),
 			]
-	return ""
+			_stat_secondary.bind_text(BuildingIcons.crystal_icon(), rate, "Crystal output")
+		BuildingDef.Kind.TOWER:
+			_stat_secondary.visible = true
+			_stat_tertiary.visible = true
+			_stat_quaternary.visible = true
+			var stats := building.stats
+			## Live tower damage is RANGED_DAMAGE; icon reuses the melee sword (same as pick UI).
+			_stat_secondary.bind_text(
+				StatIcons.icon(StatBlock.Stat.MELEE_DAMAGE),
+				StatIcons.format_value(stats, StatBlock.Stat.RANGED_DAMAGE),
+				"Damage",
+			)
+			_stat_tertiary.bind_stat(stats, StatBlock.Stat.ATTACK_SPEED)
+			_stat_quaternary.bind_stat(stats, StatBlock.Stat.ATTACK_RANGE)
+		_:
+			_stat_secondary.visible = false
+			_stat_tertiary.visible = false
+			_stat_quaternary.visible = false
 
 
-## "Dmg 3 · Spd 1 · Crit 0 · Rng 2" — the paths the owner has taken so far.
-func _tower_picks_text(building: Building) -> String:
-	return "Dmg %d · Spd %d · Crit %d · Rng %d" % [
-		building.tower_pick_count(BuildingDef.TowerPath.RANGED_DAMAGE),
-		building.tower_pick_count(BuildingDef.TowerPath.ATTACK_SPEED),
-		building.tower_pick_count(BuildingDef.TowerPath.CRIT),
-		building.tower_pick_count(BuildingDef.TowerPath.ATTACK_RANGE),
-	]
-
-
-## Swaps the upgrade slot by structure kind: a single Upgrade button for Wall / Crystal
-## Mine, the 2x2 pick grid for a Tower, and nothing at all once the def's cap is reached.
 func _refresh_upgrade_area(building: Building) -> void:
 	var def := building.def
 	var at_max_level := building.level >= def.max_level
@@ -280,11 +348,10 @@ func _refresh_upgrade_area(building: Building) -> void:
 	_pick_grid.visible = is_tower
 	_upgrade_hint.visible = is_tower
 	if is_tower:
-		## Every tower level raises max HP on its own; the player picks what else it gains.
 		if building.state == Building.State.UPGRADING:
 			_upgrade_hint.text = "Upgrading to Lv %d…" % (building.level + 1)
 		else:
-			_upgrade_hint.text = "Upgrade to Lv %d for %d — pick one stat path:" % [
+			_upgrade_hint.text = "Upgrade to Lv %d for %d — pick one:" % [
 				building.level + 1,
 				int(cost),
 			]
@@ -296,48 +363,62 @@ func _refresh_upgrade_area(building: Building) -> void:
 			pick_button.tooltip_text = "%s — %d Crystals" % [_pick_grant_long(def, path), int(cost)]
 			pick_button.disabled = not can_pick
 		return
+	_upgrade_button.icon = _upgrade_icon_for(def.kind)
 	if building.state == Building.State.UPGRADING:
 		_upgrade_button.text = "Upgrading to Lv %d…" % (building.level + 1)
 	else:
 		_upgrade_button.text = "Upgrade (%d)" % int(cost)
+	_upgrade_button.tooltip_text = _upgrade_tooltip_for(def.kind, int(cost))
 	_upgrade_button.disabled = not building.can_upgrade() or not affordable
 
 
-## Button caption. Every number comes from the def, never from a literal here.
+func _upgrade_icon_for(kind: BuildingDef.Kind) -> Texture2D:
+	match kind:
+		BuildingDef.Kind.WALL:
+			return StatIcons.icon(StatBlock.Stat.MAX_HEALTH)
+		BuildingDef.Kind.CRYSTAL_MINE:
+			return BuildingIcons.crystal_icon()
+		_:
+			return StatIcons.icon(StatBlock.Stat.MELEE_DAMAGE)
+
+
+func _upgrade_tooltip_for(kind: BuildingDef.Kind, cost: int) -> String:
+	match kind:
+		BuildingDef.Kind.WALL:
+			return "Raise wall HP (and shield from Lv 15) — %d Crystals" % cost
+		BuildingDef.Kind.CRYSTAL_MINE:
+			return "Double crystal output — %d Crystals" % cost
+		_:
+			return "Upgrade — %d Crystals" % cost
+
+
 func _pick_grant_short(def: BuildingDef, path: int) -> String:
 	match path:
 		BuildingDef.TowerPath.RANGED_DAMAGE:
-			return "+%s%% Damage" % _short_number(def.tower_damage_per_pick * 100.0)
+			return "+%s%% Dmg" % StatIcons.short_number(def.tower_damage_per_pick * 100.0)
 		BuildingDef.TowerPath.ATTACK_SPEED:
-			return "+%s%% Speed" % _short_number(def.tower_attack_speed_per_pick * 100.0)
+			return "+%s%% Spd" % StatIcons.short_number(def.tower_attack_speed_per_pick * 100.0)
 		BuildingDef.TowerPath.CRIT:
-			return "+%s%% Crit" % _short_number(def.tower_crit_chance_per_pick * 100.0)
+			return "+%s%% Crit" % StatIcons.short_number(def.tower_crit_chance_per_pick * 100.0)
 		BuildingDef.TowerPath.ATTACK_RANGE:
-			return "+%s%% Range" % _short_number(def.tower_range_per_pick * 100.0)
+			return "+%s%% Rng" % StatIcons.short_number(def.tower_range_per_pick * 100.0)
 	return ""
 
 
-## Tooltip. The Crit path grants both halves of the critical hit, so spell them out.
 func _pick_grant_long(def: BuildingDef, path: int) -> String:
 	match path:
 		BuildingDef.TowerPath.RANGED_DAMAGE:
-			return "+%s%% Ranged Damage" % _short_number(def.tower_damage_per_pick * 100.0)
+			return "+%s%% Ranged Damage" % StatIcons.short_number(def.tower_damage_per_pick * 100.0)
 		BuildingDef.TowerPath.ATTACK_SPEED:
-			return "+%s%% Attack Speed" % _short_number(def.tower_attack_speed_per_pick * 100.0)
+			return "+%s%% Attack Speed" % StatIcons.short_number(def.tower_attack_speed_per_pick * 100.0)
 		BuildingDef.TowerPath.CRIT:
 			return "+%s%% Crit Chance and +%s%% Crit Damage" % [
-				_short_number(def.tower_crit_chance_per_pick * 100.0),
-				_short_number(def.tower_crit_damage_per_pick * 100.0),
+				StatIcons.short_number(def.tower_crit_chance_per_pick * 100.0),
+				StatIcons.short_number(def.tower_crit_damage_per_pick * 100.0),
 			]
 		BuildingDef.TowerPath.ATTACK_RANGE:
-			return "+%s%% Attack Range" % _short_number(def.tower_range_per_pick * 100.0)
+			return "+%s%% Attack Range" % StatIcons.short_number(def.tower_range_per_pick * 100.0)
 	return ""
-
-
-func _short_number(value: float) -> String:
-	if is_equal_approx(value, roundf(value)):
-		return "%d" % int(roundf(value))
-	return "%.1f" % value
 
 
 func _ensure_ghost() -> void:
@@ -365,16 +446,11 @@ func _construction_manager() -> ConstructionManager:
 	return tree.get_first_node_in_group("construction_manager") as ConstructionManager
 
 
-func _local_is_active_runner() -> bool:
-	var id := _local_peer_id()
-	if not GameManager.players.has(id):
-		return false
-	if GameManager.phase != GameManager.Phase.RUNNER_PREPARATION and GameManager.phase != GameManager.Phase.HUNTER_ACTIVE:
-		return false
-	if GameManager.is_eliminated(id):
-		return false
-	var entry: Dictionary = GameManager.players[id]
-	return int(entry.get("role", RoleConfig.Role.RUNNER)) == RoleConfig.Role.RUNNER
+func _selection_manager() -> SelectionManager:
+	var tree := get_tree()
+	if tree == null:
+		return null
+	return tree.get_first_node_in_group("selection_manager") as SelectionManager
 
 
 func _local_peer_id() -> int:

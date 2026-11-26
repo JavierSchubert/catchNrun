@@ -49,6 +49,10 @@ var _target_level := 1
 var _applied_picks := PackedInt32Array()
 ## Host-only. TowerPath paid for with the running upgrade; -1 when none is pending.
 var _pending_pick := -1
+var _selection_circle: SelectionCircle
+var _selection_hovered := false
+var _selection_selected := false
+var _attack_flash_remaining := 0.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var visual: Polygon2D = $Visual
@@ -95,11 +99,20 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if def == null or not is_inside_tree() or multiplayer == null:
 		return
+	_tick_attack_flash(delta)
 	if _is_net_server():
 		server_tick(delta)
 	else:
 		_apply_synced_state()
 	_refresh_visuals()
+
+
+func _tick_attack_flash(delta: float) -> void:
+	if _attack_flash_remaining <= 0.0:
+		return
+	_attack_flash_remaining = maxf(_attack_flash_remaining - delta, 0.0)
+	if _attack_flash_remaining <= 0.0:
+		refresh_selection_visual()
 
 
 ## Old call site kept intact: tests/construction/building_grid_test.gd places footprint-only
@@ -132,6 +145,41 @@ func is_alive() -> bool:
 
 func is_own(local_peer_id: int) -> bool:
 	return owner_peer_id == local_peer_id
+
+
+func selection_circle_radius() -> float:
+	return selection_hit_radius() * 1.05
+
+
+func set_selection_hover(active: bool) -> void:
+	_selection_hovered = active
+	refresh_selection_visual()
+
+
+func set_selection_selected(active: bool) -> void:
+	_selection_selected = active
+	refresh_selection_visual()
+
+
+func refresh_selection_visual() -> void:
+	_ensure_selection_circle()
+	if _selection_circle == null:
+		return
+	if _attack_flash_remaining > 0.0:
+		_selection_circle.configure(selection_circle_radius(), SelectionCircle.COLOR_HUNTER)
+		_selection_circle.set_hover(false)
+		_selection_circle.set_selected(true)
+		return
+	var color := SelectionCircle.COLOR_OWN if is_own(GameManager.local_peer_id()) \
+			else SelectionCircle.COLOR_RUNNER_TEAM
+	_selection_circle.configure(selection_circle_radius(), color)
+	_selection_circle.set_hover(_selection_hovered and not _selection_selected)
+	_selection_circle.set_selected(_selection_selected)
+
+
+func flash_attack_target_circle(duration := 0.35) -> void:
+	_attack_flash_remaining = maxf(duration, 0.05)
+	refresh_selection_visual()
 
 
 func selection_hit_radius() -> float:
@@ -324,7 +372,11 @@ func _tick_mine(delta: float) -> void:
 	if _mine_timer < def.mine_interval:
 		return
 	_mine_timer -= def.mine_interval
-	GameManager.grant_crystals(owner_peer_id, def.mine_output_for_level(level))
+	var amount := def.mine_output_for_level(level)
+	GameManager.grant_crystals(owner_peer_id, amount)
+	## Blue crystal popups for mine ticks (local + clients via spawn_replicated).
+	if amount > 0.0:
+		_spawn_floating_number_on(self, amount, FloatingNumber.Kind.CRYSTAL)
 
 
 func _tick_tower(delta: float) -> void:
@@ -380,6 +432,19 @@ func _on_projectile_hit(hit_target: Node2D, damage: float, critical: bool) -> vo
 			" (crit)" if critical else "",
 		]
 	)
+	if applied > 0.0:
+		var kind := FloatingNumber.Kind.CRIT if critical else FloatingNumber.Kind.DAMAGE
+		_spawn_floating_number_on(target, applied, kind)
+
+
+func _spawn_floating_number_on(target: Node2D, value: float, kind: FloatingNumber.Kind) -> void:
+	## Same host-local + authority unreliable pattern as Unit (shared in FloatingNumber).
+	FloatingNumber.spawn_replicated(self, target, value, kind)
+
+
+@rpc("authority", "unreliable")
+func _rpc_floating_number(target_path: NodePath, value: float, kind: int) -> void:
+	FloatingNumber.receive_rpc(self, target_path, value, kind)
 
 
 func _spawn_projectile(target: Node2D, on_hit: Callable) -> void:
@@ -526,24 +591,50 @@ func _refresh_visuals() -> void:
 
 func _on_health_changed(current: float, maximum: float) -> void:
 	if health_bar != null:
+		## Structures: bar only while damaged (HealthBar.show_when_full is false).
 		health_bar.update_for_health(current, maximum)
 
 
 func _on_shield_changed(current: float, maximum: float) -> void:
 	if shield_bar == null:
 		return
-	shield_bar.visible = maximum > 0.0
+	if maximum <= 0.0:
+		shield_bar.visible = false
+		return
+	## Same rule as HP: hide the shield strip while it is full.
+	shield_bar.show_when_full = false
 	shield_bar.update_for_health(current, maximum)
 
 
 func _on_died() -> void:
+	_notify_selection_cleared()
 	if _is_net_server():
 		GameLog.info("CONSTRUCTION", "%s destroyed" % name)
 		queue_free()
 
 
+func _notify_selection_cleared() -> void:
+	if not is_inside_tree():
+		return
+	var manager := get_tree().get_first_node_in_group("selection_manager") as SelectionManager
+	if manager != null and manager.has_method("notify_entity_removed"):
+		manager.call("notify_entity_removed", self)
+
+
+func _ensure_selection_circle() -> void:
+	if _selection_circle != null:
+		return
+	_selection_circle = SelectionCircle.new()
+	_selection_circle.name = "SelectionCircle"
+	add_child(_selection_circle)
+	move_child(_selection_circle, 0)
+
+
 func _is_net_server() -> bool:
 	return is_inside_tree() and multiplayer != null and multiplayer.is_server()
+
+func _exit_tree() -> void:
+	_notify_selection_cleared()
 
 
 func _apply_footprint_visual() -> void:

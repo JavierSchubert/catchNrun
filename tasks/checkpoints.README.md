@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-25** (match-integrated construction: build UI, Crystal economy, Wall / Tower / Crystal Mine structures, leveling).
+Last reviewed: **2026-11-26** (WP-14 / CP-19 Hunter XP + portrait XP ring — code-reviewed, no Godot run).
 
 ---
 
@@ -40,6 +40,9 @@ Last reviewed: **2026-11-25** (match-integrated construction: build UI, Crystal 
 | 2026-11-22 | **CP-14** Attack UX, chains, camera, sandbox | Right-click attack (red ring); A+LMB attack-move; Shift+RMB green move chain; Shift+A+LMB red attack-move chain (mixable); chain path outranks in-range auto-attack; minimap RMB / Shift+RMB / A+LMB / Shift+A+LMB; MMB camera drag; faster edge-scroll (`camera_speed` 1600, `edge_margin` 48); sandbox Reset fixed (deferred lobby + null-safe multiplayer); scrollable GameLog panel |
 | 2026-11-25 | **CP-15** Match-integrated construction + Crystal economy | Bottom-right build UI (`ui/hud/building_panel/`) with clickable per-structure icons, grid ghost preview, Upgrade / Destroy for owned selection; `ConstructionManager` (host-authoritative build/upgrade/destroy RPCs + `BuildingSpawner`); data-driven `BuildingDef` (cost/HP/build-time scale with level) backing Wall / Tower / Crystal Mine scenes sharing one `Building` script; non-instant construction with a replicated progress bar; `EconomyConfig` + `GameManager` Crystal balance (`crystals_for` / `try_spend_crystals` / `grant_crystals`, reset to 1,000,000 each match); Crystal Mine ticks owner income (`2^(level-1)` per docs/economy.README.md); Tower auto-attacks Hunters in range; Hunter melee now also damages attackable buildings; Walls (and all structures) physically block unit movement (`Unit` collision mask); headless `tests/construction/building_economy_test` + interactive `tests/construction/building_system_test`. *Balance superseded by CP-16 (20 starting Crystals, mine `2 * 2^(level-1)`).* |
 | 2026-11-26 | **CP-16** Crystal rebalance, Tower projectiles, Wall shield, Runner repair (WP-16 A–D) | **Code-reviewed only — not yet run in Godot.** Starting Crystals 20; costs Mine 16 / Wall 8 / Tower 24 ×1.8 per level, max Lv 11 / 20 / 20; mine 2 → 2048; Hunter earns 0.2 Crystals per applied damage (both melee sites); top-center Crystal HUD for both roles with `+X/s`; Tower on `StatSheet` with homing projectiles and one of four stat picks per upgrade (applied on completion); Wall shield from Lv 15 via `ShieldComponent` + `Building.apply_damage()`; Runner `repair` skill (RMB own damaged structure); headless `tower_projectile_test` / `repair_skill_test`, interactive `tower_combat_test` / `wall_repair_test`; economy / construction / controls / stats / building docs updated |
+| 2026-11-26 | **CP-17** HUD overhaul (WP-17 A–D) | **Code-reviewed only — not yet run in Godot.** Layout unchanged (minimap BL / SelectionPanel BC / BuildingPanel BR ~300×360); `HudMode` mutual exclusion (`UNIT_BUILD` vs `BUILDING_MANAGE`); Building `SelectionCircle` + OWN-tier resolver; SelectionPanel building info; Destroy via BuildingPanel + `_server_destroy` `_can_build`; Runner A+LMB own-building destroy; Hunter RMB `_request_attack_building`; shared `stat_icon_row`; controls / selection_panel / construction / ui_audio / architecture docs updated |
+| 2026-11-26 | **CP-18** Hunter structure attack + floating numbers (WP-18 A–C / WP-09) | **Code-reviewed only — not yet run in Godot.** `StructureMelee` footprint reach / approach; `AttackController` building range; Hunter chase / attack / stuck-clear / bot target buildings; building attack flash; `FloatingNumber` (DAMAGE/CRIT/LIFESTEAL/REGEN → white/yellow/green, rise+fade, MoveClickMarker-style `spawn` / `spawn_on`) wired from melee, lifesteal, regen, tower hits; controls / WP docs updated |
+| 2026-11-26 | **CP-19** Hunter XP + portrait XP ring (WP-14) | **Code-reviewed only — not yet run in Godot.** `XpProgress` curve; `Unit.level`/`xp` synced; Hunter XP from melee damage; selection-panel grey double frame + violet CCW fill + level badge; Runners Lv1 full violet; sandbox XP+50 |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -192,7 +195,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Portrait ring always present | Done | Empty ring when nothing selected; sprite when a unit is selected |
 | Portrait ring uses selection affinity colors | Done | Own green / runner blue / hunter red |
 | Combat stats grid (2×3) with clean icons | Done | Damage / crit / defense / lifesteal / attack speed / move; `StatIcons` + `assets/sprites/stats/clean/` |
-| Stat values as `base (+delta)` | Done | Green / red BBCode modifier delta from `StatSheet` |
+| Stat values as colored final | Done | White at base, green above, red below (`StatIcons.format_value`) |
 | Health bar under stats + regen `+X` when not full | Done | Fill = current / max; regen label hidden at full HP |
 | `C` always centers on local own unit (ignores foreign selection) | Done | `game/camera/match_camera.gd`, `controls.README.md` §1.4 |
 | Bottom-left minimap with current map asset | Done | `ui/hud/minimap/minimap.tscn` + frame StyleBox `.tres` |
@@ -295,6 +298,74 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 
 ---
 
+## CP-17 — HUD overhaul: HudMode, building selection, Runner A-destroy
+
+**Verification:** implemented and checked by code review; nothing has run in Godot yet ("Done" here means written and reviewed), same as CP-16. The editor pass is WP-17 E in `working_packages.README.md`.
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Match HUD corners unchanged (minimap BL, SelectionPanel BC, BuildingPanel BR) | Done | `game/match/hud.tscn` |
+| Building panel ~300×360 | Done | `ui/hud/building_panel/building_panel.tscn` (`custom_minimum_size`) |
+| `HudMode` UNIT_BUILD / BUILDING_MANAGE mutual exclusion | Done | `src/hud/hud_mode.gd`; `ui/hud/building_panel/building_panel.gd` |
+| `BuildingPanel.is_armed` + `"building_ui"` group preserved | Done | `building_panel.gd`; callers in `unit.gd` / `selection_manager.gd` |
+| Building selection circle + hover/selected visuals | Done | `src/buildings/building.gd` (`set_selection_hover` / refresh); `SelectionCircle` on building scene |
+| Owned buildings resolve as OWN tier | Done | `src/selection/selection_resolver.gd` (`is_own`) |
+| SelectionPanel building portrait / kind stats / HP / level | Done | `ui/hud/selection_panel/selection_panel.gd` (`_show_building`) |
+| Upgrade / Destroy / tower picks only in BUILDING_MANAGE | Done | `building_panel.gd` + `HudMode.can_manage_building` |
+| Destroy → `request_destroy`; `_server_destroy` runs `_can_build` | Done | `src/construction/construction_manager.gd` |
+| Destroy clears selection + auto-selects local unit | Done | `Building._exit_tree` → `SelectionManager.notify_entity_removed` |
+| Runner A arms with melee 0; A+LMB own building → destroy | Done | `HudMode.can_runner_a_destroy`; `selection_manager.gd` |
+| Hunter A-move combat unchanged; Hunter RMB attacks buildings | Done | `unit.gd` `_request_attack_building` |
+| Shared `stat_icon_row` + recycled StatIcons / crystal icon | Done | `ui/hud/widgets/stat_icon_row.tscn`; `StatIcons`; `BuildingIcons.crystal_icon` |
+| Offline Python / gdparse verification (no Godot) | Done | `tools/test/test_hud_wp17.py` + `hud_mode_rules.py`; helper `tests/hud/hud_layout_preview.tscn` |
+| Match / editor verification | Not done | WP-17 E — needs Godot |
+
+**Doc owners:** `controls.README.md`, `selection_panel.README.md`, `construction.README.md`, `ui_audio.README.md`, `project_architecture.README.md`
+
+---
+
+## CP-18 — Hunter structure attack polish + floating numbers
+
+**Verification:** implemented and checked by code review; nothing has run in Godot yet ("Done" here means written and reviewed), same as CP-16 / CP-17. The editor pass is WP-18 D in `working_packages.README.md`. Floating-number checklist detail: WP-09.
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Footprint-aware melee reach / in-range / approach vs buildings | Done | `src/combat/structure_melee.gd` (`StructureMelee`) |
+| Attack range checks use StructureMelee for Building targets | Done | `src/combat/attack_controller.gd` (`in_attack_range`) |
+| Building click hit floor 56 px; chase / server attack use approach point | Done | `src/units/unit/unit.gd` (`_clickable_enemy_building_at`, chase, `_server_attack_building`) |
+| Stuck move clears when already in melee range of acquired building | Done | `unit.gd` stuck-move handling vs acquired target |
+| Hunter bot considers buildings as targets | Done | `unit.gd` `_nearest_hunter_target` |
+| Red attack flash on structures | Done | `Building.flash_attack_target_circle` |
+| Floating combat / regen numbers (white / yellow / green; rise + fade) | Done | `src/fx/floating_number.gd` (`FloatingNumber.spawn` / `spawn_on`; Kind DAMAGE / CRIT / LIFESTEAL / REGEN) |
+| Wired from melee (unit + building), lifesteal, regen (≥ 1 batch), tower projectile hit | Done | Call sites in `unit.gd` / combat / building / regen paths |
+| Spec updates | Done | `controls.README.md`; WP-09 Done + WP-18 in `working_packages.README.md` |
+| Match / editor verification | Not done | WP-18 D — needs Godot |
+
+**Doc owners:** `controls.README.md`, `construction.README.md`, `ui_audio.README.md`, `working_packages.README.md` (WP-09 / WP-18)
+
+---
+
+## CP-19 — Hunter XP and portrait XP ring
+
+**Verification:** implemented and checked by code review; nothing has run in Godot yet. Level-up **stat rewards** remain open (WP-14 still-open).
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Shared XP curve + fill helper | Done | `src/progression/xp_progress.gd` (`XpProgress`) |
+| Host-owned level / XP on units, replicated | Done | `Unit.level` / `Unit.xp` + `unit.tscn` MultiplayerSynchronizer |
+| Hunter gains XP from applied melee damage (units + buildings) | Done | `Unit.grant_xp` from `_perform_melee_on_unit` / `_perform_melee_on_building` |
+| Runners stay level 1 with full violet ring | Done | `Unit.xp_fill_ratio`; selection panel runner path |
+| Portrait grey double frame + dark band + violet CCW fill | Done | `ui/hud/selection_panel/portrait_xp_ring.gd` |
+| Overlapping level badge beside portrait | Done | `SelectionPanel` LevelBadge |
+| Empty selection: grey frame, no fill / badge | Done | `SelectionPanel._show_empty` |
+| Sandbox XP+50 (Hunter) | Done | `game/sandbox/sandbox_panel.gd` |
+| Spec / offline checks | Done | `docs/selection_panel.README.md`, `docs/stats.README.md`, `tools/test/test_wp14_xp.py` |
+| Match / editor verification | Not done | Needs Godot |
+
+**Doc owners:** `selection_panel.README.md`, `stats.README.md`, `working_packages.README.md` (WP-14)
+
+---
+
 ## CP-06 — Sandbox, bots, tests
 
 | Item | Status | Evidence |
@@ -376,4 +447,4 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 
 Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, attack-move, shift-click move/attack chains, hunter-bot hunting, elimination/observer, free camera (edge-scroll + MMB drag), editor-previewable HUD shells (CP-13), and persistent UI/audio settings are also in.
 
-Still open in `working_packages.README.md`: Hunter Crystal income / Hunter Shop, fog of war (minimap FoW), cursors, and selection context-actions. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14; match-integrated construction + Crystal economy (build UI, Wall / Tower / Crystal Mine, leveling) is CP-15.
+Still open in `working_packages.README.md`: Hunter Shop, fog of war (minimap FoW), cursors, and SelectionPanel context-action buttons. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14; match-integrated construction + Crystal economy is CP-15; crystal rebalance / tower projectiles / wall shield / repair is CP-16 (editor pass open); HUD overhaul (HudMode, building selection, Runner A-destroy) is CP-17 (editor pass open); Hunter structure melee polish + floating numbers is CP-18 (editor pass open); Hunter XP + portrait ring is CP-19 (level-up rewards still open; editor pass open).

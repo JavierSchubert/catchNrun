@@ -51,6 +51,11 @@ func mark_swung() -> void:
 
 
 func in_attack_range(from: Vector2, target: Node2D) -> bool:
+	if target == null or not is_instance_valid(target):
+		return false
+	## Buildings: reach extends to the footprint edge (StructureMelee), not the solid center.
+	if target is Building:
+		return StructureMelee.in_range(from, attack_range, target as Building)
 	return from.distance_to(target.global_position) <= attack_range
 
 

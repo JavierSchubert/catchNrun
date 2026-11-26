@@ -56,7 +56,7 @@ func _crystal_income_per_second(peer_id: int) -> float:
 	return total
 
 
-## Same phase / elimination gate as BuildingPanel._local_is_active_runner(), minus the
+## Same phase / elimination gate as HudMode.is_active_runner(), minus the
 ## role check — Crystals are shown to Runners and Hunters alike.
 func _local_is_active_player() -> bool:
 	var peer_id := _local_peer_id()

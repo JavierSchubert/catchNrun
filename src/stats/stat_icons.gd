@@ -73,16 +73,22 @@ static func display_name(stat: StatBlock.Stat) -> String:
 	return DISPLAY_NAMES.get(stat, str(stat))
 
 
+## Final value only: white at base, green above base, red below (no parenthetical delta).
 static func format_value(sheet: StatSheet, stat: StatBlock.Stat) -> String:
+	var final_value := sheet.final_value(stat)
 	var base := sheet.base_value(stat)
-	var delta := sheet.modifier_delta(stat)
-	var base_text := _format_number(stat, base)
-	if is_zero_approx(delta):
-		return base_text
-	var color := POSITIVE_COLOR if delta > 0.0 else NEGATIVE_COLOR
-	var sign := "+" if delta > 0.0 else "-"
-	var delta_text := _format_number(stat, absf(delta))
-	return "%s ([color=%s]%s%s[/color])" % [base_text, color, sign, delta_text]
+	var text := _format_number(stat, final_value)
+	if is_equal_approx(final_value, base):
+		return text
+	var color := POSITIVE_COLOR if final_value > base else NEGATIVE_COLOR
+	return "[color=%s]%s[/color]" % [color, text]
+
+
+## Compact HUD number (whole when near-integer, else one decimal). Shared by panels.
+static func short_number(value: float) -> String:
+	if is_equal_approx(value, roundf(value)):
+		return "%d" % int(roundf(value))
+	return "%.1f" % value
 
 
 static func _format_number(stat: StatBlock.Stat, value: float) -> String:
@@ -91,6 +97,4 @@ static func _format_number(stat: StatBlock.Stat, value: float) -> String:
 		if is_equal_approx(percent, roundf(percent)):
 			return "%d%%" % int(roundf(percent))
 		return "%.1f%%" % percent
-	if is_equal_approx(value, roundf(value)):
-		return str(int(roundf(value)))
-	return "%.1f" % value
+	return short_number(value)
