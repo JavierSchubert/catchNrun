@@ -26,4 +26,3 @@ move_speed = 230.0
 attack_range = 70.0
 acquisition_range = 500.0
 attack_interval = 0.75
-vision_range = 500.0

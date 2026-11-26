@@ -25,7 +25,6 @@ id = "tower"
 display_name = "Tower"
 footprint = Vector2i(2, 2)
 max_level = 20
-vision_range = 320.0
 base_cost = 24.0
 cost_growth = 1.8
 base_hp = 300.0

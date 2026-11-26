@@ -1,24 +1,16 @@
-[gd_resource type="Resource" script_class="BuildingDef" format=3]
+[gd_resource type="Resource" script_class="BuildingDef" format=3 uid="uid://oxge43m4h7jb"]
 
-[ext_resource type="Script" path="res://src/buildings/building_def.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://dlmlp08nohy53" path="res://src/buildings/building_def.gd" id="1_def"]
 
 [resource]
 script = ExtResource("1_def")
-kind = 0
 id = "wall"
 display_name = "Wall"
-footprint = Vector2i(1, 1)
 max_level = 20
-vision_range = 320.0
 base_cost = 8.0
 cost_growth = 1.8
 base_hp = 250.0
 hp_growth = 1.18
 base_build_seconds = 3.0
 build_time_growth = 1.08
-max_build_seconds = 20.0
-shield_unlock_level = 15
 shield_base = 900.0
-shield_growth = 1.18
-shield_recharge_delay = 6.0
-shield_recharge_per_second = 0.05
