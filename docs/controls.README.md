@@ -194,7 +194,9 @@ Right Click Attackable Entity
             -> Attack target
 ```
 
-The Hunter can **right-click structures** to attack them explicitly (`Unit._request_attack_building`). Auto-acquire of nearby buildings still applies when combat acquisition is allowed.
+The Hunter can **right-click structures** to attack them explicitly (`Unit._request_attack_building`). Auto-acquire of nearby buildings still applies when combat acquisition is allowed. Attack-move (`A` + left click) can also engage structures the same way once acquired.
+
+Melee vs buildings is **footprint-aware** (`StructureMelee` in `src/combat/structure_melee.gd`): reach and in-range add the structure's selection hit radius, and chase / server attack walk to an **approach point** just outside the footprint (same idea as Runner repair) instead of the solid center. `AttackController.in_attack_range` uses that helper for `Building` targets. Building click picking uses a minimum hit radius of 56 px; stuck movement clears when the Hunter is already in melee range of the acquired building. Structures flash a red attack ring via `Building.flash_attack_target_circle`. The Hunter bot also considers buildings in `_nearest_hunter_target`.
 
 #### Repair Command
 
@@ -512,7 +514,22 @@ hitbox / hurtbox
 -> Does the executed attack hit an entity?
 ```
 
-### 5.2. Attack Types
+Against structures, effective melee reach is `attack_range + structure selection hit radius` (`StructureMelee.reach`); see §1.2.
+
+### 5.2. Floating combat numbers
+
+Local-only world FX (same presentation pattern as `MoveClickMarker`): rising, fading numbers near the entity whose health changed. Implementation: `src/fx/floating_number.gd` (`FloatingNumber.spawn` / `spawn_on`).
+
+| Kind | Color | Typical source |
+| --- | --- | --- |
+| Normal damage | White | Melee hit (unit or building), tower projectile impact |
+| Crit damage | Yellow | Crit melee / crit tower hit |
+| Lifesteal | Green (`+N`) | HP gained from lifesteal on the attacker |
+| Regen | Green (`+N`) | Health regen tick (batched when gained ≥ 1) |
+
+Numbers spawn with a small random offset around the affected entity, rise upward, and fade out. They do not affect sync — host resolves damage; each peer shows local FX.
+
+### 5.3. Attack Types
 
 The combat system supports:
 

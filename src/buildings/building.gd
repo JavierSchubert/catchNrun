@@ -52,6 +52,7 @@ var _pending_pick := -1
 var _selection_circle: SelectionCircle
 var _selection_hovered := false
 var _selection_selected := false
+var _attack_flash_remaining := 0.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var visual: Polygon2D = $Visual
@@ -98,11 +99,20 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if def == null or not is_inside_tree() or multiplayer == null:
 		return
+	_tick_attack_flash(delta)
 	if _is_net_server():
 		server_tick(delta)
 	else:
 		_apply_synced_state()
 	_refresh_visuals()
+
+
+func _tick_attack_flash(delta: float) -> void:
+	if _attack_flash_remaining <= 0.0:
+		return
+	_attack_flash_remaining = maxf(_attack_flash_remaining - delta, 0.0)
+	if _attack_flash_remaining <= 0.0:
+		refresh_selection_visual()
 
 
 ## Old call site kept intact: tests/construction/building_grid_test.gd places footprint-only
@@ -155,11 +165,21 @@ func refresh_selection_visual() -> void:
 	_ensure_selection_circle()
 	if _selection_circle == null:
 		return
+	if _attack_flash_remaining > 0.0:
+		_selection_circle.configure(selection_circle_radius(), SelectionCircle.COLOR_HUNTER)
+		_selection_circle.set_hover(false)
+		_selection_circle.set_selected(true)
+		return
 	var color := SelectionCircle.COLOR_OWN if is_own(GameManager.local_peer_id()) \
 			else SelectionCircle.COLOR_RUNNER_TEAM
 	_selection_circle.configure(selection_circle_radius(), color)
 	_selection_circle.set_hover(_selection_hovered and not _selection_selected)
 	_selection_circle.set_selected(_selection_selected)
+
+
+func flash_attack_target_circle(duration := 0.35) -> void:
+	_attack_flash_remaining = maxf(duration, 0.05)
+	refresh_selection_visual()
 
 
 func selection_hit_radius() -> float:
@@ -408,6 +428,19 @@ func _on_projectile_hit(hit_target: Node2D, damage: float, critical: bool) -> vo
 			" (crit)" if critical else "",
 		]
 	)
+	if applied > 0.0:
+		var kind := FloatingNumber.Kind.CRIT if critical else FloatingNumber.Kind.DAMAGE
+		_spawn_floating_number_on(target, applied, kind)
+
+
+func _spawn_floating_number_on(target: Node2D, value: float, kind: FloatingNumber.Kind) -> void:
+	## Same host-local + authority unreliable pattern as Unit (shared in FloatingNumber).
+	FloatingNumber.spawn_replicated(self, target, value, kind)
+
+
+@rpc("authority", "unreliable")
+func _rpc_floating_number(target_path: NodePath, value: float, kind: int) -> void:
+	FloatingNumber.receive_rpc(self, target_path, value, kind)
 
 
 func _spawn_projectile(target: Node2D, on_hit: Callable) -> void:

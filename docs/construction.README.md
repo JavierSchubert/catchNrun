@@ -134,6 +134,8 @@ current_health <= 0
 
 `apply_damage()` returns the damage actually applied (shield + health); the Hunter's Crystal income is paid on that value (`economy.README.md` §3.1).
 
+Hunter melee vs structures uses footprint-aware reach and an approach point outside the hitbox (`StructureMelee`; `controls.README.md` §1.2 / §5.1). Hit feedback includes local floating damage numbers (`FloatingNumber`; `controls.README.md` §5.2).
+
 ### 6.1. Voluntary destroy (Runner)
 
 A Runner may destroy their own structures from:

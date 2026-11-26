@@ -265,29 +265,32 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 **Owning docs:** `controls.README.md` (feedback), `ui_audio.README.md`, `stats.README.md` (damage / crit / lifesteal / regen)
 
-Combat and regen feedback as rising world-space numbers that spawn near the entity whose health changed.
+Combat and regen feedback as rising world-space numbers that spawn near the entity whose health changed. Landed with CP-18 / WP-18 (code-reviewed; editor open).
+
+### Done (see CP-18)
+
+- [x] Shared FX class `FloatingNumber` (`src/fx/floating_number.gd`) — MoveClickMarker-style API (`spawn` / `spawn_on`), not an autoload
+- [x] Spawn at a **random offset around the affected entity** (damage on the target that was hit; lifesteal / regen on the unit that gained HP)
+- [x] Numbers rise upward and fade out after spawn
+- [x] Color map:
+  - normal hit damage → **white** (`Kind.DAMAGE`)
+  - crit hit damage → **yellow** (`Kind.CRIT`)
+  - lifesteal amount → **green** (`Kind.LIFESTEAL`)
+  - HP regen tick → **green** (`Kind.REGEN`; batched when gained ≥ 1)
+- [x] Wired into melee resolve (unit + building), lifesteal, regen, and tower projectile impact
+- [x] Local-only presentation (same pattern as `MoveClickMarker`) without breaking multiplayer sync
 
 ### Open
 
-- [ ] Global floating-number popup system (autoload or shared FX factory) used by all combat / regen sites
-- [ ] Spawn at a **random offset around the affected entity** (damage on the target that was hit; lifesteal / regen on the unit that gained HP)
-- [ ] Numbers rise upward and fade out after spawn
-- [ ] Color map:
-  - normal hit damage → **white**
-  - crit hit damage → **yellow**
-  - lifesteal amount → **green**
-  - HP regen tick → **green**
-- [ ] Wire into melee resolve (damage + crit + lifesteal) and health regen tick
-- [ ] Local-only presentation (or host-authoritative events with local FX) without breaking multiplayer sync
-- [ ] **Blocked until user provides an example function** for the preferred popup API / motion style
+- (none for the scoped checklist — further polish / DOT sources can reuse `FloatingNumber.spawn`)
 
 ### Depends on
 
-- Existing melee + regen pipeline (WP-01 / CP-08)
+- Existing melee + regen pipeline (WP-01 / CP-08); building melee polish (WP-18)
 
 ### Notes
 
-- Prefer one global `spawn_floating_number(world_pos, value, kind)` entry point so hunters, runners, structures, and future DOT sources stay DRY.
+- Chosen default: one `FloatingNumber.spawn(parent, world_pos, value, kind)` / `spawn_on(node, …)` entry point (mirrors `MoveClickMarker`), not a separate autoload factory.
 
 ---
 
@@ -618,6 +621,58 @@ Everything needed is in this section plus the files it names — no external pla
 
 ---
 
+## WP-18 — Hunter structure melee polish + floating numbers (P1)
+
+**Owning docs:** `controls.README.md`, `construction.README.md`, `ui_audio.README.md` (FX note), WP-09 checklist
+
+Follow-up to CP-15 / CP-17: make Hunter melee vs buildings footprint-aware (stand at the edge, not the solid center), and ship world-space floating combat numbers (WP-09). Started 2026-11-26.
+
+> **Verification status: code-reviewed only — not run in Godot.** Godot is not installed on the dev machine by choice. A `[x]` means "written and reviewed", *not* "ran green". Editor / match smoke stays open.
+
+### How to pick this package up
+
+Everything needed is in this section plus the files it names. Floating-number checklist detail lives under **WP-09** above.
+
+**Environment:** Godot is **not installed on the dev machine, by choice — do not install it.** Verify by reading code.
+
+**Reuse:** `MoveClickMarker`-style local FX (`FloatingNumber.spawn` / `spawn_on`) · `RepairSkill.approach_point` pattern · `AttackController` · `Building.selection_hit_radius` / `apply_damage`.
+
+### A — Hunter structure melee polish — landed, reviewed
+
+- [x] `StructureMelee` (`src/combat/structure_melee.gd`): footprint-aware `reach` / `in_range` / `approach_point`
+- [x] `AttackController.in_attack_range` uses `StructureMelee` for `Building` targets
+- [x] `_clickable_enemy_building_at` hit floor 56 px; chase / `_server_attack_building` use approach point
+- [x] Stuck-move clears when already in melee range of the acquired building target
+- [x] Hunter bot `_nearest_hunter_target` includes buildings
+- [x] `Building.flash_attack_target_circle` for red attack feedback on structures
+
+### B — Floating numbers (WP-09) — landed, reviewed
+
+- [x] `FloatingNumber` Kind DAMAGE / CRIT / LIFESTEAL / REGEN → white / yellow / green; rise + fade
+- [x] Wired from melee (unit + building), lifesteal, regen (batched ≥ 1), tower projectile hit
+- [x] Checklist + notes: see **WP-09** (MoveClickMarker-style API was the chosen default)
+
+### C — Documentation — landed
+
+- [x] `tasks/working_packages.README.md` — WP-09 Done; this WP-18 section; milestones
+- [x] `tasks/checkpoints.README.md` — CP-18 changelog + evidence
+- [x] `docs/controls.README.md` — footprint approach vs structures; floating combat numbers
+- [x] One-liners in `construction.README.md` / `ui_audio.README.md` where helpful
+
+### D — Verify without Godot — editor run open
+
+- [x] Static / code review of A–B
+- [ ] Confirm in the editor: Hunter RMB / A-move vs Wall / Tower / Mine (approach edge, flash, damage numbers); floating white/yellow/green on melee / crit / lifesteal / regen / tower hit
+- [ ] Run relevant `scripts/test/*.ps1` runners once Godot is available elsewhere
+
+### Depends on
+
+- CP-15 / CP-16 structure combat + repair approach pattern (done)
+- CP-17 Hunter RMB `_request_attack_building` (done; editor pass still open)
+- WP-09 floating-number scope (checklist Done above)
+
+---
+
 ## Suggested next milestones
 
 Compare against `checkpoints.README.md` (first milestone = session skeleton ≈ done).
@@ -626,7 +681,9 @@ Compare against `checkpoints.README.md` (first milestone = session skeleton ≈ 
 Milestone A — Fight and finish
   WP-01 core melee / elimination / hunter bot / attack-move / chains  ✅ landed (CP-08 / CP-14)
   Remaining: hitboxes, ranged/magic, combat tuning
-  WP-09 floating hit / heal numbers (needs your example popup function first)
+  WP-09 floating hit / heal numbers ✅ landed (CP-18; MoveClickMarker-style FloatingNumber)
+  WP-18 ◀ Hunter structure melee polish + floating numbers ✅ A/B (code-reviewed);
+         docs ✅ C; editor / match run ❌ D. Nothing run in Godot yet.
   WP-11 Hunter animated weapon on hit
   WP-13 Bigger centered world health bar + name + level rhombus + HP tick lines
   WP-15 Skins / shaders / movement animations
@@ -634,14 +691,14 @@ Milestone A — Fight and finish
 Milestone B — Build and earn
   WP-02 Construction: grid foundation ✅ (CP-11); match-integrated build UI + Wall / Tower / Crystal Mine ✅ (CP-15)
   WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income ✅ (WP-16 D); Hunter Shop still open
-  WP-16 ◀ ACTIVE — economy rebalance + crystal HUD ✅ A/B; tower projectiles ✅ C (reviewed);
+  WP-16 — economy rebalance + crystal HUD ✅ A/B; tower projectiles ✅ C (reviewed);
          wall shield + runner repair + hunter damage income ✅ D (reviewed);
          docs ✅ E; editor / match run ❌ E. Nothing run in Godot yet.
   WP-14 Player XP / levels + violet portrait XP ring
 
 Milestone C — Command and HUD
   WP-04 World selection ✅ (CP-09); selection strip ✅ (CP-10); camera drag / edge-scroll ✅ (CP-14)
-  WP-17 ◀ HUD overhaul — HudMode + building selection + Runner A-destroy ✅ A–C (code-reviewed);
+  WP-17 — HUD overhaul — HudMode + building selection + Runner A-destroy ✅ A–C (code-reviewed);
          docs ✅ D; editor / match run ❌ E. Nothing run in Godot yet.
   Remaining: cursors / SelectionPanel context-action buttons (upgrades/destroy stay on BuildingPanel for now)
   WP-10 In-game chat
