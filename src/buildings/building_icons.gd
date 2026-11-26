@@ -7,6 +7,30 @@ const SIZE := 48
 const CRYSTAL_COLOR := Color(0.3, 0.85, 0.95, 1.0)
 
 
+static func key_for_kind(kind: BuildingDef.Kind) -> String:
+	match kind:
+		BuildingDef.Kind.WALL:
+			return "wall"
+		BuildingDef.Kind.TOWER:
+			return "tower"
+		BuildingDef.Kind.CRYSTAL_MINE:
+			return "crystal_mine"
+	return "wall"
+
+
+static func icon_for_kind(kind: BuildingDef.Kind) -> ImageTexture:
+	return icon_for(key_for_kind(kind))
+
+
+## Prefer def.id when set; fall back to kind so HUD sites share one mapping.
+static func icon_for_def(def: BuildingDef) -> ImageTexture:
+	if def == null:
+		return _fallback_icon()
+	if not def.id.is_empty():
+		return icon_for(def.id)
+	return icon_for_kind(def.kind)
+
+
 static func icon_for(building_key: String) -> ImageTexture:
 	match building_key:
 		"wall":

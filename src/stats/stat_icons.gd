@@ -85,12 +85,17 @@ static func format_value(sheet: StatSheet, stat: StatBlock.Stat) -> String:
 	return "%s ([color=%s]%s%s[/color])" % [base_text, color, sign, delta_text]
 
 
+## Compact HUD number (whole when near-integer, else one decimal). Shared by panels.
+static func short_number(value: float) -> String:
+	if is_equal_approx(value, roundf(value)):
+		return "%d" % int(roundf(value))
+	return "%.1f" % value
+
+
 static func _format_number(stat: StatBlock.Stat, value: float) -> String:
 	if _CHANCE_STATS.has(stat):
 		var percent := value * 100.0
 		if is_equal_approx(percent, roundf(percent)):
 			return "%d%%" % int(roundf(percent))
 		return "%.1f%%" % percent
-	if is_equal_approx(value, roundf(value)):
-		return str(int(roundf(value)))
-	return "%.1f" % value
+	return short_number(value)

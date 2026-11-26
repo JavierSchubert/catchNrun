@@ -38,10 +38,13 @@ static func pick(candidates: Array, local_peer_id: int, rng: RandomNumberGenerat
 static func _tier(candidate: Object, local_peer_id: int) -> Tier:
 	if candidate.has_method("is_local_controllable") and bool(candidate.call("is_local_controllable", local_peer_id)):
 		return Tier.OWN
-	if candidate.has_method("is_player_character") and bool(candidate.call("is_player_character")):
-		return Tier.PLAYER
+	## Owned structures (Buildings use is_own / owner_peer_id, not peer_id).
+	if candidate.has_method("is_own") and bool(candidate.call("is_own", local_peer_id)):
+		return Tier.OWN
 	if candidate.get("peer_id") != null and int(candidate.get("peer_id")) == local_peer_id:
 		return Tier.OWN
+	if candidate.has_method("is_player_character") and bool(candidate.call("is_player_character")):
+		return Tier.PLAYER
 	return Tier.NPC
 
 

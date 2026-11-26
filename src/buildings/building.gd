@@ -49,6 +49,9 @@ var _target_level := 1
 var _applied_picks := PackedInt32Array()
 ## Host-only. TowerPath paid for with the running upgrade; -1 when none is pending.
 var _pending_pick := -1
+var _selection_circle: SelectionCircle
+var _selection_hovered := false
+var _selection_selected := false
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var visual: Polygon2D = $Visual
@@ -132,6 +135,31 @@ func is_alive() -> bool:
 
 func is_own(local_peer_id: int) -> bool:
 	return owner_peer_id == local_peer_id
+
+
+func selection_circle_radius() -> float:
+	return selection_hit_radius() * 1.05
+
+
+func set_selection_hover(active: bool) -> void:
+	_selection_hovered = active
+	refresh_selection_visual()
+
+
+func set_selection_selected(active: bool) -> void:
+	_selection_selected = active
+	refresh_selection_visual()
+
+
+func refresh_selection_visual() -> void:
+	_ensure_selection_circle()
+	if _selection_circle == null:
+		return
+	var color := SelectionCircle.COLOR_OWN if is_own(GameManager.local_peer_id()) \
+			else SelectionCircle.COLOR_RUNNER_TEAM
+	_selection_circle.configure(selection_circle_radius(), color)
+	_selection_circle.set_hover(_selection_hovered and not _selection_selected)
+	_selection_circle.set_selected(_selection_selected)
 
 
 func selection_hit_radius() -> float:
@@ -537,13 +565,34 @@ func _on_shield_changed(current: float, maximum: float) -> void:
 
 
 func _on_died() -> void:
+	_notify_selection_cleared()
 	if _is_net_server():
 		GameLog.info("CONSTRUCTION", "%s destroyed" % name)
 		queue_free()
 
 
+func _notify_selection_cleared() -> void:
+	if not is_inside_tree():
+		return
+	var manager := get_tree().get_first_node_in_group("selection_manager") as SelectionManager
+	if manager != null and manager.has_method("notify_entity_removed"):
+		manager.call("notify_entity_removed", self)
+
+
+func _ensure_selection_circle() -> void:
+	if _selection_circle != null:
+		return
+	_selection_circle = SelectionCircle.new()
+	_selection_circle.name = "SelectionCircle"
+	add_child(_selection_circle)
+	move_child(_selection_circle, 0)
+
+
 func _is_net_server() -> bool:
 	return is_inside_tree() and multiplayer != null and multiplayer.is_server()
+
+func _exit_tree() -> void:
+	_notify_selection_cleared()
 
 
 func _apply_footprint_visual() -> void:

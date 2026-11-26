@@ -291,16 +291,24 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	var target := _clickable_enemy_at(world_pos)
+	var building_target: Building = null
+	if can_attack() and target == null:
+		building_target = _clickable_enemy_building_at(world_pos)
 	## An enemy only outranks the structure for a unit that can actually attack it: a Runner
 	## repairing a wall under attack clicks right next to the Hunter.
 	var structure: Building = null
-	if target == null or not can_attack():
+	if (target == null and building_target == null) or not can_attack():
 		structure = _repairable_structure_at(world_pos)
 	if target != null and can_attack():
 		## Attack only — cancels any active move chain.
 		_clear_chain_visual()
 		_request_attack(target)
 		_show_attack_click_marker_on(target)
+	elif building_target != null and can_attack():
+		## Hunter RMB on a structure: explicit target (same combat path as A-move acquire).
+		_clear_chain_visual()
+		_request_attack_building(building_target)
+		_show_attack_click_marker_on(building_target)
 	elif structure != null:
 		## Runner RMB on an own damaged structure = repair (RepairSkill).
 		_clear_chain_visual()
@@ -711,7 +719,7 @@ func _show_attack_click_marker_at(world_pos: Vector2) -> void:
 	MoveClickMarker.spawn(host, world_pos, MoveClickMarker.ATTACK_COLOR)
 
 
-func _show_attack_click_marker_on(target: Unit) -> void:
+func _show_attack_click_marker_on(target: Node2D) -> void:
 	if target == null:
 		return
 	MoveClickMarker.spawn_on(target, MoveClickMarker.ATTACK_COLOR)
@@ -799,6 +807,25 @@ func _request_attack(target: Unit) -> void:
 		_submit_attack_target.rpc_id(1, target.peer_id)
 
 
+func _request_attack_building(target: Building) -> void:
+	if not _multiplayer_ready() or target == null:
+		return
+	if _is_net_server():
+		_server_attack_building(target)
+	else:
+		_submit_attack_building.rpc_id(1, target.get_path())
+
+
+func _server_attack_building(target: Building) -> void:
+	if target == null or not is_instance_valid(target) or not target.is_attackable():
+		return
+	_move_chain.clear()
+	_repair_target = null
+	attack.set_explicit_target(target)
+	if not attack.in_attack_range(global_position, target):
+		movement.order_move(global_position, target.global_position)
+
+
 func _request_repair(structure: Building) -> void:
 	if not _multiplayer_ready() or structure == null:
 		return
@@ -866,6 +893,23 @@ func _clickable_enemy_at(world_pos: Vector2) -> Unit:
 		if distance <= hit_radius and distance < best_distance:
 			best_distance = distance
 			best = unit
+	return best
+
+
+func _clickable_enemy_building_at(world_pos: Vector2) -> Building:
+	var best: Building = null
+	var best_distance := INF
+	for node in _enemy_candidates():
+		if not node is Building:
+			continue
+		var building := node as Building
+		if not building.is_attackable():
+			continue
+		var hit_radius := maxf(building.selection_hit_radius(), building.selection_circle_radius() * 1.15)
+		var distance := world_pos.distance_to(building.global_position)
+		if distance <= hit_radius and distance < best_distance:
+			best_distance = distance
+			best = building
 	return best
 
 
@@ -970,6 +1014,20 @@ func _submit_attack_target(target_peer_id: int) -> void:
 	attack.set_explicit_target(target)
 	if not attack.in_attack_range(global_position, target):
 		movement.order_move(global_position, target.global_position)
+
+
+@rpc("any_peer", "reliable")
+func _submit_attack_building(building_path: NodePath) -> void:
+	if not _is_net_server():
+		return
+	if GameManager.sender_id(multiplayer) != peer_id:
+		return
+	if not is_alive() or not _movement_allowed():
+		return
+	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
+		return
+	var target := get_node_or_null(building_path) as Building
+	_server_attack_building(target)
 
 
 @rpc("any_peer", "reliable")

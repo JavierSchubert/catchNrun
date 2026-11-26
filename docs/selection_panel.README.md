@@ -25,16 +25,13 @@ The Selection Panel is a **fixed-size** bottom HUD strip (`520×148`). Selection
 
 ```text
 Selection Panel (fixed size)
-├── Portrait ring (always; sprite only when a unit is selected)
-└── Right column (only when a unit is selected)
-    ├── Stats grid (2 columns)
-    │   ├── Damage          Crit Chance
-    │   ├── Defense         Lifesteal Chance
-    │   └── Attack Speed    Movement Speed
-    └── Health bar [////////////] +regen
+├── Portrait ring (always; unit sprite or building icon when selected)
+└── Right column (when a unit or Building with def is selected)
+    ├── Stats grid (2 columns) — unit combat stats, or kind-specific building rows
+    └── Health bar [////////////] +regen (units) / level caption (buildings)
 ```
 
-Stat values use `base (+delta)` with green / red BBCode for the modifier. Icons come from `assets/sprites/stats/clean/` via `StatIcons`.
+Stat values use `base (+delta)` with green / red BBCode for the modifier. Icons come from `assets/sprites/stats/clean/` via `StatIcons`. Building rows reuse the same grid with `StatIcons` and, for mine income, `BuildingIcons.crystal_icon()`.
 
 Empty selection: grey panel + empty portrait ring only (no stats, no health bar).
 
@@ -44,7 +41,9 @@ Empty selection: grey panel + empty portrait ring only (no stats, no health bar)
 ui/hud/selection_panel/selection_panel.tscn
 ui/hud/selection_panel/selection_panel_style.tres
 ui/hud/selection_panel/selection_ring_style.tres
+ui/hud/widgets/stat_icon_row.tscn   # shared icon+label row (also used by BuildingPanel)
 src/stats/stat_icons.gd
+src/buildings/building_icons.gd
 assets/sprites/stats/clean/
 ```
 
@@ -87,24 +86,27 @@ Additional values depend on the entity.
             [======== HP bar ========] +2
 ```
 
-### Wall Example
+### Building view (landed)
+
+Selecting a `Building` with a non-null `def` fills the same strip:
+
+- **Portrait:** structure icon from `BuildingIcons` (not a unit sprite).
+- **Health bar:** current / max HP; level shown beside the bar.
+- **Kind-specific stat rows** (via `StatIcons` / crystal icon), for example:
+  - Tower — damage, crit, level, attack speed, attack range
+  - Wall — HP summary, shield (or unlock hint), level
+  - Crystal Mine — HP summary, income rate, level
 
 ```text
-Wall
-Health          850 / 1000
-Level           3
+[building icon]  (kind rows…)
+                 [======== HP bar ========]  Lv N
 ```
 
-### Crystal Mine Example
-
-```text
-Crystal Mine
-Health          450 / 500
-Level           4
-Generation      8 Crystals / tick
-```
+`def == null` footprint-only buildings fall back to a generic presentation (no manage actions).
 
 Only meaningful information should be displayed. A Wall, for example, does not need Movement Speed.
+
+**Upgrades, Destroy, and tower picks live on the BuildingPanel** (bottom-right), gated by `HudMode.BUILDING_MANAGE` — not as SelectionPanel context-action buttons yet. The Selection Panel shows info only for structures in this milestone.
 
 ## 5. Team and Control Rules
 
@@ -137,12 +139,7 @@ Possible actions may include:
 
 ### Runner Structure
 
-Possible actions may include:
-
-- Upgrade Crystal Mine.
-- Upgrade Wall.
-- Upgrade Tower.
-- Other structure-specific actions.
+Structure commands (upgrade, destroy, tower stat picks) are currently on the **BuildingPanel**, visible only while `HudMode` is `BUILDING_MANAGE` (owned structure selected). SelectionPanel context-action buttons for the same capabilities are still future work (WP-04).
 
 ### Hunter
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://buikitpreview01"]
+[gd_scene load_steps=10 format=3 uid="uid://buikitpreview01"]
 
 [ext_resource type="StyleBoxFlat" path="res://ui/styles/card_panel_style.tres" id="1_card"]
 [ext_resource type="StyleBoxFlat" path="res://ui/styles/button_accent_style.tres" id="2_accent"]
@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" path="res://ui/widgets/animated_button/animated_button_32.tscn" id="5_anim"]
 [ext_resource type="PackedScene" path="res://ui/hud/selection_panel/selection_panel.tscn" id="6_sel"]
 [ext_resource type="PackedScene" path="res://ui/hud/minimap/minimap.tscn" id="7_map"]
+[ext_resource type="PackedScene" path="res://ui/hud/building_panel/building_panel.tscn" id="8_build"]
+[ext_resource type="PackedScene" path="res://ui/hud/widgets/stat_icon_row.tscn" id="9_stat"]
 
 [node name="UiKit" type="Control"]
 layout_mode = 3
@@ -102,4 +104,11 @@ layout_mode = 2
 
 [node name="Minimap" parent="Margin/Scroll/Content" instance=ExtResource("7_map")]
 custom_minimum_size = Vector2(220, 146)
+layout_mode = 2
+
+[node name="StatIconRow" parent="Margin/Scroll/Content" instance=ExtResource("9_stat")]
+layout_mode = 2
+
+[node name="BuildingPanel" parent="Margin/Scroll/Content" instance=ExtResource("8_build")]
+custom_minimum_size = Vector2(300, 360)
 layout_mode = 2

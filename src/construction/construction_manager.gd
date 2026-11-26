@@ -111,13 +111,8 @@ func _spawn_building(data: Dictionary) -> Node:
 
 
 func _can_build(peer_id: int) -> bool:
-	if not GameManager.players.has(peer_id) or GameManager.is_eliminated(peer_id):
-		return false
-	var entry: Dictionary = GameManager.players[peer_id]
-	if int(entry.get("role", RoleConfig.Role.RUNNER)) != RoleConfig.Role.RUNNER:
-		return false
-	return GameManager.phase == GameManager.Phase.RUNNER_PREPARATION \
-		or GameManager.phase == GameManager.Phase.HUNTER_ACTIVE
+	## Same gate as HudMode / BuildingPanel — keep destroy/upgrade/build in sync.
+	return HudMode.is_active_runner(peer_id)
 
 
 ## `pick` is a BuildingDef.TowerPath index. A Tower upgrade requires one; Wall and Crystal
@@ -179,10 +174,13 @@ func _rpc_request_destroy(building_name: String) -> void:
 func _server_destroy(peer_id: int, building_name: String) -> void:
 	if not multiplayer.is_server():
 		return
+	if not _can_build(peer_id):
+		return
 	var building := buildings_root.get_node_or_null(building_name) as Building
 	if building == null or building.owner_peer_id != peer_id:
 		return
 	GameLog.info("CONSTRUCTION", "peer %d destroyed %s" % [peer_id, building_name])
+	## Selection clears via Building._exit_tree → SelectionManager.notify_entity_removed.
 	building.queue_free()
 
 

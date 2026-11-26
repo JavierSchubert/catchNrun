@@ -100,6 +100,17 @@ func clear_selection() -> void:
 	_set_selected(null)
 
 
+## Called when a clickable entity leaves the tree (destroyed building / dead unit).
+func notify_entity_removed(entity: Node) -> void:
+	if entity == null:
+		return
+	if hovered == entity:
+		_set_hovered(null)
+	if selected == entity:
+		_set_selected(null)
+		_auto_select_local_unit()
+
+
 func _handle_attack_move_key(key: InputEventKey) -> void:
 	if key.echo:
 		return
@@ -109,7 +120,7 @@ func _handle_attack_move_key(key: InputEventKey) -> void:
 		return
 	if key.keycode != KEY_A or not key.pressed:
 		return
-	if not _can_arm_attack_move():
+	if not _can_arm_a_click():
 		return
 	attack_move_armed = true
 	get_viewport().set_input_as_handled()
@@ -154,7 +165,17 @@ func _is_build_mode_armed() -> bool:
 	return ui != null and ui.has_method("is_armed") and bool(ui.call("is_armed"))
 
 
+## A arms for Hunter attack-move, or for Runner voluntary destroy of an own structure.
+func _can_arm_a_click() -> bool:
+	if not is_controllable_selected():
+		return false
+	if selected.has_method("can_attack") and bool(selected.call("can_attack")):
+		return true
+	return _local_is_active_runner()
+
+
 func _can_arm_attack_move() -> bool:
+	## Kept for callers / tests that mean combat attack-move only.
 	if not is_controllable_selected():
 		return false
 	if selected.has_method("can_attack"):
@@ -168,6 +189,16 @@ func _issue_armed_attack_move() -> void:
 	if selected == null or not is_instance_valid(selected):
 		_disarm_attack_move()
 		return
+	## Runner A+LMB on own building = Destroy (same as BuildingPanel Destroy button).
+	var own_building := _own_building_at(destination)
+	if HudMode.can_runner_a_destroy(selected, own_building, _local_peer_id(), _local_is_active_runner()):
+		_disarm_attack_move()
+		_request_destroy_building(own_building as Building)
+		return
+	if not _can_arm_attack_move():
+		## Runner A+LMB on empty ground / foreign target: disarm only.
+		_disarm_attack_move()
+		return
 	if chain_modifier_held and selected.has_method("issue_attack_chain_append"):
 		## Shift/Ctrl+A+LMB appends a red attack-move waypoint; stay armed for more.
 		selected.call("issue_attack_chain_append", destination)
@@ -175,6 +206,36 @@ func _issue_armed_attack_move() -> void:
 	_disarm_attack_move()
 	if selected.has_method("issue_attack_move"):
 		selected.call("issue_attack_move", destination)
+
+
+func _own_building_at(world_pos: Vector2) -> Building:
+	var hits := _entities_at_point(world_pos)
+	var best: Building = null
+	var best_distance := INF
+	for node in hits:
+		if not node is Building:
+			continue
+		var building := node as Building
+		if building.def == null or building.owner_peer_id != _local_peer_id():
+			continue
+		var distance := world_pos.distance_to(building.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best = building
+	return best
+
+
+func _request_destroy_building(building: Building) -> void:
+	if building == null or not is_instance_valid(building):
+		return
+	var manager := get_tree().get_first_node_in_group("construction_manager") as ConstructionManager
+	if manager == null:
+		return
+	manager.request_destroy(building.name)
+
+
+func _local_is_active_runner() -> bool:
+	return HudMode.is_active_runner(_local_peer_id())
 
 
 func _disarm_attack_move() -> void:

@@ -45,6 +45,8 @@ Left Click Entity
 
 When an entity is selected, a selection circle is drawn under it. The circle radius scales with the entity's size (hitbox / visual footprint).
 
+**Structures** (Wall / Tower / Crystal Mine) use the same hover / selected circle path as units (`Building` exposes `set_selection_hover` / selected refresh via `SelectionCircle`).
+
 Hover and selection use the same circle, with different stroke weight:
 
 | State | Circle |
@@ -65,6 +67,8 @@ Circle color depends on ownership and team relative to the local player:
 | Hunter | Red |
 
 Own-group green takes priority over the Hunter red when the local player is the Hunter and has selected themselves.
+
+**Own buildings are OWN tier** in `SelectionResolver` (`Building.is_own(local)`), same priority band as the local controllable unit when resolving overlapping or box candidates.
 
 #### Drag-box selection
 
@@ -190,6 +194,8 @@ Right Click Attackable Entity
             -> Attack target
 ```
 
+The Hunter can **right-click structures** to attack them explicitly (`Unit._request_attack_building`). Auto-acquire of nearby buildings still applies when combat acquisition is allowed.
+
 #### Repair Command
 
 A Runner right-clicking one of their **own** structures that is damaged and past its first construction starts the `repair` skill. A green click ring flashes on the structure.
@@ -207,13 +213,29 @@ Repair restores HP only, never a wall's shield. Any other command (move, chain w
 
 Pressing `A` followed by a left click issues an attack-move command. The ground click ring is red (same attack color as a right-click attack). Escape or right-click cancels attack-move mode before the click.
 
+`A` **arms for the Runner even when melee damage is 0** (Runners cannot attack units). Hunter attack-move combat is unchanged.
+
 ```text
 A
 -> Left Click Position
 -> Attack Move (red ground marker)
 ```
 
-During attack move:
+#### Runner A-click destroy
+
+When a Runner has their controllable unit selected and presses `A`, then left-clicks one of their **own** structures, that issues a voluntary destroy — not combat (`HudMode.can_runner_a_destroy` → `ConstructionManager.request_destroy`). Ground under the cursor (or a foreign / enemy building) stays a normal attack-move. Hunters never take this path; they use combat A-move / RMB attack on buildings.
+
+```text
+A + Left Click (Runner, unit selected)
+    |
+    +-- Own structure under cursor
+    |       -> request_destroy (BuildingPanel Destroy is the other entry)
+    |
+    +-- Else
+            -> Attack-move to world position
+```
+
+During Hunter (or combat-capable) attack move:
 
 ```text
 Attack Move

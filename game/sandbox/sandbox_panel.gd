@@ -3,9 +3,9 @@ extends Node
 ## Hidden for bots, headless runs, and non-host browser clients.
 ##
 ## Layout: the action bar and, stacked directly below it, the status + game log panel sit
-## top-left (a minimized bar pulls the log up); native tests top-right. Bottom-left is the
-## minimap, bottom-right the Runner's building panel. Every panel has a Minimize button,
-## and `G` (god mode) minimizes / expands all of them at once.
+## top-left (a minimized bar pulls the log up); native tests top-right. Match HUD corners
+## stay free — minimap BL, selection BC, building BR (WP-17). Every panel has a Minimize
+## button, and `G` (god mode) minimizes / expands all of them at once.
 
 const RUNNER_ICON := preload("res://assets/sprites/units/Player_1.png")
 const HUNTER_ICON := preload("res://assets/sprites/units/Enemy_1.png")
@@ -13,8 +13,9 @@ const HUNTER_ICON := preload("res://assets/sprites/units/Enemy_1.png")
 ## Height of a minimized panel: just its header row plus the panel margins.
 const COLLAPSED_HEIGHT := 48.0
 ## Expanded size of the action bar / log panel inside the top-left stack.
-const ACTION_BAR_WIDTH := 764.0
-const LOG_PANEL_SIZE := Vector2(404.0, 264.0)
+## Keep the log compact so it does not collide with the bottom HUD strip.
+const ACTION_BAR_WIDTH := 640.0
+const LOG_PANEL_SIZE := Vector2(360.0, 220.0)
 
 var _status: Label
 var _state: Label

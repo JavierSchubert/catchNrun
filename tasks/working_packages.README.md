@@ -521,7 +521,7 @@ Static checks already done without Godot (2026-11-26): all `.gd` files parse wit
 - [ ] Confirm the restructured HUD in the real match flow (sandbox quick-start 1 Hunter + 2 Runners, skip prep)
 - [ ] Run every `scripts/test/*.ps1` runner + `smoke_test.ps1`
 - [x] `economy.README.md` — de-duplicated (§1–§5 appeared twice); mine table 2 → 2048 (Lv 1–11), starting Crystals 20, cost table, `hunter_crystals_per_damage = 0.2`, shield / tower-pick summary. Section numbers kept, so the code's §2.1 / §3.1 / §5 citations still resolve
-- [x] `construction.README.md` — tower projectile + upgrade paths (§5), wall shield (§4), `apply_damage` + repair (§6, §6.1)
+- [x] `construction.README.md` — tower projectile + upgrade paths (§5), wall shield (§4), `apply_damage` + repair (§6, §6.2; voluntary destroy §6.1 added in WP-17)
 - [x] `controls.README.md` — RMB on own structure = repair (§1.2)
 - [x] `stats.README.md` — `attack_speed` / `ATTACK_RANGE` rows, append-only rule, towers consume `StatSheet`
 - [x] `building.README.md` — shield + projectile notes (§6)
@@ -543,6 +543,78 @@ Static checks already done without Godot (2026-11-26): all `.gd` files parse wit
 
 - CP-15 construction + economy scaffold (done)
 - Stats modifiers (CP-05) for the tower paths and any future skill effects
+
+---
+
+## WP-17 — HUD overhaul: HudMode, building selection, Runner A-destroy (P1)
+
+**Owning docs:** `controls.README.md`, `selection_panel.README.md`, `construction.README.md`, `ui_audio.README.md`, `project_architecture.README.md`
+
+Follow-up to CP-15 / CP-16: keep the three-corner match HUD layout, gate build vs manage UI through a shared `HudMode`, give structures selection chrome and SelectionPanel info, and let Runners A-click destroy their own buildings. Started 2026-11-26.
+
+> **Verification status: code-reviewed only — not run in Godot.** Godot is not installed on the dev machine by choice. A `[x]` means "written and reviewed", *not* "ran green". Package E (editor / match smoke) stays open.
+
+### How to pick this package up
+
+Everything needed is in this section plus the files it names — no external plan document is required.
+
+**Environment:** Godot is **not installed on the dev machine, by choice — do not install it.** Verify by reading code. Be exact with GDScript syntax, Godot 4 API names, and `.tscn` / `.tres` format.
+
+**Hard invariants — breaking any of these is silent, not loud:**
+
+- `HudMode` mutual exclusion: build placement buttons only in `UNIT_BUILD`; Upgrade / Destroy / tower picks only in `BUILDING_MANAGE`. Never show both at once.
+- `BuildingPanel.is_armed()` and the `"building_ui"` group are called by `unit.gd` and `selection_manager.gd` — that contract must not change.
+- `Building` with `def == null` is a supported legacy path (`tests/construction/building_grid_test.tscn` places footprint-only buildings). Nothing may assume `def != null` (HudMode / SelectionPanel treat those as non-manageable / generic).
+- Do **not** install Godot to "verify". Static review and evidence paths only until an editor pass is explicitly requested.
+
+**Reuse instead of rewriting:** `StatIcons` · `BuildingIcons` (incl. `crystal_icon()`) · `SelectionCircle` · `SelectionResolver` · `ConstructionManager.request_destroy` / `_server_*` · `ui/hud/widgets/stat_icon_row.tscn` for shared icon+label rows.
+
+### A — Chrome and building selection visuals — landed, reviewed
+
+- [x] Layout stays: minimap bottom-left, SelectionPanel bottom-center, BuildingPanel bottom-right (`game/match/hud.tscn`)
+- [x] Building panel size ~300×360 (`ui/hud/building_panel/building_panel.tscn`)
+- [x] Building has `SelectionCircle` + `set_selection_hover` / selected / `refresh_selection_visual`
+- [x] `SelectionResolver` treats `is_own(local)` as OWN tier (owned structures compete with own unit for priority)
+- [x] SelectionPanel building view: portrait via `BuildingIcons`, HP bar, kind-specific stats with `StatIcons` / `BuildingIcons.crystal_icon`, level
+- [x] Shared widget `ui/hud/widgets/stat_icon_row.tscn` for wall/mine upgrade rows and building detail lines
+- [x] Stat icons recycled on wall/mine upgrade button captions and building detail rows
+
+### B — HudMode gating — landed, reviewed
+
+- [x] `src/hud/hud_mode.gd`: `UNIT_BUILD` only when local controllable unit selected; `BUILDING_MANAGE` only when owned `Building` selected (`def != null`)
+- [x] BuildingPanel wires mode via `HudMode.resolve` — placement arming only in `UNIT_BUILD`; Upgrade / Destroy / tower picks only in `BUILDING_MANAGE`
+- [x] Mutual exclusion enforced in panel refresh (build buttons vs manage actions never both live)
+
+### C — Destroy + Runner A-click — landed, reviewed
+
+- [x] BuildingPanel Destroy → `ConstructionManager.request_destroy`
+- [x] `_server_destroy` also runs `_can_build` (role / eliminated / phase), like build / upgrade
+- [x] `Building._exit_tree` → `SelectionManager.notify_entity_removed` → clear selection + auto-select local unit
+- [x] Runner `A` arms even with melee 0; `A`+LMB on own building → `request_destroy` (not combat) via `HudMode.can_runner_a_destroy`
+- [x] Hunter A-move combat unchanged; Hunter RMB can target buildings via `_request_attack_building`
+
+### D — Documentation — landed
+
+- [x] `tasks/working_packages.README.md` — this WP-17 section; Milestone C mentions WP-17
+- [x] `tasks/checkpoints.README.md` — CP-17 changelog + evidence table
+- [x] `docs/controls.README.md` — Runner A-destroy, building selection circles / OWN tier, Hunter RMB on structures
+- [x] `docs/selection_panel.README.md` — building view; upgrades/destroy stay on BuildingPanel
+- [x] `docs/construction.README.md` — build UI gating + Runner A-destroy path
+- [x] `docs/ui_audio.README.md` / `docs/project_architecture.README.md` — panel size, HudMode, `stat_icon_row`, ui_kit note
+
+### E — Verify without Godot — editor run open
+
+- [x] Static / code review of A–C (HudMode mutual exclusion, destroy path, selection chrome, panel wiring)
+- [x] Offline Python mirror + structural checks: `python tools/test/test_hud_wp17.py` (HudMode rules, hud.tscn anchors, `%Name` wiring, icon assets, helper scenes)
+- [x] `gdparse` on touched `.gd` files; independent DRY review (SelectionPanel icon leak fix, `StatIcons.short_number`, `BuildingIcons.icon_for_def`)
+- [x] Helper scenes: `tests/hud/hud_layout_preview.tscn`; `ui_kit` instances BuildingPanel + `stat_icon_row`
+- [ ] Confirm match HUD in the editor (sandbox quick-start, select unit → build buttons; select own building → Upgrade/Destroy; A+LMB destroy; Hunter RMB on structure)
+- [ ] Run relevant `scripts/test/*.ps1` runners once Godot is available elsewhere
+
+### Depends on
+
+- CP-15 match-integrated construction + build UI (done)
+- CP-16 crystal HUD / build-panel restructure / tower picks / repair (done; editor pass still open)
 
 ---
 
@@ -569,9 +641,11 @@ Milestone B — Build and earn
 
 Milestone C — Command and HUD
   WP-04 World selection ✅ (CP-09); selection strip ✅ (CP-10); camera drag / edge-scroll ✅ (CP-14)
-  Remaining: cursors / context actions
+  WP-17 ◀ HUD overhaul — HudMode + building selection + Runner A-destroy ✅ A–C (code-reviewed);
+         docs ✅ D; editor / match run ❌ E. Nothing run in Godot yet.
+  Remaining: cursors / SelectionPanel context-action buttons (upgrades/destroy stay on BuildingPanel for now)
   WP-10 In-game chat
-  Hunter Shop + tower attacks as extensions of B
+  Hunter Shop as an extension of B
 
 Milestone D — Fog and map awareness
   WP-05 Vision doc + FoW still open; live minimap + command clicks ✅ (CP-10 / CP-14)
