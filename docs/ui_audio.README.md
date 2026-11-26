@@ -124,9 +124,11 @@ Visible when `LaunchOptions.sandbox_enabled` (debug builds, `--sandbox`, or brow
 | --- | --- | --- |
 | Action bar | Top-left (compact ~780px) | Native: Host, Runner/Hunter icon buttons, quick start, continue, skip, reset; Headless **on by default**; Godot path. Browser host: Runner/Hunter bot requests, quick start, continue, skip, reset |
 | Tests | Top-right (native only) | Open lobby / roles / game alone |
-| Status | Bottom-right | Phase, peers, last action text |
+| Status + game log | Bottom-left, directly above the minimap | Phase, peers, last action text, scrolling game log |
 
-Match HUD status sits **top-center under** the action bar so it does not collide with sandbox chrome. Minimap stays bottom-left; selection strip bottom-center.
+Every panel has a **Minimize / Expand** button in its header; a minimized panel shrinks to its header and keeps its anchor corner. `G` (god mode) minimizes all panels at once, or expands them all again when everything is already minimized. `G` is ignored while the Godot-path field has focus.
+
+Match HUD status sits **top-center under** the action bar so it does not collide with sandbox chrome. Minimap and the sandbox log stack bottom-left; selection strip bottom-center; the Runner building panel owns the bottom-right corner.
 
 ---
 

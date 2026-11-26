@@ -2,11 +2,18 @@ extends Node
 ## Debug panel for local multiplayer and the dedicated-server browser host.
 ## Hidden for bots, headless runs, and non-host browser clients.
 ##
-## Layout: compact action bar top-left, native tests top-right, status bottom-right.
-## Leaves the center and bottom-left free for lobby / match HUD / minimap.
+## Layout: compact action bar top-left, native tests top-right, status + game log
+## bottom-left directly above the minimap. The bottom-right corner belongs to the
+## Runner's building panel. Every panel has a Minimize button, and `G` (god mode)
+## minimizes / expands all of them at once.
 
 const RUNNER_ICON := preload("res://assets/sprites/units/Player_1.png")
 const HUNTER_ICON := preload("res://assets/sprites/units/Enemy_1.png")
+
+## Height of a minimized panel: just its header row plus the panel margins.
+const COLLAPSED_HEIGHT := 48.0
+## Gap between the log panel and the minimap below it (minimap top edge is at -162).
+const LOG_BOTTOM_OFFSET := -178.0
 
 var _status: Label
 var _state: Label
@@ -25,6 +32,8 @@ var _is_web_client := false
 var _runner_count := 0
 var _hunter_count := 0
 var _log_listener: Callable
+## One entry per minimizable panel: panel, button, hidden nodes, expanded offsets, state.
+var _collapsibles: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -69,6 +78,20 @@ func _process(_delta: float) -> void:
 	_refresh()
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if _collapsibles.is_empty() or not event is InputEventKey:
+		return
+	var key := event as InputEventKey
+	if not key.pressed or key.echo or key.physical_keycode != KEY_G:
+		return
+	if _root != null and not _root.visible:
+		return
+	if get_viewport().gui_get_focus_owner() is LineEdit:
+		return
+	_toggle_all_collapsed()
+	get_viewport().set_input_as_handled()
+
+
 func _build_action_bar(root: Control) -> void:
 	var bar := PanelContainer.new()
 	bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -105,21 +128,30 @@ func _build_action_bar(root: Control) -> void:
 	_skip_button.tooltip_text = "Skip Runner preparation and spawn the Hunter."
 	_reset_button = _add_text_button(top, "Reset", _reset_match)
 
-	if _is_web_client:
-		return
-	var bottom := HBoxContainer.new()
-	bottom.add_theme_constant_override("separation", 8)
-	col.add_child(bottom)
+	# Everything except the title folds away when minimized.
+	var hidden: Array[Control] = []
+	for child in top.get_children():
+		if child != title:
+			hidden.append(child as Control)
+	var toggle := _add_toggle_button(top)
 
-	_headless.text = "Headless"
-	_headless.button_pressed = true
-	_headless.tooltip_text = "Launch bots without a window"
-	bottom.add_child(_headless)
+	if not _is_web_client:
+		var bottom := HBoxContainer.new()
+		bottom.add_theme_constant_override("separation", 8)
+		col.add_child(bottom)
+		hidden.append(bottom)
 
-	_bin_edit.placeholder_text = "Godot executable"
-	_bin_edit.text = OS.get_executable_path()
-	_bin_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bottom.add_child(_bin_edit)
+		_headless.text = "Headless"
+		_headless.button_pressed = true
+		_headless.tooltip_text = "Launch bots without a window"
+		bottom.add_child(_headless)
+
+		_bin_edit.placeholder_text = "Godot executable"
+		_bin_edit.text = OS.get_executable_path()
+		_bin_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bottom.add_child(_bin_edit)
+
+	_register_collapsible(bar, toggle, hidden, 200.0)
 
 
 func _build_tests_panel(root: Control) -> void:
@@ -137,25 +169,35 @@ func _build_tests_panel(root: Control) -> void:
 	box.add_theme_constant_override("separation", 6)
 	panel.add_child(box)
 
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	box.add_child(header)
+
 	var title := Label.new()
 	title.text = "Tests"
 	title.add_theme_font_size_override("font_size", 16)
 	title.add_theme_color_override("font_color", Color(0.95, 0.82, 0.35))
-	box.add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+	var toggle := _add_toggle_button(header)
 
-	_add_text_button(box, "Lobby", _test_lobby)
-	_add_text_button(box, "Roles", _test_selection)
-	_add_text_button(box, "Game", _test_game)
+	var hidden: Array[Control] = [
+		_add_text_button(box, "Lobby", _test_lobby),
+		_add_text_button(box, "Roles", _test_selection),
+		_add_text_button(box, "Game", _test_game),
+	]
+	_register_collapsible(panel, toggle, hidden)
 
 
 func _build_status_panel(root: Control) -> void:
-	# Bottom-right keeps minimap (bottom-left) and selection (bottom-center) clear.
+	# Bottom-left, stacked directly above the minimap. Bottom-right is the building panel.
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	panel.offset_left = -420.0
-	panel.offset_top = -280.0
-	panel.offset_right = -16.0
-	panel.offset_bottom = -16.0
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.offset_left = 16.0
+	panel.offset_top = LOG_BOTTOM_OFFSET - 264.0
+	panel.offset_right = 420.0
+	panel.offset_bottom = LOG_BOTTOM_OFFSET
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.06, 0.07, 0.09, 0.85)))
 	root.add_child(panel)
@@ -169,15 +211,21 @@ func _build_status_panel(root: Control) -> void:
 	_peers.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.add_theme_color_override("font_color", Color(0.75, 0.85, 0.95))
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	box.add_child(header)
+	var log_title := Label.new()
+	log_title.text = "Game log"
+	log_title.add_theme_font_size_override("font_size", 14)
+	log_title.add_theme_color_override("font_color", Color(0.95, 0.82, 0.35))
+	log_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(log_title)
+	var toggle := _add_toggle_button(header)
+
 	box.add_child(_state)
 	box.add_child(_peers)
 	box.add_child(_status)
-
-	var log_title := Label.new()
-	log_title.text = "Log"
-	log_title.add_theme_font_size_override("font_size", 14)
-	log_title.add_theme_color_override("font_color", Color(0.95, 0.82, 0.35))
-	box.add_child(log_title)
 
 	_log_scroll = ScrollContainer.new()
 	_log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -196,6 +244,78 @@ func _build_status_panel(root: Control) -> void:
 	_log_view.add_theme_font_size_override("normal_font_size", 12)
 	_log_view.add_theme_color_override("default_color", Color(0.78, 0.86, 0.92))
 	_log_scroll.add_child(_log_view)
+
+	_register_collapsible(panel, toggle, [_state, _peers, _status, _log_scroll], 200.0)
+
+
+func _add_toggle_button(parent: Node) -> Button:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(84, 28)
+	# No focus, so Space / Enter never re-trigger it after a click.
+	button.focus_mode = Control.FOCUS_NONE
+	parent.add_child(button)
+	return button
+
+
+## Makes `panel` minimizable. `hidden` are the nodes that fold away; the header (with the
+## toggle button) stays. A minimized panel keeps its anchor corner and shrinks toward it,
+## to `collapsed_width` wide (or its old width when 0) and COLLAPSED_HEIGHT tall.
+func _register_collapsible(
+	panel: Control, button: Button, hidden: Array, collapsed_width := 0.0
+) -> void:
+	var entry := {
+		"panel": panel,
+		"button": button,
+		"hidden": hidden,
+		"width": collapsed_width,
+		"left": panel.offset_left,
+		"top": panel.offset_top,
+		"right": panel.offset_right,
+		"bottom": panel.offset_bottom,
+		"collapsed": false,
+	}
+	_collapsibles.append(entry)
+	button.pressed.connect(func() -> void:
+		SoundManager.play_ui()
+		_set_collapsed(entry, not bool(entry["collapsed"]))
+	)
+	_set_collapsed(entry, false)
+
+
+func _set_collapsed(entry: Dictionary, collapsed: bool) -> void:
+	entry["collapsed"] = collapsed
+	var panel: Control = entry["panel"]
+	var button: Button = entry["button"]
+	for node in entry["hidden"]:
+		(node as Control).visible = not collapsed
+	panel.offset_left = entry["left"]
+	panel.offset_top = entry["top"]
+	panel.offset_right = entry["right"]
+	panel.offset_bottom = entry["bottom"]
+	if collapsed:
+		if panel.anchor_top >= 1.0:
+			panel.offset_top = panel.offset_bottom - COLLAPSED_HEIGHT
+		else:
+			panel.offset_bottom = panel.offset_top + COLLAPSED_HEIGHT
+		var width: float = entry["width"]
+		if width > 0.0:
+			if panel.anchor_left >= 1.0:
+				panel.offset_left = panel.offset_right - width
+			else:
+				panel.offset_right = panel.offset_left + width
+	button.text = "Expand" if collapsed else "Minimize"
+	button.tooltip_text = "%s panel (G toggles all)" % ("Expand" if collapsed else "Minimize")
+
+
+## `G` (god mode): if anything is open, minimize everything; otherwise expand everything.
+func _toggle_all_collapsed() -> void:
+	var any_open := false
+	for entry in _collapsibles:
+		if not bool(entry["collapsed"]):
+			any_open = true
+			break
+	for entry in _collapsibles:
+		_set_collapsed(entry, any_open)
 
 
 func _panel_style(bg: Color) -> StyleBoxFlat:

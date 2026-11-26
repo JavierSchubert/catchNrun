@@ -40,10 +40,13 @@ func _refresh() -> void:
 		timer = " | hunter is in the match"
 	elif GameManager.phase == GameManager.Phase.ENDED:
 		timer = " | match over"
+	var controls := "LMB select | RMB command own unit | C centers on you"
+	if LaunchOptions.sandbox_enabled:
+		controls += " | G toggles the debug panels"
 	var lines := [
 		"%s%s" % [GameManager.phase_label(), timer],
 		_local_unit_text(),
-		"LMB select | RMB command own unit | C centers on you",
+		controls,
 	]
 	if not _winner.is_empty():
 		lines.append("%s team wins" % _winner.capitalize())

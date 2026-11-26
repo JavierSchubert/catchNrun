@@ -239,6 +239,10 @@ Left-click on the **minimap** also recenters the camera on the corresponding wor
 
 Eliminations and other roster updates must **not** auto-recenter the camera. A free camera stays where the player left it until `C`, a minimap click, or match start.
 
+### 1.5. Debug panels (`G`)
+
+Only when the sandbox is enabled: `G` minimizes all sandbox panels (action bar, tests, game log), or expands them again when all are minimized. Each panel also has its own Minimize button. See `ui_audio.README.md` §6.
+
 ---
 
 ## 2. Camera
