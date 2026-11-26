@@ -131,6 +131,18 @@ theme_override_styles/hover = ExtResource("6_accent_hover")
 theme_override_styles/pressed = ExtResource("5_accent")
 text = "Join local"
 
+[node name="SandboxButton" type="Button" parent="Center/Card/Margin/Root/ConnectBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+tooltip_text = "Play a Runner and a Hunter alone to try out their abilities. Click a character to switch."
+theme_override_colors/font_color = Color(0.95, 0.95, 0.92, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_styles/normal = ExtResource("7_normal")
+theme_override_styles/hover = ExtResource("7_normal")
+theme_override_styles/pressed = ExtResource("7_normal")
+text = "Sandbox"
+
 [node name="LobbyBox" type="VBoxContainer" parent="Center/Card/Margin/Root"]
 unique_name_in_owner = true
 visible = false

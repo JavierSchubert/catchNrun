@@ -25,6 +25,7 @@ const ICON_PATHS := {
 	StatBlock.Stat.CRITICAL_CHANCE: "res://assets/sprites/stats/clean/crit_chance.png",
 	StatBlock.Stat.RANGED_DAMAGE: "res://assets/sprites/stats/attack_range.png",
 	StatBlock.Stat.MAGIC_DAMAGE: "res://assets/sprites/stats/magic.png",
+	StatBlock.Stat.ATTACK_RANGE: "res://assets/sprites/stats/attack_range.png",
 }
 
 const DISPLAY_NAMES := {
@@ -40,6 +41,7 @@ const DISPLAY_NAMES := {
 	StatBlock.Stat.MAGIC_DAMAGE: "Magic Damage",
 	StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER: "Crit Damage",
 	StatBlock.Stat.LIFESTEAL_AMOUNT: "Lifesteal Amount",
+	StatBlock.Stat.ATTACK_RANGE: "Attack Range",
 }
 
 const _CHANCE_STATS := {

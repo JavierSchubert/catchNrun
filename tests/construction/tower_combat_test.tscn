@@ -1,0 +1,79 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tests/construction/tower_combat_test.gd" id="1_test"]
+[ext_resource type="Script" path="res://src/construction/construction_manager.gd" id="2_construction"]
+
+[node name="TowerCombatTest" type="Node2D"]
+script = ExtResource("1_test")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+unique_name_in_owner = true
+zoom = Vector2(0.8, 0.8)
+
+[node name="BuildingsRoot" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="BuildingSpawner" type="MultiplayerSpawner" parent="."]
+unique_name_in_owner = true
+spawn_path = NodePath("../BuildingsRoot")
+
+[node name="ConstructionManager" type="Node" parent="."]
+script = ExtResource("2_construction")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Help" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 760.0
+offset_bottom = 90.0
+theme_override_font_sizes/font_size = 14
+text = "Tower combat test
+The dummy Hunter patrols in and out of the Tower's range. Watch a projectile leave the
+Tower and land before the HP drops. Use the buttons to apply one upgrade pick at a time."
+
+[node name="StatsLabel" type="Label" parent="HUD"]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 110.0
+offset_right = 420.0
+offset_bottom = 370.0
+theme_override_font_sizes/font_size = 15
+text = "Tower"
+
+[node name="Picks" type="VBoxContainer" parent="HUD"]
+offset_left = 16.0
+offset_top = 390.0
+offset_right = 236.0
+offset_bottom = 560.0
+theme_override_constants/separation = 6
+
+[node name="PickDamageButton" type="Button" parent="HUD/Picks"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 30)
+layout_mode = 2
+text = "Pick: Damage"
+
+[node name="PickSpeedButton" type="Button" parent="HUD/Picks"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 30)
+layout_mode = 2
+text = "Pick: Attack Speed"
+
+[node name="PickCritButton" type="Button" parent="HUD/Picks"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 30)
+layout_mode = 2
+text = "Pick: Crit"
+
+[node name="PickRangeButton" type="Button" parent="HUD/Picks"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 30)
+layout_mode = 2
+text = "Pick: Range"
+
+[node name="HealButton" type="Button" parent="HUD/Picks"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 30)
+layout_mode = 2
+text = "Heal dummy"

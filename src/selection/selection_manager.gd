@@ -122,6 +122,9 @@ func _handle_mouse_button(click: InputEventMouseButton) -> void:
 		return
 	if click.button_index != MOUSE_BUTTON_LEFT:
 		return
+	if _is_build_mode_armed():
+		## The building UI owns LMB (placement) while a structure is armed.
+		return
 	if click.pressed:
 		if attack_move_armed:
 			_issue_armed_attack_move()
@@ -144,6 +147,11 @@ func _handle_mouse_button(click: InputEventMouseButton) -> void:
 		return
 	_apply_point_selection(_press_world)
 	get_viewport().set_input_as_handled()
+
+
+func _is_build_mode_armed() -> bool:
+	var ui := get_tree().get_first_node_in_group("building_ui")
+	return ui != null and ui.has_method("is_armed") and bool(ui.call("is_armed"))
 
 
 func _can_arm_attack_move() -> bool:
@@ -234,12 +242,31 @@ func _set_hovered(entity: Node) -> void:
 func _set_selected(entity: Node) -> void:
 	if selected != null and is_instance_valid(selected) and selected.has_method("set_selection_selected"):
 		selected.call("set_selection_selected", false)
+	_follow_sandbox_character(entity)
 	selected = entity
 	if selected != null and selected.has_method("set_selection_selected"):
 		selected.call("set_selection_selected", true)
 	_disarm_attack_move()
 	_refresh_circle_states()
 	selection_changed.emit(selected)
+
+
+## Sandbox: selecting one of the two test characters also hands the controls to it, so the
+## HUD, build panel and RMB commands all follow the selection. Foreign entities keep the
+## current character.
+func _follow_sandbox_character(entity: Node) -> void:
+	if not GameManager.sandbox_mode or not entity is Unit:
+		return
+	var unit := entity as Unit
+	if not GameManager.is_sandbox_character(unit.peer_id) or not unit.is_alive():
+		return
+	if unit.peer_id == GameManager.local_peer_id():
+		return
+	GameManager.set_sandbox_active(unit.peer_id)
+	## Own / enemy ring colours are relative to the character in play.
+	for node in get_tree().get_nodes_in_group(CLICKABLE_GROUP):
+		if node != entity and node.has_method("refresh_selection_visual"):
+			node.call("refresh_selection_visual")
 
 
 func _refresh_circle_states() -> void:
@@ -304,9 +331,7 @@ func _nearest_entity(candidates: Array, world_pos: Vector2) -> Node:
 
 
 func _local_peer_id() -> int:
-	if multiplayer.has_multiplayer_peer():
-		return multiplayer.get_unique_id()
-	return 1
+	return GameManager.local_peer_id()
 
 
 func _auto_select_local_unit() -> void:

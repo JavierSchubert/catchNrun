@@ -55,6 +55,9 @@ var _attack_flash_remaining := 0.0
 var _move_chain: Array[Vector2] = []
 ## Local-only green dotted path / waypoint rings for the commanding player.
 var _chain_visual: MoveChainVisual
+## Host-only. Own structure this Runner is walking to / channelling `repair` on.
+var _repair_target: Building = null
+var _repair_repath_in := 0.0
 
 
 func _enter_tree() -> void:
@@ -261,9 +264,7 @@ func _is_net_server() -> bool:
 
 
 func _local_unique_id() -> int:
-	if _multiplayer_ready() and multiplayer.has_multiplayer_peer():
-		return multiplayer.get_unique_id()
-	return 1
+	return GameManager.local_peer_id()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -280,6 +281,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	var click := event as InputEventMouseButton
 	if not click.pressed or click.button_index != MOUSE_BUTTON_RIGHT:
 		return
+	if _build_mode_armed():
+		## The building UI owns RMB (cancel placement) while a structure is armed.
+		return
 	var world_pos := get_global_mouse_position()
 	var chain_modifier_held := SelectionManager.is_chain_modifier_held(click)
 	if chain_modifier_held:
@@ -287,11 +291,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	var target := _clickable_enemy_at(world_pos)
+	## An enemy only outranks the structure for a unit that can actually attack it: a Runner
+	## repairing a wall under attack clicks right next to the Hunter.
+	var structure: Building = null
+	if target == null or not can_attack():
+		structure = _repairable_structure_at(world_pos)
 	if target != null and can_attack():
 		## Attack only — cancels any active move chain.
 		_clear_chain_visual()
 		_request_attack(target)
 		_show_attack_click_marker_on(target)
+	elif structure != null:
+		## Runner RMB on an own damaged structure = repair (RepairSkill).
+		_clear_chain_visual()
+		_request_repair(structure)
+		MoveClickMarker.spawn_on(structure, MoveClickMarker.REPAIR_COLOR)
 	else:
 		## Ground RMB cancels chain / attack and walks to the click.
 		_clear_chain_visual()
@@ -315,6 +329,7 @@ func _physics_process(delta: float) -> void:
 			movement.clear_order()
 			attack.clear_target()
 			_move_chain.clear()
+			_repair_target = null
 		else:
 			_server_combat_tick(delta)
 			if not movement.has_order():
@@ -392,6 +407,7 @@ func _server_combat_tick(delta: float) -> void:
 	attack.tick(delta)
 	_regen(delta)
 	if config.role != RoleConfig.Role.HUNTER:
+		server_repair_tick(delta)
 		return
 	if GameManager.phase != GameManager.Phase.HUNTER_ACTIVE:
 		return
@@ -401,6 +417,11 @@ func _server_combat_tick(delta: float) -> void:
 	## Shift-click chains always outrank in-range / auto-acquire combat.
 	if not _move_chain.is_empty():
 		_resume_move_chain_if_needed()
+		return
+
+	## Sandbox: the Hunter you are not playing stands down instead of hunting your Runner.
+	## It still finishes an explicit order you gave it before switching away.
+	if _sandbox_standing_down() and attack.explicit_target == null and not attack.attack_move_active:
 		return
 
 	var target := attack.pick_target(global_position, _enemy_candidates())
@@ -421,13 +442,27 @@ func _server_combat_tick(delta: float) -> void:
 	_intent = Vector2.ZERO
 	if not attack.can_swing():
 		return
-	_perform_melee(target as Unit)
+	_perform_melee(target)
 
 
-func _perform_melee(target: Unit) -> void:
-	if target == null or not target.is_attackable():
+func _sandbox_standing_down() -> bool:
+	return GameManager.sandbox_mode and peer_id != GameManager.sandbox_active_peer
+
+
+## Target may be an enemy Unit or (Hunter only) a Runner-owned Building (src/buildings/).
+func _perform_melee(target: Node2D) -> void:
+	if target == null or not target.has_method("is_attackable") or not bool(target.call("is_attackable")):
 		attack.clear_target()
 		return
+	if target is Unit:
+		_perform_melee_on_unit(target as Unit)
+	elif target is Building:
+		_perform_melee_on_building(target as Building)
+	else:
+		attack.mark_swung()
+
+
+func _perform_melee_on_unit(target: Unit) -> void:
 	var result := CombatDamage.resolve_melee(stats, target.stats)
 	attack.mark_swung()
 	if result.damage <= 0.0:
@@ -435,6 +470,8 @@ func _perform_melee(target: Unit) -> void:
 	var max_health := target.stats.final_value(StatBlock.Stat.MAX_HEALTH)
 	var applied: float = target.health.take_damage(result.damage, max_health)
 	target.sync_health = target.health.current
+	if role() == RoleConfig.Role.HUNTER:
+		GameManager.award_damage_crystals(peer_id, applied)
 	GameLog.info(
 		"COMBAT",
 		"%s hit %s for %.1f%s" % [
@@ -450,6 +487,34 @@ func _perform_melee(target: Unit) -> void:
 		sync_health = health.current
 
 
+func _perform_melee_on_building(target: Building) -> void:
+	attack.mark_swung()
+	var raw := stats.final_value(StatBlock.Stat.MELEE_DAMAGE)
+	if raw <= 0.0:
+		return
+	var critical := false
+	if randf() < stats.final_value(StatBlock.Stat.CRITICAL_CHANCE):
+		raw *= stats.final_value(StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER)
+		critical = true
+	var applied := target.apply_damage(raw)
+	if role() == RoleConfig.Role.HUNTER:
+		GameManager.award_damage_crystals(peer_id, applied)
+	GameLog.info(
+		"COMBAT",
+		"%s hit building %s for %.1f%s" % [
+			name_label.text if name_label else str(peer_id),
+			target.name,
+			applied,
+			" (crit)" if critical else "",
+		]
+	)
+	if applied > 0.0 and randf() < stats.final_value(StatBlock.Stat.LIFESTEAL_CHANCE):
+		var lifesteal := stats.final_value(StatBlock.Stat.LIFESTEAL_AMOUNT)
+		var own_max := stats.final_value(StatBlock.Stat.MAX_HEALTH)
+		health.heal(lifesteal, own_max)
+		sync_health = health.current
+
+
 func _regen(delta: float) -> void:
 	var regen := stats.final_value(StatBlock.Stat.HEALTH_REGENERATION)
 	if regen <= 0.0 or not health.is_alive():
@@ -458,10 +523,38 @@ func _regen(delta: float) -> void:
 	health.heal(regen * delta, maximum)
 
 
+## Host-only, Runner only. Walks toward the repair target until in reach, then channels
+## RepairSkill.DEF.value_per_second; ends on its own once the structure is full or invalid.
+func server_repair_tick(delta: float) -> void:
+	if _repair_target == null:
+		return
+	if not is_instance_valid(_repair_target) or not RepairSkill.can_repair(self, _repair_target):
+		_repair_target = null
+		return
+	if not RepairSkill.in_range(self, _repair_target):
+		## Re-aim on a fixed cadence, order or not: a straight-line order blocked by another
+		## structure never finishes on its own.
+		_repair_repath_in = maxf(_repair_repath_in - delta, 0.0)
+		if _repair_repath_in <= 0.0:
+			_repair_repath_in = 0.5
+			movement.order_move(
+				global_position, _clamp_map_position(RepairSkill.approach_point(self, _repair_target))
+			)
+		return
+	movement.clear_order()
+	_intent = Vector2.ZERO
+	_repair_target.repair(RepairSkill.DEF.value_per_second * delta)
+
+
+func is_repairing() -> bool:
+	return _repair_target != null and is_instance_valid(_repair_target)
+
+
 func _on_died() -> void:
 	if _eliminated:
 		return
 	_eliminated = true
+	_repair_target = null
 	movement.clear_order()
 	attack.clear_target()
 	_intent = Vector2.ZERO
@@ -495,6 +588,14 @@ func _selection_manager() -> SelectionManager:
 	if tree == null:
 		return null
 	return tree.get_first_node_in_group("selection_manager") as SelectionManager
+
+
+func _build_mode_armed() -> bool:
+	var tree := get_tree()
+	if tree == null:
+		return false
+	var ui := tree.get_first_node_in_group("building_ui")
+	return ui != null and ui.has_method("is_armed") and bool(ui.call("is_armed"))
 
 
 func _notify_selection_manager_ready() -> void:
@@ -556,6 +657,7 @@ func _request_move(destination: Vector2, clear_attack := true) -> void:
 		return
 	if _is_net_server():
 		_move_chain.clear()
+		_repair_target = null
 		if clear_attack:
 			attack.clear_target()
 			attack.clear_attack_move()
@@ -575,6 +677,7 @@ func _request_chain_append(destination: Vector2) -> void:
 
 
 func _server_chain_append(destination: Vector2) -> void:
+	_repair_target = null
 	attack.clear_target()
 	attack.clear_attack_move()
 	var was_empty := _move_chain.is_empty()
@@ -590,6 +693,7 @@ func _request_attack_move(destination: Vector2) -> void:
 	var clamped := _clamp_map_position(destination)
 	if _is_net_server():
 		_move_chain.clear()
+		_repair_target = null
 		attack.begin_attack_move(clamped)
 		movement.order_move(global_position, clamped)
 	else:
@@ -687,11 +791,65 @@ func _request_attack(target: Unit) -> void:
 		return
 	if _is_net_server():
 		_move_chain.clear()
+		_repair_target = null
 		attack.set_explicit_target(target)
 		if not attack.in_attack_range(global_position, target):
 			movement.order_move(global_position, target.global_position)
 	else:
 		_submit_attack_target.rpc_id(1, target.peer_id)
+
+
+func _request_repair(structure: Building) -> void:
+	if not _multiplayer_ready() or structure == null:
+		return
+	if _is_net_server():
+		_server_begin_repair(structure)
+	else:
+		_submit_repair_target.rpc_id(1, structure.get_path())
+
+
+## Host-only. Re-validates through RepairSkill: the client's check is a hint, not trust.
+## A rejected repair (healed / destroyed meanwhile) still honours the click as a move, so the
+## green marker the client already showed never leaves the previous order running.
+func _server_begin_repair(structure: Building) -> void:
+	_move_chain.clear()
+	attack.clear_target()
+	attack.clear_attack_move()
+	_repair_target = null
+	if structure == null or not is_instance_valid(structure):
+		## Destroyed between click and RPC: stop rather than keep the previous order.
+		movement.clear_order()
+		_intent = Vector2.ZERO
+		return
+	if not RepairSkill.can_repair(self, structure):
+		movement.order_move(global_position, _clamp_map_position(structure.global_position))
+		return
+	_repair_target = structure
+	_repair_repath_in = 0.0
+	if RepairSkill.in_range(self, structure):
+		movement.clear_order()
+		return
+	_repair_repath_in = 0.5
+	movement.order_move(global_position, _clamp_map_position(RepairSkill.approach_point(self, structure)))
+
+
+## Runner RMB target: the nearest own structure under the cursor that RepairSkill accepts.
+## Anything else (full HP, still being built, someone else's) falls through to a move.
+func _repairable_structure_at(world_pos: Vector2) -> Building:
+	if role() != RoleConfig.Role.RUNNER:
+		return null
+	var best: Building = null
+	var best_distance := INF
+	for node in get_tree().get_nodes_in_group("buildings"):
+		var structure := node as Building
+		if structure == null or not RepairSkill.can_repair(self, structure):
+			continue
+		var hit_radius := maxf(structure.selection_hit_radius(), 24.0)
+		var distance := world_pos.distance_to(structure.global_position)
+		if distance <= hit_radius and distance < best_distance:
+			best_distance = distance
+			best = structure
+	return best
 
 
 func _clickable_enemy_at(world_pos: Vector2) -> Unit:
@@ -724,6 +882,11 @@ func _enemy_candidates() -> Array[Node2D]:
 		if config.role == RoleConfig.Role.RUNNER and other.role() != RoleConfig.Role.HUNTER:
 			continue
 		result.append(other)
+	if config.role == RoleConfig.Role.HUNTER:
+		## Runner structures (src/buildings/) are also valid Hunter targets.
+		for node in get_tree().get_nodes_in_group("buildings"):
+			if node is Node2D and node.has_method("is_attackable") and bool(node.call("is_attackable")):
+				result.append(node as Node2D)
 	return result
 
 
@@ -768,6 +931,7 @@ func _submit_move_order(destination: Vector2, clear_attack := true) -> void:
 	if not is_alive() or not _movement_allowed():
 		return
 	_move_chain.clear()
+	_repair_target = null
 	if clear_attack:
 		attack.clear_target()
 		attack.clear_attack_move()
@@ -802,6 +966,7 @@ func _submit_attack_target(target_peer_id: int) -> void:
 	if not target.is_attackable():
 		return
 	_move_chain.clear()
+	_repair_target = null
 	attack.set_explicit_target(target)
 	if not attack.in_attack_range(global_position, target):
 		movement.order_move(global_position, target.global_position)
@@ -818,9 +983,21 @@ func _submit_attack_move(destination: Vector2) -> void:
 	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
 		return
 	_move_chain.clear()
+	_repair_target = null
 	var clamped := _clamp_map_position(destination)
 	attack.begin_attack_move(clamped)
 	movement.order_move(global_position, clamped)
+
+
+@rpc("any_peer", "reliable")
+func _submit_repair_target(structure_path: NodePath) -> void:
+	if not _is_net_server():
+		return
+	if GameManager.sender_id(multiplayer) != peer_id:
+		return
+	if not is_alive() or not _movement_allowed():
+		return
+	_server_begin_repair(get_node_or_null(structure_path) as Building)
 
 
 @rpc("any_peer", "unreliable_ordered")

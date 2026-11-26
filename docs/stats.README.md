@@ -98,8 +98,16 @@ The initial character stat system supports the following stats.
 | `critical_damage_multiplier` | Critical Hit | 1.50 | Damage multiplier applied to critical hits |
 | `lifesteal_chance` | Lifesteal | 0.10 | Probability that lifesteal is triggered |
 | `lifesteal_amount` | Lifesteal | 5 | Health restored when lifesteal is triggered |
+| `attack_speed` | Attack | 1.25 | Attacks per second; the attack interval is `1 / attack_speed` |
+| `attack_range` | Attack | 0 | Reach of an attack in pixels; read by Towers. Units ignore it and use `RoleConfig.attack_range` |
 
 All supported stats use the standard stat calculation unless explicitly documented otherwise.
+
+`StatBlock.Stat` is **append-only**: its ordinals are serialized in `.tres` files, so a new stat goes at the end of the enum, never in between.
+
+Towers use the same system: each Tower owns a `StatSheet` seeded from `tower_base_stats` in `tower_def.tres`, and its upgrade picks are ordinary `StatModifier`s (`construction.README.md` §5). Only `RANGED_DAMAGE`, `ATTACK_SPEED`, `ATTACK_RANGE`, and the two crit stats affect a Tower; structure HP is not taken from `max_health` but from `BuildingDef.hp_for_level()`.
+
+Units currently read their real reach from `RoleConfig.attack_range` and report `attack_range = 0` through their sheet.
 
 ---
 

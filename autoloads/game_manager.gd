@@ -13,19 +13,35 @@ signal match_finished(winner_team: String)
 signal all_players_loaded
 signal auto_host_failed(error_code: Error)
 signal test_bot_request_completed(success: bool, message: String)
+## Sandbox only: the locally played character changed (see local_peer_id()).
+signal sandbox_character_changed(peer_id: int)
 
 enum Phase { LOBBY, ROLE_SELECTION, RUNNER_PREPARATION, HUNTER_ACTIVE, ENDED }
 
 const ANY_ROLE := -1
 const TEST_PLAYER_ID := 1000
 const SPRITE_COUNT := 5
+## Crystal income (mine ticks, Hunter damage) only replicates this often. Spends and
+## roster/phase changes bypass the throttle and flush straight away.
+const PLAYERS_SYNC_INTERVAL := 0.25
+## Single-player sandbox (start menu): one local player owns BOTH roster entries and plays
+## whichever character is currently selected. Offline only, so peer 1 is the server.
+const SANDBOX_RUNNER_ID := 1
+const SANDBOX_HUNTER_ID := TEST_PLAYER_ID
+## Test budget for both sandbox characters, so every build / upgrade can be tried.
+const SANDBOX_CRYSTALS := 100000.0
 
 var resolved_hunter_id := -1
+## True while the start-menu sandbox is running. Cleared by _reset_state().
+var sandbox_mode := false
+## Sandbox only: the roster id of the character the local player is currently playing.
+var sandbox_active_peer := SANDBOX_RUNNER_ID
 var _next_test_player_id := TEST_PLAYER_ID
 var session_host_id := 0
 var test_bots_enabled := false
 
 var config: MatchConfig
+var economy_config: EconomyConfig
 var phase := Phase.LOBBY
 ## peer id -> {name, preferred_role, role, sprite_index, alive}. Role is assigned when the match starts.
 var players: Dictionary = {}
@@ -44,6 +60,8 @@ var _loaded_peers: Dictionary = {}
 var _announced_loaded := false
 var _test_bot_processes: Dictionary = {}
 var _next_test_bot_number := 1
+var _players_dirty := false
+var _players_sync_timer := 0.0
 
 
 func _ready() -> void:
@@ -51,6 +69,10 @@ func _ready() -> void:
 	if config == null:
 		push_error("Match config is missing at res://src/match/match_config.tres")
 		config = MatchConfig.new()
+	economy_config = load("res://src/economy/economy_config.tres") as EconomyConfig
+	if economy_config == null:
+		push_error("Economy config is missing at res://src/economy/economy_config.tres")
+		economy_config = EconomyConfig.new()
 	head_start_duration = config.runner_head_start_duration
 	test_bots_enabled = LaunchOptions.server_mode
 	if LaunchOptions.head_start >= 0.0:
@@ -73,6 +95,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_tick_players_sync(delta)
 	if phase != Phase.RUNNER_PREPARATION:
 		return
 	time_left = maxf(time_left - delta, 0.0)
@@ -184,7 +207,8 @@ func eliminate_player(peer_id: int) -> void:
 
 
 func _check_match_end() -> void:
-	if not multiplayer.is_server():
+	if not multiplayer.is_server() or sandbox_mode:
+		## The sandbox never ends on its own: a fallen character just stays down until Restart.
 		return
 	if phase != Phase.HUNTER_ACTIVE and phase != Phase.RUNNER_PREPARATION:
 		return
@@ -205,7 +229,35 @@ func sender_id(mp: MultiplayerAPI) -> int:
 	## Peer that sent the current RPC. Also returns the right id when the host
 	## calls an RPC on itself.
 	var id := mp.get_remote_sender_id()
-	return id if id != 0 else mp.get_unique_id()
+	return id if id != 0 else _own_peer_id(mp)
+
+
+## The roster id the local player acts as: every "is this mine?" check in the HUD,
+## selection, camera, construction and unit input goes through here. Outside the sandbox
+## it is simply the network peer id (1 when there is no peer, e.g. in isolated tests).
+func local_peer_id() -> int:
+	return _own_peer_id(multiplayer)
+
+
+func _own_peer_id(mp: MultiplayerAPI) -> int:
+	if sandbox_mode and players.has(sandbox_active_peer):
+		return sandbox_active_peer
+	if mp != null and mp.has_multiplayer_peer():
+		return mp.get_unique_id()
+	return 1
+
+
+func is_sandbox_character(peer_id: int) -> bool:
+	return sandbox_mode and (peer_id == SANDBOX_RUNNER_ID or peer_id == SANDBOX_HUNTER_ID)
+
+
+## Sandbox only: switch which character the local player controls.
+func set_sandbox_active(peer_id: int) -> void:
+	if not sandbox_mode or not players.has(peer_id) or peer_id == sandbox_active_peer:
+		return
+	sandbox_active_peer = peer_id
+	GameLog.info("SANDBOX", "now playing %s" % role_label(int(players[peer_id].get("role", ANY_ROLE))))
+	sandbox_character_changed.emit(peer_id)
 
 
 func note_unit_spawned(role: int) -> void:
@@ -392,6 +444,8 @@ static func test_bot_request_error(
 
 @rpc("authority", "call_local", "reliable")
 func _sync_players(raw_players: Dictionary) -> void:
+	## A full roster just went out / came in, so nothing is left pending.
+	_clear_players_dirty()
 	players = _normalize_players(raw_players)
 	resolved_hunter_id = _find_assigned_hunter(players)
 	players_changed.emit()
@@ -673,6 +727,10 @@ static func choose_hunter_id(roster: Dictionary, rng: RandomNumberGenerator = nu
 
 func _apply_preparation(raw_players: Dictionary, duration: float) -> void:
 	players = _normalize_players(raw_players)
+	for key in players.keys():
+		var entry: Dictionary = players[key]
+		entry["crystals"] = _starting_crystals()
+		players[key] = entry
 	resolved_hunter_id = _find_assigned_hunter(players)
 	time_left = duration
 	_loaded_peers.clear()
@@ -681,6 +739,7 @@ func _apply_preparation(raw_players: Dictionary, duration: float) -> void:
 	hunter_spawned = false
 	hunter_spawned_during_preparation = false
 	players_at_hunter_phase.clear()
+	_clear_players_dirty()
 	_set_phase(Phase.RUNNER_PREPARATION)
 	players_changed.emit()
 	GameLog.info("MATCH", "runner preparation started (%.1f s)" % duration)
@@ -777,6 +836,11 @@ func _reset_to_lobby() -> void:
 
 
 func _reset_to_lobby_local() -> void:
+	if sandbox_mode:
+		## The sandbox roster is synthetic: leaving it must not leave two phantom players behind.
+		players.clear()
+		sandbox_mode = false
+		sandbox_active_peer = SANDBOX_RUNNER_ID
 	for key in players.keys():
 		var entry: Dictionary = players[key]
 		entry.alive = true
@@ -804,6 +868,7 @@ func _new_player(player_name: String, preferred_role: int) -> Dictionary:
 		"role": RoleConfig.Role.RUNNER,
 		"sprite_index": 0,
 		"alive": true,
+		"crystals": _starting_crystals(),
 	}
 
 
@@ -818,11 +883,106 @@ func _normalize_players(raw_players: Dictionary) -> Dictionary:
 			"role": int(entry.get("role", RoleConfig.Role.RUNNER)),
 			"sprite_index": clampi(int(entry.get("sprite_index", 0)), 0, SPRITE_COUNT - 1),
 			"alive": bool(entry.get("alive", true)),
+			"crystals": float(entry.get("crystals", _starting_crystals())),
 		}
 	return normalized
 
 
+func _starting_crystals() -> float:
+	return economy_config.starting_crystals if economy_config != null else 0.0
+
+
+## --- Economy (docs/economy.README.md) -------------------------------------------------
+
+func crystals_for(peer_id: int) -> float:
+	if not players.has(peer_id):
+		return 0.0
+	return float(players[peer_id].get("crystals", 0.0))
+
+
+## Host-only. Returns false (and spends nothing) when the player cannot afford `amount`.
+func try_spend_crystals(peer_id: int, amount: float) -> bool:
+	if not multiplayer.is_server() or amount < 0.0 or not players.has(peer_id):
+		return false
+	if amount == 0.0:
+		return true
+	var entry: Dictionary = players[peer_id]
+	var current := float(entry.get("crystals", 0.0))
+	if current < amount:
+		return false
+	entry["crystals"] = current - amount
+	players[peer_id] = entry
+	## Spending is replicated immediately so the build UI never shows stale affordability.
+	_flush_players()
+	return true
+
+
+func grant_crystals(peer_id: int, amount: float) -> void:
+	if not multiplayer.is_server() or amount <= 0.0 or not players.has(peer_id):
+		return
+	var entry: Dictionary = players[peer_id]
+	entry["crystals"] = float(entry.get("crystals", 0.0)) + amount
+	players[peer_id] = entry
+	_mark_players_dirty()
+
+
+## Host-only. Turns damage the Hunter actually applied into Crystal income. The
+## damage -> Crystal rate lives here, not at the combat call site (docs/economy.README.md §3.1).
+func award_damage_crystals(peer_id: int, applied_damage: float) -> void:
+	if not multiplayer.is_server() or applied_damage <= 0.0:
+		return
+	var rate := economy_config.hunter_crystals_per_damage if economy_config != null else 0.0
+	if rate <= 0.0:
+		return
+	grant_crystals(peer_id, applied_damage * rate)
+
+
+# --- Roster replication throttle ------------------------------------------------------
+#
+# Income arrives in a steady trickle (every mine pays out on its mine_interval, the
+# Hunter earns on every hit). A full roster RPC per grant would be a storm, so
+# grants only raise a dirty flag and _process coalesces them into one reliable
+# _sync_players at most every PLAYERS_SYNC_INTERVAL seconds.
+
+func _mark_players_dirty() -> void:
+	_players_dirty = true
+
+
+func _tick_players_sync(delta: float) -> void:
+	if not _players_dirty:
+		return
+	_players_sync_timer += delta
+	if _players_sync_timer >= PLAYERS_SYNC_INTERVAL:
+		_flush_players()
+
+
+## Sends the roster now and drops any pending dirty state.
+func _flush_players() -> void:
+	_clear_players_dirty()
+	_broadcast_players()
+
+
+func _flush_players_if_dirty() -> void:
+	if _players_dirty:
+		_flush_players()
+
+
+## Called when the roster has just been replicated or replaced by some other path.
+func _clear_players_dirty() -> void:
+	_players_dirty = false
+	_players_sync_timer = 0.0
+
+
+func _broadcast_players() -> void:
+	if NetworkManager.is_online():
+		_sync_players.rpc(players)
+	else:
+		players_changed.emit()
+
+
 func _set_phase(new_phase: int) -> void:
+	## Make sure the phase change never lands on clients ahead of pending Crystal income.
+	_flush_players_if_dirty()
 	phase = new_phase as Phase
 	if new_phase == Phase.HUNTER_ACTIVE and players_at_hunter_phase.is_empty():
 		players_at_hunter_phase = _roster()
@@ -864,7 +1024,10 @@ func _phase_name(value: int) -> String:
 
 func _reset_state() -> void:
 	phase = Phase.LOBBY
+	sandbox_mode = false
+	sandbox_active_peer = SANDBOX_RUNNER_ID
 	players.clear()
+	_clear_players_dirty()
 	session_host_id = 0
 	_loaded_peers.clear()
 	_announced_loaded = false
@@ -904,3 +1067,39 @@ func prepare_game_test() -> void:
 	time_left = head_start_duration
 	_set_phase(Phase.RUNNER_PREPARATION)
 	players_changed.emit()
+
+
+## Start-menu sandbox: one Runner (peer 1, the local player) and one Hunter (peer 1000) share
+## the match scene. The Hunter's phase is already open, both are funded, and
+## sandbox_active_peer says which of the two the local player is currently playing.
+func prepare_sandbox() -> void:
+	_reset_state()
+	sandbox_mode = true
+	sandbox_active_peer = SANDBOX_RUNNER_ID
+	session_host_id = SANDBOX_RUNNER_ID
+	var runner := _new_player(local_player_name, RoleConfig.Role.RUNNER)
+	runner.role = RoleConfig.Role.RUNNER
+	runner.crystals = SANDBOX_CRYSTALS
+	players[SANDBOX_RUNNER_ID] = runner
+	var hunter := _new_player("Sandbox Hunter", RoleConfig.Role.HUNTER)
+	hunter.role = RoleConfig.Role.HUNTER
+	hunter.crystals = SANDBOX_CRYSTALS
+	players[SANDBOX_HUNTER_ID] = hunter
+	resolved_hunter_id = SANDBOX_HUNTER_ID
+	## The match scene only reports the local peer as loaded; the Hunter has no scene of its own.
+	_loaded_peers[SANDBOX_HUNTER_ID] = true
+	time_left = 0.0
+	_set_phase(Phase.HUNTER_ACTIVE)
+	players_changed.emit()
+	GameLog.info("SANDBOX", "sandbox prepared (Runner %d, Hunter %d)" % [SANDBOX_RUNNER_ID, SANDBOX_HUNTER_ID])
+
+
+## Fresh sandbox in the same match scene: both characters respawn, buildings are gone.
+func restart_sandbox() -> void:
+	prepare_sandbox()
+	get_tree().call_deferred("reload_current_scene")
+
+
+## Back to the start menu.
+func exit_sandbox() -> void:
+	reset_match()

@@ -17,6 +17,8 @@ enum Stat {
 	LIFESTEAL_CHANCE,
 	LIFESTEAL_AMOUNT,
 	ATTACK_SPEED,
+	# Append new stats at the end: the ordinals are serialized in .tres role configs.
+	ATTACK_RANGE,
 }
 
 @export var max_health := 100.0
@@ -31,6 +33,7 @@ enum Stat {
 @export var lifesteal_chance := 0.10
 @export var lifesteal_amount := 5.0
 @export var attack_speed := 1.25 ## Attacks per second. Interval = 1 / attack_speed.
+@export var attack_range := 0.0 ## Reach in pixels. Towers read it; units ignore it and use RoleConfig.attack_range.
 
 
 func get_base(stat: Stat) -> float:
@@ -59,6 +62,8 @@ func get_base(stat: Stat) -> float:
 			return lifesteal_amount
 		Stat.ATTACK_SPEED:
 			return attack_speed
+		Stat.ATTACK_RANGE:
+			return attack_range
 	return 0.0
 
 

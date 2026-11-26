@@ -81,5 +81,8 @@ func _open_requested_scene() -> void:
 		"game":
 			GameManager.prepare_game_test()
 			transition("", GAME)
+		"sandbox":
+			GameManager.prepare_sandbox()
+			transition("", GAME)
 		_:
-			push_error("Unknown --scene '%s' (use lobby, selection, or game)." % LaunchOptions.open_scene)
+			push_error("Unknown --scene '%s' (use lobby, selection, game, or sandbox)." % LaunchOptions.open_scene)

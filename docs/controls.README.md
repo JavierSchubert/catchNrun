@@ -146,6 +146,9 @@ Right Click
     +-- Valid Attackable Entity
     |       -> Attack Command
     |
+    +-- Own damaged, finished structure (Runner)
+    |       -> Repair Command
+    |
     +-- Invalid Target
             -> Next moveable position
 ```
@@ -187,6 +190,19 @@ Right Click Attackable Entity
             -> Attack target
 ```
 
+#### Repair Command
+
+A Runner right-clicking one of their **own** structures that is damaged and past its first construction starts the `repair` skill. A green click ring flashes on the structure.
+
+```text
+Right Click Own Damaged Structure (Runner)
+    -> Walk into repair reach if necessary
+    -> Restore HP at the skill's value_per_second (src/skills/defs/repair_def.tres)
+    -> Stop on its own at full HP
+```
+
+Repair restores HP only, never a wall's shield. Any other command (move, chain waypoint, attack-move) cancels it. Right-clicking a structure that is at full HP, still under its first construction, or owned by someone else is a plain move. An enemy under the cursor outranks the structure only for a unit that can attack it — a Runner repairing a wall under attack can click right next to the Hunter.
+
 ### 1.3. Attack Move
 
 Pressing `A` followed by a left click issues an attack-move command. The ground click ring is red (same attack color as a right-click attack). Escape or right-click cancels attack-move mode before the click.
@@ -222,6 +238,10 @@ This always targets the local controllable character, even when another entity i
 Left-click on the **minimap** also recenters the camera on the corresponding world position (see `minimap.README.md` §2.3).
 
 Eliminations and other roster updates must **not** auto-recenter the camera. A free camera stays where the player left it until `C`, a minimap click, or match start.
+
+### 1.5. Debug panels (`G`)
+
+Only when the debug sandbox panels are enabled: `G` minimizes all of them (action bar, tests, game log), or expands them again when all are minimized. Each panel also has its own Minimize button. See `ui_audio.README.md` §6.
 
 ---
 

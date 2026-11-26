@@ -75,6 +75,8 @@ Wall Upgrade
 
 Exact costs and health values must be configurable.
 
+From `shield_unlock_level` (15) a Wall also carries a **shield** in front of its health. The shield absorbs damage first; only the overflow reaches health. It waits `shield_recharge_delay` seconds after the last hit, then refills `shield_recharge_per_second` of its maximum per second. The shield grows by `shield_growth` per level above the unlock. Values live in `src/buildings/defs/wall_def.tres` (see `economy.README.md` §2.1).
+
 Destroying a Wall must update navigation so that previously blocked paths can become available.
 
 ## 5. Towers
@@ -88,6 +90,19 @@ Towers:
 - Acquire valid Hunter targets according to their targeting rules.
 - Attack according to their configured attack behavior.
 - May be upgradeable.
+
+A Tower fires a homing projectile at the nearest living Hunter in range. Damage is resolved when the shot is fired (`CombatDamage.resolve_ranged`), but applied only when the projectile lands; a target that dies or disappears in flight takes nothing. Its combat numbers come from a `StatSheet` seeded from `tower_base_stats` in `tower_def.tres` — never from a per-level damage curve. Its HP comes from `hp_for_level()` alone.
+
+Every Tower upgrade requires one **stat pick**, chosen by the owner in the build panel:
+
+| Path | Effect per pick |
+| --- | --- |
+| Damage | +`tower_damage_per_pick` of base ranged damage |
+| Attack Speed | +`tower_attack_speed_per_pick` of base attack speed |
+| Crit | +`tower_crit_chance_per_pick` crit chance and +`tower_crit_damage_per_pick` crit multiplier (flat) |
+| Range | +`tower_range_per_pick` of base attack range |
+
+Percentage picks on the same path sum rather than compound. The host validates the pick before spending anything, and the pick takes effect when the upgrade finishes — together with the new level and its HP — so a Tower never holds more picks than levels.
 
 A common defensive pattern is:
 
@@ -105,14 +120,23 @@ Walls delay access while Towers apply pressure to the Hunter.
 All destructible structures expose health to the combat system.
 
 ```text
-Structure takes damage
--> Reduce current health
+Structure takes damage (Building.apply_damage — the only entry point)
+-> Wall shield absorbs first, if any
+-> Reduce current health by the rest
 
 current_health <= 0
 -> Destroy structure
 -> Remove gameplay functionality
 -> Update navigation / world state where required
 ```
+
+`apply_damage()` returns the damage actually applied (shield + health); the Hunter's Crystal income is paid on that value (`economy.README.md` §3.1).
+
+### 6.1. Repair
+
+Runners can **repair** their own structures with the `repair` skill (`src/skills/defs/repair_def.tres`, rules in `src/skills/repair_skill.gd`). Right-clicking an own, damaged structure walks the Runner into reach and restores `value_per_second` HP per second until the structure is full (`controls.README.md` §1.2).
+
+The host validates every repair: Runner role, alive, owner of the structure, structure alive and damaged, and not under its first construction. Structures that are upgrading can be repaired. Repair restores health only; a wall's shield recharges on its own.
 
 ## 7. Structure Upgrades
 
@@ -130,6 +154,8 @@ The relevant system owns the final behavior:
 
 ```text
 Crystal Mine Upgrade -> Economy configuration
-Wall Upgrade         -> Structure / health configuration
-Tower Upgrade        -> Structure / combat configuration
+Wall Upgrade         -> Structure / health configuration (+ shield from level 15)
+Tower Upgrade        -> Structure / combat configuration (+ one stat pick per level)
 ```
+
+All of it lives in one `BuildingDef` per type (`src/buildings/defs/*.tres`); one `Building` script serves every type.
