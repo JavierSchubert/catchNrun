@@ -26,15 +26,15 @@ The Selection Panel is a **fixed-size** bottom HUD strip (`520×148`). Selection
 ```text
 Selection Panel (fixed size)
 ├── Portrait wrap (always)
-│   ├── XpRing — grey outer ring + dark band + thick inner frame; violet fill CCW
+│   ├── XpRing — matching grey outer/inner rings + dark band; violet fill CCW
 │   ├── Portrait — circular crop inset inside the frame
 │   └── LevelBadge — small overlapping circle with current level
 └── Right column (when a unit or Building with def is selected)
     ├── Stats grid (2 columns) — unit combat stats, or kind-specific building rows
-    └── Health bar [////////////] +regen (units) / level caption (buildings)
+    └── Health bar [////////////] +regen (units only)
 ```
 
-**Portrait chrome (WP-14):** grey outer ring and thicker inner frame with a darker band between. Hunter XP fills that band **violet counterclockwise** from 12 o'clock; a full ring levels the Hunter up. Runners stay **level 1** with a **full violet** band. Buildings show structure level on the badge and leave the XP band empty. Empty selection: grey double frame only (no fill, no badge).
+**Portrait chrome (WP-14):** matching-thickness grey outer and inner rings with a darker band between. Hunter XP fills that band **violet counterclockwise** from 12 o'clock; a full ring levels the Hunter up. Runners stay **level 1** with a **full violet** band. Buildings show structure level on the badge and leave the XP band empty. Level is only on the badge (not beside the health bar). Empty selection: grey double frame only (no fill, no badge).
 
 Stat values show the **final** number only: white at base, green above base, red below (`StatIcons.format_value`). Icons come from `assets/sprites/stats/clean/` via `StatIcons`. Building rows reuse the same grid with `StatIcons` and, for mine income, `BuildingIcons.crystal_icon()`.
 
@@ -98,15 +98,15 @@ Additional values depend on the entity.
 Selecting a `Building` with a non-null `def` fills the same strip:
 
 - **Portrait:** structure icon from `BuildingIcons` (not a unit sprite).
-- **Health bar:** current / max HP; level shown beside the bar.
+- **Health bar:** current / max HP (level is on the portrait badge, not beside the bar).
 - **Kind-specific stat rows** (via `StatIcons` / crystal icon), for example:
   - Tower — damage, crit, level, attack speed, attack range
   - Wall — HP summary, shield (or unlock hint), level
   - Crystal Mine — HP summary, income rate, level
 
 ```text
-[building icon]  (kind rows…)
-                 [======== HP bar ========]  Lv N
+[building icon] LvN   (kind rows…)
+                      [======== HP bar ========]
 ```
 
 `def == null` footprint-only buildings fall back to a generic presentation (no manage actions).

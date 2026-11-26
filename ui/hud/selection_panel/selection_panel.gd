@@ -288,7 +288,8 @@ func _bind_building_health(building: Building) -> void:
 	var current := building.health.current if building.health else 0.0
 	var ratio := clampf(current / maximum, 0.0, 1.0) if maximum > 0.0 else 0.0
 	_health_bar.value = ratio
-	_regen_label.text = "Lv %d" % building.level
+	## Level lives on the portrait badge; keep the health-row caption empty for buildings.
+	_regen_label.text = ""
 
 
 func _bind_stat_values(sheet: StatSheet) -> void:

@@ -136,7 +136,7 @@ alignment = 1
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 28
 alignment = 0
 
 [node name="PortraitWrap" type="Control" parent="Root/Content/Body" unique_id=1548111253]
