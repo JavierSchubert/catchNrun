@@ -33,7 +33,7 @@ enum Stat {
 @export var lifesteal_chance := 0.10
 @export var lifesteal_amount := 5.0
 @export var attack_speed := 1.25 ## Attacks per second. Interval = 1 / attack_speed.
-@export var attack_range := 0.0 ## Reach of an attack in pixels. 0 means the role config decides.
+@export var attack_range := 0.0 ## Reach in pixels. Towers read it; units ignore it and use RoleConfig.attack_range.
 
 
 func get_base(stat: Stat) -> float:

@@ -454,7 +454,7 @@ Everything needed to continue is in this section plus the files it names — no 
 
 **Reuse instead of rewriting:** `HealthComponent` · `StatSheet` / `StatModifier` / `StatIcons` · `AttackController` · `CombatDamage` · `MoveClickMarker` (local-only click feedback) · `BuildGrid` / `PlacementValidator` · the request → RPC → `_server_*` pattern in `ConstructionManager` · the `_check` / `_near` + `print("PASS: …")` + `get_tree().quit(code)` convention in `tests/construction/building_economy_test.gd` and its `scripts/test/*.ps1` runner.
 
-**Balance source of truth:** section A below and the three `src/buildings/defs/*.tres`. The `docs/` files are **stale until E lands** — see the warning in E.
+**Balance source of truth:** section A below, the three `src/buildings/defs/*.tres`, `src/economy/economy_config.tres` and `src/skills/defs/repair_def.tres`. The `docs/` files were brought up to date in E; if they ever disagree with the resources, the resources win.
 
 ### A — Economy and data foundation — landed, reviewed
 
@@ -477,38 +477,55 @@ Everything needed to continue is in this section plus the files it names — no 
 - [x] Interactive harness `tests/construction/building_system_test.tscn` shows the bar without the lobby flow
 - [x] Income readout counts a mine that is mid-upgrade (it keeps producing in `State.UPGRADING`)
 
-### C — Tower stats, projectiles, upgrade picks — implemented, **review outstanding**
+### C — Tower stats, projectiles, upgrade picks — landed, reviewed
 
 - [x] Tower migrated onto `StatSheet` / `CombatDamage.resolve_ranged`
 - [x] `src/combat/projectile.{gd,tscn}` using `assets/sprites/items/projectiles/projectile_lvl1.png`
 - [x] Replicated `tower_picks`, one of 4 paths per upgrade, host-validated in `ConstructionManager`
 - [x] Four pick buttons wired in the build panel
 - [x] Headless `tests/combat/tower_projectile_test.*` + `scripts/test/tower_projectile_test.ps1`
-- [ ] **Independent feature review of C** (A and B each had one; C has not)
-- [ ] Interactive `tests/construction/tower_combat_test.tscn` — dropped to save budget, still wanted
+- [x] **Independent feature review of C** — no blockers. Fixed from it:
+  - a pick is now *queued* (`Building.queue_tower_pick`) and applied in `_complete_construction()` together with the level and HP, instead of instantly at upgrade start (which also let a tower hold more picks than levels mid-upgrade)
+  - `_server_upgrade` now runs `_can_build()` (role / eliminated / phase), like `_server_build` — previously an eliminated Runner or a peer in `Phase.ENDED` could still buy upgrades
+  - test: the "another peer cannot upgrade" check could never fail (it asserted the owner's balance; peer 2 is not in the roster) — now asserts state / pending pick / level
+  - test: tower balance pinned as literals (18 dmg, 1.0 atk/s, 280 range, ×1.5 crit, pick increments, 650 px/s), plus one end-to-end `_tick_tower` → projectile → Hunter HP check
+  - `push_warning` when a tower def has no `tower_base_stats` (it would silently never fire)
+  - build panel shows "Upgrading to Lv N…" instead of the stale cost line while an upgrade runs
+- [x] Interactive `tests/construction/tower_combat_test.tscn` — it did exist (the earlier "dropped" note was wrong); reviewed as usable. Pick buttons now disable during an upgrade; patrol widened to 1100 px so the dummy still leaves range after many Range picks
 
-### D — Wall shield and Runner `repair` skill — **not started**
+### D — Wall shield and Runner `repair` skill — landed, reviewed
 
-- [ ] `src/components/shield/shield_component.gd` (mirrors `HealthComponent`'s shape)
-- [ ] `Building.apply_damage()` as the single structure damage entry point: shield first, then health, returns applied
-- [ ] Replicate `sync_current_shield` / `max_shield`; shield bar above the health bar in `building.tscn`
-- [ ] **Hunter Crystal income wired** — `award_damage_crystals()` exists but has no caller yet; it belongs at the two melee sites in `unit.gd` (vs Runners *and* vs structures). Until this lands the Hunter earns nothing.
-- [ ] `src/skills/skill_def.gd` + `defs/repair_def.tres` (first entry in a skill system that does not exist yet)
-- [ ] Runner RMB on an own finished structure → walk into range, heal `value_per_second`; green `MoveClickMarker.REPAIR_COLOR`
-- [ ] Host validation: Runner role, owner match, alive, damaged, not `UNDER_CONSTRUCTION`
-- [ ] Interactive `tests/construction/wall_repair_test.tscn` (Lv 1 + Lv 15 wall, damage button, repairing Runner)
-- [ ] Headless `tests/skills/repair_skill_test.*` + `scripts/test/repair_skill_test.ps1`
+- [x] `src/components/shield/shield_component.gd` (mirrors `HealthComponent`'s shape, but has no alive / `died` state — a max of 0.0 is the normal "no shield" value, so the `setup(0.0)` trap does not exist here)
+- [x] `Building.apply_damage()` as the single structure damage entry point: shield first, then health, returns applied (shield + health). The Hunter melee site in `unit.gd` is the only caller; nothing else writes structure HP directly
+- [x] Replicate `sync_current_shield` / `max_shield`; `ShieldBar` (instance of `health_bar.tscn`, blue fill override) above the health bar in `building.tscn`, hidden while `max_shield == 0`
+- [x] **Hunter Crystal income wired** at both melee sites in `unit.gd` (vs Runners *and* vs structures), paid on applied damage
+- [x] `src/skills/skill_def.gd` + `src/skills/defs/repair_def.tres`; rules in `src/skills/repair_skill.gd` (`RepairSkill.can_repair` / `in_range` / `approach_point`), shared by the click, the RPC and the tests
+- [x] Runner RMB on an own finished, damaged structure → walk into range, heal `value_per_second`; green `MoveClickMarker.REPAIR_COLOR`. RMB precedence: enemy → repairable own structure → ground move. Every other command (move, chain, attack, attack-move, death, phase lock) cancels the channel; it also ends by itself at full HP
+- [x] Host validation: Runner role, owner match, alive, damaged, not `UNDER_CONSTRUCTION` (upgrading structures *can* be repaired)
+- [x] Interactive `tests/construction/wall_repair_test.tscn` (Lv 1 + Lv 15 wall, damage button, repairing Runner)
+- [x] Headless `tests/skills/repair_skill_test.*` + `scripts/test/repair_skill_test.ps1`
+- [x] **Independent feature review of D** — no blockers. Fixed from it:
+  - RMB precedence: a nearby Hunter swallowed the Runner's repair click (Runners cannot attack, so "enemy beats structure" now only applies to a unit that can attack)
+  - harness: the damage button killed the Lv 1 wall in one press — now 20 % of each wall's HP + shield; destroyed walls are pruned by index (no freed instance in a typed loop)
+  - `is_damaged()` ignores float residue (`DAMAGED_EPSILON`) so a visibly full wall after a level-up is not "damaged"
+  - a host-rejected repair now falls back to a move toward the structure instead of silently keeping the previous order
+  - repair re-aims every 0.5 s while out of reach, order or not (a straight-line order blocked by another structure never finishes)
+  - Crystal income is guarded by the Hunter role at both call sites
+- [ ] **First run needs an import:** there is no `.godot/` cache, so `ShieldComponent` / `SkillDef` / `RepairSkill` are not in the global class cache yet. Run `godot --headless --import` (or open the editor once) before the `scripts/test/*.ps1` runners
+- [ ] Known, pre-existing: on clients `Building._ready()` runs `_begin_construction(1)` and resets level / state / health / shield for one frame until the next sync (replication mode ALWAYS re-sends them). Harmless flicker; skip it on clients if it ever shows
 
-### E — Match integration and documentation — **not started**
+### E — Match integration and documentation — docs done, **editor run open**
+
+Static checks already done without Godot (2026-11-26): all `.gd` files parse with `gdtoolkit`'s `gdparse`; a scene/resource validator found no `load_steps` / id / path / `%Name` problem in any WP-16 file; a Python port of the shield / repair / cost / pick logic, fed from the real `.tres`, reproduces every numeric expectation of the headless tests. None of this replaces running Godot.
 
 - [ ] Confirm the restructured HUD in the real match flow (sandbox quick-start 1 Hunter + 2 Runners, skip prep)
 - [ ] Run every `scripts/test/*.ps1` runner + `smoke_test.ps1`
-- [ ] `economy.README.md` — ⚠️ **the file is corrupted**: §1–§5 appear twice, the second copy nested inside the §4 code fence. Repair it, then correct the mine table (2 → 2048, Lv 1–11), starting Crystals 20, build costs, `hunter_crystals_per_damage = 0.2`. Every citation added in A currently points at superseded text.
-- [ ] `construction.README.md` — tower upgrade paths, wall shield, repair
-- [ ] `controls.README.md` — RMB on own structure = repair
-- [ ] `stats.README.md` — `ATTACK_RANGE`; towers consume `StatSheet`
-- [ ] `building.README.md` — shield + projectile notes
-- [ ] `tasks/checkpoints.README.md` — CP-16 changelog row + section (CP-15's row still claims 1,000,000 Crystals and `2^(level-1)`)
+- [x] `economy.README.md` — de-duplicated (§1–§5 appeared twice); mine table 2 → 2048 (Lv 1–11), starting Crystals 20, cost table, `hunter_crystals_per_damage = 0.2`, shield / tower-pick summary. Section numbers kept, so the code's §2.1 / §3.1 / §5 citations still resolve
+- [x] `construction.README.md` — tower projectile + upgrade paths (§5), wall shield (§4), `apply_damage` + repair (§6, §6.1)
+- [x] `controls.README.md` — RMB on own structure = repair (§1.2)
+- [x] `stats.README.md` — `attack_speed` / `ATTACK_RANGE` rows, append-only rule, towers consume `StatSheet`
+- [x] `building.README.md` — shield + projectile notes (§6)
+- [x] `tasks/checkpoints.README.md` — CP-16 changelog row + section; CP-15's balance marked superseded
 
 ### Open decisions for the user — not bugs, judgement calls
 
@@ -517,6 +534,10 @@ Everything needed to continue is in this section plus the files it names — no 
 - [ ] **Build-button row overflows horizontally** (~418px of buttons in 280px) because of the 48px icon + `"Crystal Mine"`. Pre-existing, not a WP-16 regression.
 - [ ] **`StatBlock.attack_range` duplicates `RoleConfig.attack_range`.** Units report `ATTACK_RANGE = 0.0` through their sheet while `RoleConfig` holds the real 70.0 / 64.0. Harmless today (the selection panel's stat grid is fixed and does not show it), a trap once anything enumerates it.
 - [ ] **`ATTACK_RANGE` and `RANGED_DAMAGE` render the same icon.** `assets/sprites/stats/attack_range2.png` exists if a distinct one is wanted.
+- [ ] **Hunter melee vs structures bypasses `CombatDamage`** (pre-existing since CP-15): `_perform_melee_on_building` rolls crit inline and structures have no defense. Harmless today; route it through `CombatDamage` if structures ever get defense.
+- [ ] **Crit pick keeps advertising "+8% Crit" past the cap.** `StatSheet` clamps crit chance to 1.0: 12 picks give 96 %, the 13th only +4 %, and from the 14th on only the +0.15 multiplier half still does anything. Cap the path, change the caption, or accept it.
+- [ ] **Repair numbers are placeholders chosen in D, not confirmed.** `repair_def.tres`: `value_per_second = 20`, `cast_range = 48` px beyond the structure's hit radius. For scale: a Lv 1 wall (250 HP) refills in ~12 s, a Lv 15 wall (~2.5k HP) in ~2 min. Repair is free (no Crystal cost), stacks across several Runners, and restores HP only — the shield recharges on its own.
+- [ ] **Hunter income counts shield damage — and that is farmable.** `apply_damage()` returns shield + health, and the 0.2 Crystals/damage is paid on that total; Hunter lifesteal also triggers on shield hits. A Lv 15 shield refills for free (45/s after 6 s), so a Hunter can earn ~180 Crystals per drain cycle without ever threatening the wall; repaired HP can be farmed the same way. If hitting a shield should pay less (or nothing), change it at the `award_damage_crystals` call in `_perform_melee_on_building`.
 
 ### Depends on
 
@@ -540,9 +561,10 @@ Milestone A — Fight and finish
 
 Milestone B — Build and earn
   WP-02 Construction: grid foundation ✅ (CP-11); match-integrated build UI + Wall / Tower / Crystal Mine ✅ (CP-15)
-  WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income / Hunter Shop still open
-  WP-16 ◀ ACTIVE — economy rebalance + crystal HUD ✅ A/B; tower projectiles ⏳ C (review open);
-         wall shield + runner repair ❌ D; integration + docs ❌ E. Nothing run in Godot yet.
+  WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income ✅ (WP-16 D); Hunter Shop still open
+  WP-16 ◀ ACTIVE — economy rebalance + crystal HUD ✅ A/B; tower projectiles ✅ C (reviewed);
+         wall shield + runner repair + hunter damage income ✅ D (reviewed);
+         docs ✅ E; editor / match run ❌ E. Nothing run in Godot yet.
   WP-14 Player XP / levels + violet portrait XP ring
 
 Milestone C — Command and HUD

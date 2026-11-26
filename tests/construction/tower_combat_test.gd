@@ -29,6 +29,8 @@ extends Node2D
 ##     that must still work from a zero base — if it stays at 0% the modifier is wrong.
 ##   - "HP" climbs on every upgrade regardless of the pick, because max HP is driven by
 ##     BuildingDef.hp_for_level() and not by any pick.
+##   - A pick takes effect when its upgrade finishes, not on the press: the stats and the
+##     pick counters stay put while the Tower shows "upgrading", and the buttons are disabled.
 ##   - The pick counters line ("Dmg 3 · Spd 1 · Crit 0 · Rng 2") must match what you pressed.
 
 const TOWER_SCENE := preload("res://src/buildings/tower.tscn")
@@ -36,8 +38,8 @@ const UNIT_SCENE := preload("res://src/units/unit/unit.tscn")
 
 const DUMMY_PEER_ID := 2
 const DUMMY_MAX_HEALTH := 20000.0
-## Wide enough that the dummy leaves even a heavily range-upgraded tower's reach.
-const PATROL_HALF_WIDTH := 620.0
+## Wide enough that the dummy still leaves the reach of a tower with ~15 Range picks.
+const PATROL_HALF_WIDTH := 1100.0
 const PATROL_SECONDS := 10.0
 const PATROL_OFFSET_Y := 60.0
 const TEST_CRYSTALS := 1.0e9
@@ -79,6 +81,10 @@ func _physics_process(delta: float) -> void:
 	_elapsed += delta
 	_drive_dummy()
 	_refresh_readout()
+	## A press during a running upgrade would be rejected by the host; say so visibly.
+	var can_pick := _tower != null and is_instance_valid(_tower) and _tower.can_upgrade()
+	for button in _pick_buttons:
+		button.disabled = not can_pick
 
 
 func _spawn_tower() -> void:

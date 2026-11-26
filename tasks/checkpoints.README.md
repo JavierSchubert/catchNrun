@@ -38,7 +38,8 @@ Last reviewed: **2026-11-25** (match-integrated construction: build UI, Crystal 
 | 2026-11-21 | CP-10 selection panel combat HUD | Fixed-size panel; clean stat icons; 2×3 combat grid; health bar + regen; empty = grey box + empty ring |
 | 2026-11-21 | CP-02 networking cleanup | Removed `addons/godotsteam` and all Steam lobby / invite paths; `NetworkManager` is ENet-only |
 | 2026-11-22 | **CP-14** Attack UX, chains, camera, sandbox | Right-click attack (red ring); A+LMB attack-move; Shift+RMB green move chain; Shift+A+LMB red attack-move chain (mixable); chain path outranks in-range auto-attack; minimap RMB / Shift+RMB / A+LMB / Shift+A+LMB; MMB camera drag; faster edge-scroll (`camera_speed` 1600, `edge_margin` 48); sandbox Reset fixed (deferred lobby + null-safe multiplayer); scrollable GameLog panel |
-| 2026-11-25 | **CP-15** Match-integrated construction + Crystal economy | Bottom-right build UI (`ui/hud/building_panel/`) with clickable per-structure icons, grid ghost preview, Upgrade / Destroy for owned selection; `ConstructionManager` (host-authoritative build/upgrade/destroy RPCs + `BuildingSpawner`); data-driven `BuildingDef` (cost/HP/build-time scale with level) backing Wall / Tower / Crystal Mine scenes sharing one `Building` script; non-instant construction with a replicated progress bar; `EconomyConfig` + `GameManager` Crystal balance (`crystals_for` / `try_spend_crystals` / `grant_crystals`, reset to 1,000,000 each match); Crystal Mine ticks owner income (`2^(level-1)` per docs/economy.README.md); Tower auto-attacks Hunters in range; Hunter melee now also damages attackable buildings; Walls (and all structures) physically block unit movement (`Unit` collision mask); headless `tests/construction/building_economy_test` + interactive `tests/construction/building_system_test` |
+| 2026-11-25 | **CP-15** Match-integrated construction + Crystal economy | Bottom-right build UI (`ui/hud/building_panel/`) with clickable per-structure icons, grid ghost preview, Upgrade / Destroy for owned selection; `ConstructionManager` (host-authoritative build/upgrade/destroy RPCs + `BuildingSpawner`); data-driven `BuildingDef` (cost/HP/build-time scale with level) backing Wall / Tower / Crystal Mine scenes sharing one `Building` script; non-instant construction with a replicated progress bar; `EconomyConfig` + `GameManager` Crystal balance (`crystals_for` / `try_spend_crystals` / `grant_crystals`, reset to 1,000,000 each match); Crystal Mine ticks owner income (`2^(level-1)` per docs/economy.README.md); Tower auto-attacks Hunters in range; Hunter melee now also damages attackable buildings; Walls (and all structures) physically block unit movement (`Unit` collision mask); headless `tests/construction/building_economy_test` + interactive `tests/construction/building_system_test`. *Balance superseded by CP-16 (20 starting Crystals, mine `2 * 2^(level-1)`).* |
+| 2026-11-26 | **CP-16** Crystal rebalance, Tower projectiles, Wall shield, Runner repair (WP-16 A–D) | **Code-reviewed only — not yet run in Godot.** Starting Crystals 20; costs Mine 16 / Wall 8 / Tower 24 ×1.8 per level, max Lv 11 / 20 / 20; mine 2 → 2048; Hunter earns 0.2 Crystals per applied damage (both melee sites); top-center Crystal HUD for both roles with `+X/s`; Tower on `StatSheet` with homing projectiles and one of four stat picks per upgrade (applied on completion); Wall shield from Lv 15 via `ShieldComponent` + `Building.apply_damage()`; Runner `repair` skill (RMB own damaged structure); headless `tower_projectile_test` / `repair_skill_test`, interactive `tower_combat_test` / `wall_repair_test`; economy / construction / controls / stats / building docs updated |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -263,6 +264,34 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 **Deliberately out of scope (not requested):** Hunter Crystal income from damage dealt (`docs/economy.README.md` §3.1 — WP-03); Hunter Shop; explicit right-click targeting of a building (the Hunter still auto-engages a nearby building via normal combat acquisition); real pathfinding around structures (existing straight-line movement limitation, now more visible once Walls exist).
 
 **Doc owners:** `building.README.md`, `construction.README.md`, `economy.README.md`
+
+The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope" Hunter damage income are superseded by CP-16.
+
+---
+
+## CP-16 — Crystal rebalance, Tower projectiles, Wall shield, Runner repair
+
+**Verification:** every item was implemented and checked by code review plus an independent reviewer pass; nothing has run in Godot yet ("Done" here means written and reviewed). A–C landed in `b674c55`, D and the E docs in the following commit. The editor pass is WP-16 E in `working_packages.README.md`.
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Starting Crystals 20; Hunter 0.2 Crystals / applied damage | Done | `src/economy/economy_config.tres`; `GameManager.award_damage_crystals` called from both melee sites in `unit.gd` |
+| Costs ×1.8 per level, max levels Mine 11 / Wall 20 / Tower 20, mine 2 → 2048 | Done | `src/buildings/defs/*.tres`, `BuildingDef` |
+| Coalesced 4 Hz roster broadcast for income | Done | `GameManager._mark_players_dirty` / `PLAYERS_SYNC_INTERVAL` |
+| Crystal HUD top-center for both roles with mine income `+X/s` | Done | `ui/hud/resource_bar/` |
+| Build panel restructure (detail line, Max level, tower pick grid) | Done | `ui/hud/building_panel/` |
+| Tower stats on `StatSheet`, `ATTACK_RANGE` appended | Done | `Building._setup_tower_stats` / `_rebuild_tower_stats`, `StatBlock.Stat.ATTACK_RANGE` |
+| Homing projectile; damage on impact; cosmetic client copy | Done | `src/combat/projectile.{gd,tscn}`, `Building._broadcast_projectile` |
+| One of four tower stat picks per upgrade, host-validated, applied on completion | Done | `ConstructionManager._server_upgrade`, `Building.queue_tower_pick` |
+| Wall shield from Lv 15 (soak first, delayed recharge), replicated + shield bar | Done | `src/components/shield/shield_component.gd`, `Building.apply_damage`, `building.tscn` |
+| Runner `repair` skill: RMB own damaged structure, host-validated | Done | `src/skills/` (`SkillDef`, `repair_def.tres`, `RepairSkill`), `Unit.server_repair_tick` |
+| Headless tests | Done (not run) | `tests/combat/tower_projectile_test`, `tests/skills/repair_skill_test`, `tests/construction/building_economy_test` + `scripts/test/*.ps1` |
+| Interactive harnesses | Done (not run) | `tests/construction/tower_combat_test.tscn`, `wall_repair_test.tscn`, `building_system_test.tscn` |
+| Match integration pass in the editor | Not done | WP-16 E — needs Godot (`godot --headless --import` first) |
+
+**Open balance decisions:** listed under WP-16 "Open decisions for the user" (late-level costs, repair numbers, shield-damage income, crit cap, panel margins).
+
+**Doc owners:** `economy.README.md`, `construction.README.md`, `controls.README.md`, `stats.README.md`, `building.README.md`
 
 ---
 

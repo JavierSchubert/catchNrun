@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SkillDef" format=3]
+
+[ext_resource type="Script" path="res://src/skills/skill_def.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+id = "repair"
+display_name = "Repair"
+role = 1
+target = 0
+cast_range = 48.0
+value_per_second = 20.0

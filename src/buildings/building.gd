@@ -13,6 +13,9 @@ enum State { UNDER_CONSTRUCTION, IDLE, UPGRADING }
 const PROJECTILE_SCENE := preload("res://src/combat/projectile.tscn")
 ## Fallback only — defs set tower_projectile_speed.
 const DEFAULT_PROJECTILE_SPEED := 650.0
+## Absorbs float residue from the level-up heal, so a visibly full structure never turns a
+## plain RMB into a repair.
+const DAMAGED_EPSILON := 0.01
 
 @export var def: BuildingDef
 @export var footprint := Vector2i(1, 1)
@@ -28,6 +31,10 @@ var max_health := 0.0
 var progress_ratio := 0.0
 ## Shadow of health.current for replication (mirrors Unit.sync_health).
 var sync_current_health := 0.0
+## Wall shield. 0.0 below def.shield_unlock_level and for every non-wall structure.
+var max_shield := 0.0
+## Shadow of shield.current for replication.
+var sync_current_shield := 0.0
 ## Tower combat stats. Seeded from def.tower_base_stats and re-derived from tower_picks.
 ## Structure HP never comes from here — def.hp_for_level() stays the sole HP authority.
 var stats := StatSheet.new()
@@ -40,11 +47,15 @@ var _mine_timer := 0.0
 var _target_level := 1
 ## Copy of tower_picks the sheet was last built from, so clients rebuild only on change.
 var _applied_picks := PackedInt32Array()
+## Host-only. TowerPath paid for with the running upgrade; -1 when none is pending.
+var _pending_pick := -1
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var visual: Polygon2D = $Visual
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
+@onready var shield: ShieldComponent = $Shield
+@onready var shield_bar: HealthBar = $ShieldBar
 @onready var progress_bar: ProgressBar = $BuildProgressBar
 @onready var attack: AttackController = $Attack
 
@@ -69,11 +80,14 @@ func _ready() -> void:
 		## Legacy footprint-only building (building_grid_test.tscn) — nothing else to do.
 		if health_bar != null:
 			health_bar.visible = false
+		if shield_bar != null:
+			shield_bar.visible = false
 		if progress_bar != null:
 			progress_bar.visible = false
 		return
 	health.health_changed.connect(_on_health_changed)
 	health.died.connect(_on_died)
+	shield.shield_changed.connect(_on_shield_changed)
 	_setup_tower_stats()
 	_begin_construction(1)
 
@@ -171,13 +185,60 @@ func tower_pick_count(path: int) -> int:
 	return tower_picks[path]
 
 
-## Host-only. Records one upgrade pick and re-derives the combat stats from it.
+## Host-only. Stores the pick paid for with the upgrade that is about to start; it is
+## applied in _complete_construction(), together with the level and the HP gain, so a tower
+## never holds more picks than levels and the bonus waits for the build time like HP does.
 ## ConstructionManager calls this only after try_spend_crystals() has succeeded.
+func queue_tower_pick(path: int) -> void:
+	if not is_tower() or not is_valid_tower_pick(path):
+		return
+	_pending_pick = path
+
+
+## The pick waiting for the running upgrade to finish, or -1.
+func pending_tower_pick() -> int:
+	return _pending_pick
+
+
+## Test / tooling only. Records one pick immediately, bypassing the upgrade queue, so it can
+## give a tower more picks than levels. Gameplay goes through queue_tower_pick().
 func apply_tower_pick(path: int) -> void:
 	if not is_tower() or not is_valid_tower_pick(path) or path >= tower_picks.size():
 		return
 	tower_picks[path] += 1
 	_rebuild_tower_stats()
+
+
+func is_damaged() -> bool:
+	return def != null and health != null and health.is_alive() \
+		and health.current < max_health - DAMAGED_EPSILON
+
+
+## Host-only. The single entry point for damage against a structure: the wall shield soaks
+## first, health takes the rest. Returns the total actually applied (shield + health), which
+## is what the attacker's Crystal income is paid on.
+func apply_damage(amount: float) -> float:
+	if not is_attackable() or amount <= 0.0:
+		return 0.0
+	var absorbed := shield.absorb(amount)
+	sync_current_shield = shield.current
+	var applied := absorbed
+	var rest := amount - absorbed
+	if rest > 0.0:
+		applied += health.take_damage(rest, max_health)
+	sync_current_health = health.current
+	return applied
+
+
+## Host-only. Restores health, never the shield (that recharges on its own). A structure
+## still under its first construction cannot be repaired; an upgrading one can.
+func repair(amount: float) -> float:
+	if not is_attackable() or amount <= 0.0 or state == State.UNDER_CONSTRUCTION:
+		return 0.0
+	var before := health.current
+	health.heal(amount, max_health)
+	sync_current_health = health.current
+	return health.current - before
 
 
 ## Host-only per-physics-frame tick. Safe to call while offline (OfflineMultiplayerPeer
@@ -191,10 +252,13 @@ func server_tick(delta: float) -> void:
 		State.UPGRADING:
 			_tick_construction(delta)
 			_tick_active(delta)
+			shield.tick(delta)
 		State.IDLE:
 			progress_ratio = 0.0
 			_tick_active(delta)
+			shield.tick(delta)
 	sync_current_health = health.current
+	sync_current_shield = shield.current
 
 
 func _begin_construction(target_level: int) -> void:
@@ -208,6 +272,13 @@ func _begin_construction(target_level: int) -> void:
 		max_health = def.hp_for_level(1) if def != null else 100.0
 		health.setup(max_health)
 		sync_current_health = health.current
+		max_shield = _shield_for_level(1)
+		shield.setup(
+			max_shield,
+			def.shield_recharge_delay if def != null else 0.0,
+			def.shield_recharge_per_second if def != null else 0.0
+		)
+		sync_current_shield = shield.current
 
 
 func _tick_construction(delta: float) -> void:
@@ -225,6 +296,12 @@ func _complete_construction() -> void:
 		max_health = new_max
 		if delta_max > 0.0:
 			health.heal(delta_max, max_health)
+		max_shield = _shield_for_level(level)
+		shield.set_maximum(max_shield)
+		sync_current_shield = shield.current
+		if _pending_pick >= 0 and _pending_pick < tower_picks.size():
+			tower_picks[_pending_pick] += 1
+		_pending_pick = -1
 		_rebuild_tower_stats()
 	state = State.IDLE
 	progress_ratio = 0.0
@@ -353,6 +430,9 @@ func _projectile_speed() -> float:
 func _setup_tower_stats() -> void:
 	if not is_tower():
 		return
+	if def.tower_base_stats == null:
+		## StatSheet would fall back to StatBlock defaults (attack_range 0): a tower that never fires.
+		push_warning("%s: tower def '%s' has no tower_base_stats" % [name, def.id])
 	stats.stats_changed.connect(_apply_derived_stats)
 	stats.set_base(def.tower_base_stats)
 	_rebuild_tower_stats()
@@ -420,9 +500,18 @@ func _add_pick_modifier(kind: StatModifier.Kind, stat: StatBlock.Stat, value: fl
 	stats.add_modifier(modifier)
 
 
+## Only walls carry a shield; the def defaults (shield_base 0.0) would also yield 0.0 for the
+## other kinds, but a tower or mine def must never grow one by accident.
+func _shield_for_level(p_level: int) -> float:
+	if def == null or def.kind != BuildingDef.Kind.WALL:
+		return 0.0
+	return def.shield_for_level(p_level)
+
+
 func _apply_synced_state() -> void:
 	max_health = def.hp_for_level(maxi(level, 1)) if def != null else max_health
 	health.set_from_sync(sync_current_health, max_health)
+	shield.set_from_sync(sync_current_shield, max_shield)
 	if is_tower() and tower_picks != _applied_picks:
 		## The replicated picks changed: remote players see the real tower stats.
 		_rebuild_tower_stats()
@@ -438,6 +527,13 @@ func _refresh_visuals() -> void:
 func _on_health_changed(current: float, maximum: float) -> void:
 	if health_bar != null:
 		health_bar.update_for_health(current, maximum)
+
+
+func _on_shield_changed(current: float, maximum: float) -> void:
+	if shield_bar == null:
+		return
+	shield_bar.visible = maximum > 0.0
+	shield_bar.update_for_health(current, maximum)
 
 
 func _on_died() -> void:

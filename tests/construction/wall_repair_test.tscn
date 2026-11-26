@@ -1,0 +1,49 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tests/construction/wall_repair_test.gd" id="1_test"]
+[ext_resource type="Script" path="res://src/construction/construction_manager.gd" id="2_construction"]
+
+[node name="WallRepairTest" type="Node2D"]
+script = ExtResource("1_test")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+unique_name_in_owner = true
+
+[node name="BuildingsRoot" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="BuildingSpawner" type="MultiplayerSpawner" parent="."]
+unique_name_in_owner = true
+spawn_path = NodePath("../BuildingsRoot")
+
+[node name="ConstructionManager" type="Node" parent="."]
+script = ExtResource("2_construction")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Help" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 760.0
+offset_bottom = 90.0
+theme_override_font_sizes/font_size = 14
+text = "Wall repair test
+RMB a damaged wall: the Runner walks over and repairs it. RMB the ground cancels.
+\"Damage walls\" hits both walls; the Lv 15 wall's shield soaks first and recharges."
+
+[node name="StatsLabel" type="Label" parent="HUD"]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 110.0
+offset_right = 420.0
+offset_bottom = 330.0
+theme_override_font_sizes/font_size = 15
+text = "Walls"
+
+[node name="DamageButton" type="Button" parent="HUD"]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 350.0
+offset_right = 236.0
+offset_bottom = 380.0
+text = "Damage walls"

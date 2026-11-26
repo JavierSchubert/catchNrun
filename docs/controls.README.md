@@ -146,6 +146,9 @@ Right Click
     +-- Valid Attackable Entity
     |       -> Attack Command
     |
+    +-- Own damaged, finished structure (Runner)
+    |       -> Repair Command
+    |
     +-- Invalid Target
             -> Next moveable position
 ```
@@ -186,6 +189,19 @@ Right Click Attackable Entity
             -> Stop when target enters attack range
             -> Attack target
 ```
+
+#### Repair Command
+
+A Runner right-clicking one of their **own** structures that is damaged and past its first construction starts the `repair` skill. A green click ring flashes on the structure.
+
+```text
+Right Click Own Damaged Structure (Runner)
+    -> Walk into repair reach if necessary
+    -> Restore HP at the skill's value_per_second (src/skills/defs/repair_def.tres)
+    -> Stop on its own at full HP
+```
+
+Repair restores HP only, never a wall's shield. Any other command (move, chain waypoint, attack-move) cancels it. Right-clicking a structure that is at full HP, still under its first construction, or owned by someone else is a plain move. An enemy under the cursor outranks the structure only for a unit that can attack it — a Runner repairing a wall under attack can click right next to the Hunter.
 
 ### 1.3. Attack Move
 

@@ -7,6 +7,7 @@ const PROJECTILE_SCENE := preload("res://src/combat/projectile.tscn")
 const TOWER_SCENE := preload("res://src/buildings/tower.tscn")
 const WALL_SCENE := preload("res://src/buildings/wall.tscn")
 const MINE_SCENE := preload("res://src/buildings/crystal_mine.tscn")
+const HUNTER_SCENE := preload("res://src/units/hunter/hunter.tscn")
 
 var _failures: PackedStringArray = PackedStringArray()
 
@@ -20,6 +21,8 @@ func _ready() -> void:
 	_test_each_pick_moves_its_stat()
 	_test_picks_stack()
 	_test_legacy_tower_fields_are_gone()
+	_test_tower_def_numbers_are_pinned()
+	_test_tower_shot_damages_a_hunter()
 	_test_tower_upgrade_requires_a_pick()
 	_test_wall_and_mine_upgrade_without_a_pick()
 	if _failures.is_empty():
@@ -229,6 +232,78 @@ func _test_legacy_tower_fields_are_gone() -> void:
 	)
 
 
+## The checks above compare against values read back from the def, so a bad edit to
+## tower_def.tres would still pass them. These pin the confirmed balance literally.
+func _test_tower_def_numbers_are_pinned() -> void:
+	var def := ConstructionManager.TOWER_DEF
+	var base := def.tower_base_stats
+	_check(base != null, "tower_def.tres carries tower_base_stats")
+	if base == null:
+		return
+	_near(base.ranged_damage, 18.0, "tower base ranged damage")
+	_near(base.attack_speed, 1.0, "tower base attack speed")
+	_near(base.attack_range, 280.0, "tower base attack range")
+	_near(base.critical_chance, 0.0, "tower base crit chance")
+	_near(base.critical_damage_multiplier, 1.5, "tower base crit multiplier")
+	_near(def.tower_damage_per_pick, 0.30, "Damage pick increment")
+	_near(def.tower_attack_speed_per_pick, 0.20, "Attack Speed pick increment")
+	_near(def.tower_crit_chance_per_pick, 0.08, "Crit pick chance increment")
+	_near(def.tower_crit_damage_per_pick, 0.15, "Crit pick multiplier increment")
+	_near(def.tower_range_per_pick, 0.15, "Range pick increment")
+	_near(def.tower_projectile_speed, 650.0, "tower projectile speed")
+
+
+## The real path end to end: _tick_tower picks the Hunter, the projectile lands, and the HP
+## drop arrives through _on_projectile_hit with the replicated shadow updated.
+func _test_tower_shot_damages_a_hunter() -> void:
+	var tower := _building(TOWER_SCENE, "ShotTower")
+	tower.state = Building.State.IDLE
+	tower.global_position = Vector2.ZERO
+	var holder := Node2D.new()
+	holder.name = "ShotHunterHolder"
+	add_child(holder)
+	var hunter := HUNTER_SCENE.instantiate() as Unit
+	## Unit takes its peer id from the node name.
+	hunter.name = "7"
+	holder.add_child(hunter)
+	hunter.global_position = Vector2(100.0, 0.0)
+	var max_hp := hunter.health.current
+	var expected := maxf(
+		0.0,
+		tower.stats.final_value(StatBlock.Stat.RANGED_DAMAGE)
+			- hunter.stats.final_value(StatBlock.Stat.DEFENSE) * 0.25
+	)
+
+	tower.server_tick(0.1)
+	var shot := _projectile_aimed_at(hunter)
+	_check(shot != null, "a tower fires at a Hunter in range")
+	_near(hunter.health.current, max_hp, "the Hunter loses nothing at the moment of firing")
+	if shot != null:
+		for _i in 10:
+			shot.advance(0.1)
+	_near(hunter.health.current, max_hp - expected, "the landed shot applies ranged damage minus defense")
+	_near(hunter.sync_health, hunter.health.current, "the hit updates the Hunter's replicated health")
+
+	tower.server_tick(0.1)
+	_check(
+		_projectile_aimed_at(hunter) == null,
+		"the tower waits out its attack interval before the next shot"
+	)
+	holder.queue_free()
+	tower.queue_free()
+
+
+func _projectile_aimed_at(target: Node2D) -> Projectile:
+	var host := get_tree().current_scene
+	if host == null:
+		return null
+	for child in host.get_children():
+		var shot := child as Projectile
+		if shot != null and shot.target == target and not shot._consumed:
+			return shot
+	return null
+
+
 func _test_tower_upgrade_requires_a_pick() -> void:
 	GameManager.prepare_game_test()
 	GameManager.grant_crystals(1, 1000.0)
@@ -247,26 +322,43 @@ func _test_tower_upgrade_requires_a_pick() -> void:
 	_near(GameManager.crystals_for(1), before, "a tower upgrade with an out-of-range pick spends no Crystals")
 	_check(tower.state == Building.State.IDLE, "a tower upgrade with an out-of-range pick does not start")
 
+	var base_crit := tower.stats.final_value(StatBlock.Stat.CRITICAL_CHANCE)
 	manager._server_upgrade(1, "UpTower", BuildingDef.TowerPath.CRIT)
 	_near(GameManager.crystals_for(1), before - cost, "a tower upgrade with a valid pick spends the cost")
-	_check(tower.tower_pick_count(BuildingDef.TowerPath.CRIT) == 1, "the chosen path is recorded")
 	_check(tower.state == Building.State.UPGRADING, "a valid tower upgrade starts building")
+	## The pick waits for the build like the HP gain: picks never exceed levels.
+	_check(tower.pending_tower_pick() == BuildingDef.TowerPath.CRIT, "the chosen path is queued")
+	_check(tower.tower_pick_count(BuildingDef.TowerPath.CRIT) == 0, "a queued pick is not counted mid-upgrade")
+	_near(
+		tower.stats.final_value(StatBlock.Stat.CRITICAL_CHANCE),
+		base_crit,
+		"a queued pick grants nothing until the upgrade completes"
+	)
+	tower._complete_construction()
+	_check(tower.level == 2, "the upgrade completes to level 2")
+	_check(tower.tower_pick_count(BuildingDef.TowerPath.CRIT) == 1, "the chosen path is recorded on completion")
+	_check(tower.pending_tower_pick() == -1, "completion clears the queued pick")
+	_near(
+		tower.stats.final_value(StatBlock.Stat.CRITICAL_CHANCE),
+		base_crit + tower.def.tower_crit_chance_per_pick,
+		"the pick's bonus applies on completion"
+	)
 
 	## A pick is never half-applied: an unaffordable upgrade must leave the counters alone.
-	tower.state = Building.State.IDLE
 	GameManager.try_spend_crystals(1, GameManager.crystals_for(1))
 	manager._server_upgrade(1, "UpTower", BuildingDef.TowerPath.RANGED_DAMAGE)
-	_check(
-		tower.tower_pick_count(BuildingDef.TowerPath.RANGED_DAMAGE) == 0,
-		"an unaffordable tower upgrade records no pick"
-	)
+	_check(tower.pending_tower_pick() == -1, "an unaffordable tower upgrade queues no pick")
 	_check(tower.state == Building.State.IDLE, "an unaffordable tower upgrade does not start")
 
-	## Ownership still wins over a valid pick.
+	## Ownership still wins over a valid pick. Peer 2 is not in the roster, so its own
+	## balance proves nothing — assert on the tower instead.
 	GameManager.grant_crystals(1, 1000.0)
 	var owned_before := GameManager.crystals_for(1)
-	manager._server_upgrade(2, "UpTower", BuildingDef.TowerPath.CRIT)
-	_near(GameManager.crystals_for(1), owned_before, "another peer cannot upgrade someone else's tower")
+	manager._server_upgrade(2, "UpTower", BuildingDef.TowerPath.RANGED_DAMAGE)
+	_near(GameManager.crystals_for(1), owned_before, "another peer's upgrade spends nothing of the owner's")
+	_check(tower.state == Building.State.IDLE, "another peer cannot start an upgrade on someone else's tower")
+	_check(tower.pending_tower_pick() == -1, "another peer cannot queue a pick on someone else's tower")
+	_check(tower.level == 2, "another peer's upgrade leaves the level alone")
 
 
 func _test_wall_and_mine_upgrade_without_a_pick() -> void:

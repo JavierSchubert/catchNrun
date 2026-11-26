@@ -137,7 +137,7 @@ func _rpc_request_upgrade(building_name: String, pick: int) -> void:
 
 
 func _server_upgrade(peer_id: int, building_name: String, pick := -1) -> void:
-	if not multiplayer.is_server():
+	if not multiplayer.is_server() or not _can_build(peer_id):
 		return
 	var building := buildings_root.get_node_or_null(building_name) as Building
 	if building == null or building.owner_peer_id != peer_id or not building.can_upgrade():
@@ -153,9 +153,10 @@ func _server_upgrade(peer_id: int, building_name: String, pick := -1) -> void:
 	var cost := building.next_upgrade_cost()
 	if not GameManager.try_spend_crystals(peer_id, cost):
 		return
-	## Record the pick only once the Crystals are actually gone — never half-apply.
+	## Queue the pick only once the Crystals are actually gone — never half-apply. It takes
+	## effect when the upgrade completes, together with the new level.
 	if is_tower:
-		building.apply_tower_pick(pick)
+		building.queue_tower_pick(pick)
 	var next_level := building.level + 1
 	building.begin_upgrade()
 	GameLog.info("CONSTRUCTION", "peer %d upgraded %s to level %d" % [peer_id, building_name, next_level])

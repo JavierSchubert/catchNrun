@@ -205,10 +205,14 @@ func _refresh_selected_building() -> void:
 	_refresh_upgrade_area(building)
 
 
-## Type-specific line under the HP readout. Wall has none yet (WP-D adds its shield).
+## Type-specific line under the HP readout.
 func _selected_detail_text(building: Building) -> String:
 	var def := building.def
 	match def.kind:
+		BuildingDef.Kind.WALL:
+			if building.max_shield > 0.0:
+				return "Shield %.0f / %.0f" % [building.shield.current, building.max_shield]
+			return "Shield unlocks at Lv %d" % def.shield_unlock_level
 		BuildingDef.Kind.CRYSTAL_MINE:
 			if def.mine_interval <= 0.0:
 				return ""
@@ -254,10 +258,13 @@ func _refresh_upgrade_area(building: Building) -> void:
 	_upgrade_hint.visible = is_tower
 	if is_tower:
 		## Every tower level raises max HP on its own; the player picks what else it gains.
-		_upgrade_hint.text = "Upgrade to Lv %d for %d — pick one stat path:" % [
-			building.level + 1,
-			int(cost),
-		]
+		if building.state == Building.State.UPGRADING:
+			_upgrade_hint.text = "Upgrading to Lv %d…" % (building.level + 1)
+		else:
+			_upgrade_hint.text = "Upgrade to Lv %d for %d — pick one stat path:" % [
+				building.level + 1,
+				int(cost),
+			]
 		var can_pick := building.can_upgrade() and affordable
 		for path in _pick_buttons.size():
 			var pick_button := _pick_buttons[path]
@@ -266,7 +273,10 @@ func _refresh_upgrade_area(building: Building) -> void:
 			pick_button.tooltip_text = "%s — %d Crystals" % [_pick_grant_long(def, path), int(cost)]
 			pick_button.disabled = not can_pick
 		return
-	_upgrade_button.text = "Upgrade (%d)" % int(cost)
+	if building.state == Building.State.UPGRADING:
+		_upgrade_button.text = "Upgrading to Lv %d…" % (building.level + 1)
+	else:
+		_upgrade_button.text = "Upgrade (%d)" % int(cost)
 	_upgrade_button.disabled = not building.can_upgrade() or not affordable
 
 

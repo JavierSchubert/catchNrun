@@ -3,8 +3,8 @@ extends Control
 ## Top-center HUD strip: a Crystal icon, the local player's Crystal balance, and — while
 ## they own finished Crystal Mines — the income those mines produce per second.
 ##
-## Shown to both roles (the Hunter earns Crystals from damage in a later package), only
-## while the local player is in an active match phase and not eliminated.
+## Shown to both roles (the Hunter earns Crystals from the damage he applies), only while
+## the local player is in an active match phase and not eliminated.
 ##
 ## Presentation only: the balance comes from GameManager and the per-mine rate from each
 ## BuildingDef. No economy rule is duplicated here (root README "Implementation Principle").
