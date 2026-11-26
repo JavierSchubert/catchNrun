@@ -6,7 +6,7 @@
 [ext_resource type="StyleBox" path="res://ui/styles/button_hover_style.tres" id="4_button_hover"]
 
 [node name="BuildingPanel" type="Control" unique_id=1885995451]
-custom_minimum_size = Vector2(300, 440)
+custom_minimum_size = Vector2(360, 600)
 layout_mode = 3
 anchors_preset = 0
 mouse_filter = 2

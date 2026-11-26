@@ -12,6 +12,7 @@ extends Control
 @onready var _host_button: Button = %HostButton
 @onready var _join_button: Button = %JoinButton
 @onready var _leave_button: Button = %LeaveButton
+@onready var _sandbox_button: Button = %SandboxButton
 var _web_client := false
 
 
@@ -19,6 +20,7 @@ func _ready() -> void:
 	_name_edit.text = GameManager.local_player_name
 	_host_button.pressed.connect(_on_host_local)
 	_join_button.pressed.connect(_on_join_local)
+	_sandbox_button.pressed.connect(_on_sandbox)
 	_leave_button.pressed.connect(func() -> void:
 		SoundManager.play_ui()
 		NetworkManager.leave()
@@ -34,6 +36,7 @@ func _ready() -> void:
 	if _web_client:
 		_host_button.hide()
 		_address_edit.hide()
+		_sandbox_button.hide()
 		_join_button.text = "Connect"
 
 	GameManager.players_changed.connect(_refresh)
@@ -49,6 +52,14 @@ func _ready() -> void:
 func _apply_name() -> void:
 	var player_name := _name_edit.text.strip_edges()
 	GameManager.local_player_name = player_name if not player_name.is_empty() else "Player"
+
+
+## Offline, one Runner + one Hunter in the match scene (GameManager.prepare_sandbox()).
+func _on_sandbox() -> void:
+	SoundManager.play_ui()
+	_apply_name()
+	GameManager.prepare_sandbox()
+	SceneTransitionManager.transition("", SceneTransitionManager.GAME)
 
 
 func _on_host_local() -> void:

@@ -2,18 +2,19 @@ extends Node
 ## Debug panel for local multiplayer and the dedicated-server browser host.
 ## Hidden for bots, headless runs, and non-host browser clients.
 ##
-## Layout: compact action bar top-left, native tests top-right, status + game log
-## bottom-left directly above the minimap. The bottom-right corner belongs to the
-## Runner's building panel. Every panel has a Minimize button, and `G` (god mode)
-## minimizes / expands all of them at once.
+## Layout: the action bar and, stacked directly below it, the status + game log panel sit
+## top-left (a minimized bar pulls the log up); native tests top-right. Bottom-left is the
+## minimap, bottom-right the Runner's building panel. Every panel has a Minimize button,
+## and `G` (god mode) minimizes / expands all of them at once.
 
 const RUNNER_ICON := preload("res://assets/sprites/units/Player_1.png")
 const HUNTER_ICON := preload("res://assets/sprites/units/Enemy_1.png")
 
 ## Height of a minimized panel: just its header row plus the panel margins.
 const COLLAPSED_HEIGHT := 48.0
-## Gap between the log panel and the minimap below it (minimap top edge is at -162).
-const LOG_BOTTOM_OFFSET := -178.0
+## Expanded size of the action bar / log panel inside the top-left stack.
+const ACTION_BAR_WIDTH := 764.0
+const LOG_PANEL_SIZE := Vector2(404.0, 264.0)
 
 var _status: Label
 var _state: Label
@@ -58,10 +59,19 @@ func _ready() -> void:
 	layer.add_child(root)
 	_root = root
 
-	_build_action_bar(root)
+	## Top-left stack: the log lives right under the action bar and follows it when it folds.
+	var stack := VBoxContainer.new()
+	stack.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	stack.offset_left = 16.0
+	stack.offset_top = 12.0
+	stack.add_theme_constant_override("separation", 8)
+	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(stack)
+
+	_build_action_bar(stack)
 	if not _is_web_client:
 		_build_tests_panel(root)
-	_build_status_panel(root)
+	_build_status_panel(stack)
 	_log_listener = _on_game_log_line
 	GameLog.add_listener(_log_listener)
 	GameManager.test_bot_request_completed.connect(_on_test_bot_request_completed)
@@ -92,16 +102,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
-func _build_action_bar(root: Control) -> void:
+func _build_action_bar(stack: Control) -> void:
 	var bar := PanelContainer.new()
-	bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	bar.offset_left = 16.0
-	bar.offset_top = 12.0
-	bar.offset_right = 780.0
-	bar.offset_bottom = 96.0
+	bar.custom_minimum_size = Vector2(ACTION_BAR_WIDTH, 0.0)
+	bar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	bar.mouse_filter = Control.MOUSE_FILTER_STOP
 	bar.add_theme_stylebox_override("panel", _panel_style(Color(0.07, 0.08, 0.1, 0.92)))
-	root.add_child(bar)
+	stack.add_child(bar)
 
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 6)
@@ -189,18 +196,14 @@ func _build_tests_panel(root: Control) -> void:
 	_register_collapsible(panel, toggle, hidden)
 
 
-func _build_status_panel(root: Control) -> void:
-	# Bottom-left, stacked directly above the minimap. Bottom-right is the building panel.
+func _build_status_panel(stack: Control) -> void:
+	# Directly under the action bar; bottom-left stays free for the minimap.
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	panel.offset_left = 16.0
-	panel.offset_top = LOG_BOTTOM_OFFSET - 264.0
-	panel.offset_right = 420.0
-	panel.offset_bottom = LOG_BOTTOM_OFFSET
+	panel.custom_minimum_size = LOG_PANEL_SIZE
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.06, 0.07, 0.09, 0.85)))
-	root.add_child(panel)
+	stack.add_child(panel)
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
@@ -258,8 +261,10 @@ func _add_toggle_button(parent: Node) -> Button:
 
 
 ## Makes `panel` minimizable. `hidden` are the nodes that fold away; the header (with the
-## toggle button) stays. A minimized panel keeps its anchor corner and shrinks toward it,
-## to `collapsed_width` wide (or its old width when 0) and COLLAPSED_HEIGHT tall.
+## toggle button) stays. A panel inside a Container (the top-left stack) shrinks through its
+## minimum size, so the panels below it move up. A free-floating panel keeps its anchor corner
+## and shrinks toward it, to COLLAPSED_HEIGHT tall. Either way it becomes `collapsed_width`
+## wide (or keeps its width when 0).
 func _register_collapsible(
 	panel: Control, button: Button, hidden: Array, collapsed_width := 0.0
 ) -> void:
@@ -268,6 +273,8 @@ func _register_collapsible(
 		"button": button,
 		"hidden": hidden,
 		"width": collapsed_width,
+		"managed": panel.get_parent() is Container,
+		"min_size": panel.custom_minimum_size,
 		"left": panel.offset_left,
 		"top": panel.offset_top,
 		"right": panel.offset_right,
@@ -288,6 +295,17 @@ func _set_collapsed(entry: Dictionary, collapsed: bool) -> void:
 	var button: Button = entry["button"]
 	for node in entry["hidden"]:
 		(node as Control).visible = not collapsed
+	var width: float = entry["width"]
+	if bool(entry["managed"]):
+		var min_size: Vector2 = entry["min_size"]
+		if collapsed:
+			panel.custom_minimum_size = Vector2(width if width > 0.0 else min_size.x, 0.0)
+		else:
+			panel.custom_minimum_size = min_size
+		panel.reset_size()
+		button.text = "Expand" if collapsed else "Minimize"
+		button.tooltip_text = "%s panel (G toggles all)" % ("Expand" if collapsed else "Minimize")
+		return
 	panel.offset_left = entry["left"]
 	panel.offset_top = entry["top"]
 	panel.offset_right = entry["right"]
@@ -297,7 +315,6 @@ func _set_collapsed(entry: Dictionary, collapsed: bool) -> void:
 			panel.offset_top = panel.offset_bottom - COLLAPSED_HEIGHT
 		else:
 			panel.offset_bottom = panel.offset_top + COLLAPSED_HEIGHT
-		var width: float = entry["width"]
 		if width > 0.0:
 			if panel.anchor_left >= 1.0:
 				panel.offset_left = panel.offset_right - width

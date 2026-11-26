@@ -7,6 +7,8 @@ extends Node2D
 @export var runner_scene: PackedScene
 ## Players spawn on a ring around map center so they do not stack on top of each other.
 @export var spawn_ring_radius := 160.0
+## Sandbox only: Runner and Hunter spawn this far left / right of the map center.
+const SANDBOX_SPAWN_OFFSET := 450.0
 
 var _spawned: Dictionary = {}
 
@@ -81,7 +83,11 @@ func _spawn_unit(data: Dictionary) -> Node:
 	return unit
 
 
-func _position_for(peer_id: int, _role: int) -> Vector2:
+func _position_for(peer_id: int, role: int) -> Vector2:
+	if GameManager.sandbox_mode:
+		## Far enough apart that the Hunter's acquisition range (500) does not reach the Runner.
+		var side := 1.0 if role == RoleConfig.Role.HUNTER else -1.0
+		return PlateauMap.spawn_center() + Vector2(SANDBOX_SPAWN_OFFSET * side, 0.0)
 	var ids: Array[int] = []
 	for key in GameManager.players.keys():
 		ids.append(int(key))

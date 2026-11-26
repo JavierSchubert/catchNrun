@@ -15,7 +15,7 @@ var bot_role := "" ## --bot=runner|hunter: run as a bot client. Empty = normal p
 var bot_name := "Bot" ## --bot-name=NAME
 var bot_lifetime := 0.0 ## --bot-lifetime=SECONDS: the bot leaves after this long (0 = never).
 var report_path := "" ## --report=PATH: write a JSON report of what this process observed.
-var open_scene := "" ## --scene=lobby|selection|game. Opens that screen directly.
+var open_scene := "" ## --scene=lobby|selection|game|sandbox. Opens that screen directly.
 var test_role := "runner" ## --test-role=runner|hunter. Role used by --scene=game.
 
 

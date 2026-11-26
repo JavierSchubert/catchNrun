@@ -13,6 +13,8 @@ signal match_finished(winner_team: String)
 signal all_players_loaded
 signal auto_host_failed(error_code: Error)
 signal test_bot_request_completed(success: bool, message: String)
+## Sandbox only: the locally played character changed (see local_peer_id()).
+signal sandbox_character_changed(peer_id: int)
 
 enum Phase { LOBBY, ROLE_SELECTION, RUNNER_PREPARATION, HUNTER_ACTIVE, ENDED }
 
@@ -22,8 +24,18 @@ const SPRITE_COUNT := 5
 ## Crystal income (mine ticks, Hunter damage) only replicates this often. Spends and
 ## roster/phase changes bypass the throttle and flush straight away.
 const PLAYERS_SYNC_INTERVAL := 0.25
+## Single-player sandbox (start menu): one local player owns BOTH roster entries and plays
+## whichever character is currently selected. Offline only, so peer 1 is the server.
+const SANDBOX_RUNNER_ID := 1
+const SANDBOX_HUNTER_ID := TEST_PLAYER_ID
+## Test budget for both sandbox characters, so every build / upgrade can be tried.
+const SANDBOX_CRYSTALS := 100000.0
 
 var resolved_hunter_id := -1
+## True while the start-menu sandbox is running. Cleared by _reset_state().
+var sandbox_mode := false
+## Sandbox only: the roster id of the character the local player is currently playing.
+var sandbox_active_peer := SANDBOX_RUNNER_ID
 var _next_test_player_id := TEST_PLAYER_ID
 var session_host_id := 0
 var test_bots_enabled := false
@@ -195,7 +207,8 @@ func eliminate_player(peer_id: int) -> void:
 
 
 func _check_match_end() -> void:
-	if not multiplayer.is_server():
+	if not multiplayer.is_server() or sandbox_mode:
+		## The sandbox never ends on its own: a fallen character just stays down until Restart.
 		return
 	if phase != Phase.HUNTER_ACTIVE and phase != Phase.RUNNER_PREPARATION:
 		return
@@ -216,7 +229,35 @@ func sender_id(mp: MultiplayerAPI) -> int:
 	## Peer that sent the current RPC. Also returns the right id when the host
 	## calls an RPC on itself.
 	var id := mp.get_remote_sender_id()
-	return id if id != 0 else mp.get_unique_id()
+	return id if id != 0 else _own_peer_id(mp)
+
+
+## The roster id the local player acts as: every "is this mine?" check in the HUD,
+## selection, camera, construction and unit input goes through here. Outside the sandbox
+## it is simply the network peer id (1 when there is no peer, e.g. in isolated tests).
+func local_peer_id() -> int:
+	return _own_peer_id(multiplayer)
+
+
+func _own_peer_id(mp: MultiplayerAPI) -> int:
+	if sandbox_mode and players.has(sandbox_active_peer):
+		return sandbox_active_peer
+	if mp != null and mp.has_multiplayer_peer():
+		return mp.get_unique_id()
+	return 1
+
+
+func is_sandbox_character(peer_id: int) -> bool:
+	return sandbox_mode and (peer_id == SANDBOX_RUNNER_ID or peer_id == SANDBOX_HUNTER_ID)
+
+
+## Sandbox only: switch which character the local player controls.
+func set_sandbox_active(peer_id: int) -> void:
+	if not sandbox_mode or not players.has(peer_id) or peer_id == sandbox_active_peer:
+		return
+	sandbox_active_peer = peer_id
+	GameLog.info("SANDBOX", "now playing %s" % role_label(int(players[peer_id].get("role", ANY_ROLE))))
+	sandbox_character_changed.emit(peer_id)
 
 
 func note_unit_spawned(role: int) -> void:
@@ -795,6 +836,11 @@ func _reset_to_lobby() -> void:
 
 
 func _reset_to_lobby_local() -> void:
+	if sandbox_mode:
+		## The sandbox roster is synthetic: leaving it must not leave two phantom players behind.
+		players.clear()
+		sandbox_mode = false
+		sandbox_active_peer = SANDBOX_RUNNER_ID
 	for key in players.keys():
 		var entry: Dictionary = players[key]
 		entry.alive = true
@@ -978,6 +1024,8 @@ func _phase_name(value: int) -> String:
 
 func _reset_state() -> void:
 	phase = Phase.LOBBY
+	sandbox_mode = false
+	sandbox_active_peer = SANDBOX_RUNNER_ID
 	players.clear()
 	_clear_players_dirty()
 	session_host_id = 0
@@ -1019,3 +1067,39 @@ func prepare_game_test() -> void:
 	time_left = head_start_duration
 	_set_phase(Phase.RUNNER_PREPARATION)
 	players_changed.emit()
+
+
+## Start-menu sandbox: one Runner (peer 1, the local player) and one Hunter (peer 1000) share
+## the match scene. The Hunter's phase is already open, both are funded, and
+## sandbox_active_peer says which of the two the local player is currently playing.
+func prepare_sandbox() -> void:
+	_reset_state()
+	sandbox_mode = true
+	sandbox_active_peer = SANDBOX_RUNNER_ID
+	session_host_id = SANDBOX_RUNNER_ID
+	var runner := _new_player(local_player_name, RoleConfig.Role.RUNNER)
+	runner.role = RoleConfig.Role.RUNNER
+	runner.crystals = SANDBOX_CRYSTALS
+	players[SANDBOX_RUNNER_ID] = runner
+	var hunter := _new_player("Sandbox Hunter", RoleConfig.Role.HUNTER)
+	hunter.role = RoleConfig.Role.HUNTER
+	hunter.crystals = SANDBOX_CRYSTALS
+	players[SANDBOX_HUNTER_ID] = hunter
+	resolved_hunter_id = SANDBOX_HUNTER_ID
+	## The match scene only reports the local peer as loaded; the Hunter has no scene of its own.
+	_loaded_peers[SANDBOX_HUNTER_ID] = true
+	time_left = 0.0
+	_set_phase(Phase.HUNTER_ACTIVE)
+	players_changed.emit()
+	GameLog.info("SANDBOX", "sandbox prepared (Runner %d, Hunter %d)" % [SANDBOX_RUNNER_ID, SANDBOX_HUNTER_ID])
+
+
+## Fresh sandbox in the same match scene: both characters respawn, buildings are gone.
+func restart_sandbox() -> void:
+	prepare_sandbox()
+	get_tree().call_deferred("reload_current_scene")
+
+
+## Back to the start menu.
+func exit_sandbox() -> void:
+	reset_match()

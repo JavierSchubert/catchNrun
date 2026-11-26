@@ -242,12 +242,31 @@ func _set_hovered(entity: Node) -> void:
 func _set_selected(entity: Node) -> void:
 	if selected != null and is_instance_valid(selected) and selected.has_method("set_selection_selected"):
 		selected.call("set_selection_selected", false)
+	_follow_sandbox_character(entity)
 	selected = entity
 	if selected != null and selected.has_method("set_selection_selected"):
 		selected.call("set_selection_selected", true)
 	_disarm_attack_move()
 	_refresh_circle_states()
 	selection_changed.emit(selected)
+
+
+## Sandbox: selecting one of the two test characters also hands the controls to it, so the
+## HUD, build panel and RMB commands all follow the selection. Foreign entities keep the
+## current character.
+func _follow_sandbox_character(entity: Node) -> void:
+	if not GameManager.sandbox_mode or not entity is Unit:
+		return
+	var unit := entity as Unit
+	if not GameManager.is_sandbox_character(unit.peer_id) or not unit.is_alive():
+		return
+	if unit.peer_id == GameManager.local_peer_id():
+		return
+	GameManager.set_sandbox_active(unit.peer_id)
+	## Own / enemy ring colours are relative to the character in play.
+	for node in get_tree().get_nodes_in_group(CLICKABLE_GROUP):
+		if node != entity and node.has_method("refresh_selection_visual"):
+			node.call("refresh_selection_visual")
 
 
 func _refresh_circle_states() -> void:
@@ -312,9 +331,7 @@ func _nearest_entity(candidates: Array, world_pos: Vector2) -> Node:
 
 
 func _local_peer_id() -> int:
-	if multiplayer.has_multiplayer_peer():
-		return multiplayer.get_unique_id()
-	return 1
+	return GameManager.local_peer_id()
 
 
 func _auto_select_local_unit() -> void:

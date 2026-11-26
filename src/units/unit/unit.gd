@@ -264,9 +264,7 @@ func _is_net_server() -> bool:
 
 
 func _local_unique_id() -> int:
-	if _multiplayer_ready() and multiplayer.has_multiplayer_peer():
-		return multiplayer.get_unique_id()
-	return 1
+	return GameManager.local_peer_id()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -421,6 +419,11 @@ func _server_combat_tick(delta: float) -> void:
 		_resume_move_chain_if_needed()
 		return
 
+	## Sandbox: the Hunter you are not playing stands down instead of hunting your Runner.
+	## It still finishes an explicit order you gave it before switching away.
+	if _sandbox_standing_down() and attack.explicit_target == null and not attack.attack_move_active:
+		return
+
 	var target := attack.pick_target(global_position, _enemy_candidates())
 	if target == null:
 		_resume_attack_move_if_needed()
@@ -440,6 +443,10 @@ func _server_combat_tick(delta: float) -> void:
 	if not attack.can_swing():
 		return
 	_perform_melee(target)
+
+
+func _sandbox_standing_down() -> bool:
+	return GameManager.sandbox_mode and peer_id != GameManager.sandbox_active_peer
 
 
 ## Target may be an enemy Unit or (Hunter only) a Runner-owned Building (src/buildings/).

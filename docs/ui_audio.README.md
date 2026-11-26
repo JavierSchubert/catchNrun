@@ -124,11 +124,20 @@ Visible when `LaunchOptions.sandbox_enabled` (debug builds, `--sandbox`, or brow
 | --- | --- | --- |
 | Action bar | Top-left (compact ~780px) | Native: Host, Runner/Hunter icon buttons, quick start, continue, skip, reset; Headless **on by default**; Godot path. Browser host: Runner/Hunter bot requests, quick start, continue, skip, reset |
 | Tests | Top-right (native only) | Open lobby / roles / game alone |
-| Status + game log | Bottom-left, directly above the minimap | Phase, peers, last action text, scrolling game log |
+| Status + game log | Top-left, stacked **directly under** the action bar | Phase, peers, last action text, scrolling game log |
 
 Every panel has a **Minimize / Expand** button in its header; a minimized panel shrinks to its header and keeps its anchor corner. `G` (god mode) minimizes all panels at once, or expands them all again when everything is already minimized. `G` is ignored while the Godot-path field has focus.
 
-Match HUD status sits **top-center under** the action bar so it does not collide with sandbox chrome. Minimap and the sandbox log stack bottom-left; selection strip bottom-center; the Runner building panel owns the bottom-right corner.
+Match HUD status sits **top-center under** the action bar so it does not collide with sandbox chrome. The log stacks under the action bar (a minimized bar pulls it up); the minimap keeps the bottom-left corner alone, the selection strip is bottom-center, and the Runner building panel (360x600) owns the bottom-right corner.
+
+### 6.1. Start-menu Sandbox (Runner + Hunter)
+
+The lobby's **Sandbox** button (hidden in browsers; also `--scene=sandbox`) calls `GameManager.prepare_sandbox()` and opens the match scene offline with two characters: the Runner (peer 1) and a Hunter (peer 1000, `GameManager.SANDBOX_HUNTER_ID`). The Hunter phase is already open, both sides hold `SANDBOX_CRYSTALS`, and they spawn 900 px apart (outside the Hunter's 500 acquisition range).
+
+- **Switching:** click a character in the world, or use the Runner / Hunter buttons in the top-right *Sandbox* panel (the buttons also center the camera). The selected character is the one you play: `GameManager.local_peer_id()` returns it, and the HUD, build panel, crystal bar, minimap colors, camera `C`, RMB commands and construction requests all follow it. Nothing else in the game knows about the sandbox.
+- **Idle Hunter:** the Hunter you are not playing does not auto-acquire targets (it still finishes an explicit order you gave it before switching).
+- **No match end:** a fallen character stays down; **Restart** respawns both and clears buildings, **Exit** returns to the start menu.
+- Outside the sandbox `local_peer_id()` is simply the network peer id, so online play is unchanged.
 
 ---
 

@@ -2,6 +2,8 @@ extends CanvasLayer
 ## Match HUD: phase status, selection panel, and minimap.
 ## Layout lives in hud.tscn; this script only binds match data.
 
+const SANDBOX_CONTROLS := preload("res://game/match/sandbox_controls.gd")
+
 @onready var _root: Control = %Root
 @onready var _status: Label = %Status
 @onready var _selection_panel: SelectionPanel = %SelectionPanel
@@ -13,6 +15,8 @@ var _winner := ""
 func _ready() -> void:
 	SettingsMenu.attach(_root)
 	SoundManager.ensure_music()
+	if GameManager.sandbox_mode:
+		_root.add_child(SANDBOX_CONTROLS.new())
 	GameManager.match_finished.connect(_on_match_finished)
 	GameManager.phase_changed.connect(_on_phase_changed)
 	_refresh()
@@ -41,6 +45,8 @@ func _refresh() -> void:
 	elif GameManager.phase == GameManager.Phase.ENDED:
 		timer = " | match over"
 	var controls := "LMB select | RMB command own unit | C centers on you"
+	if GameManager.sandbox_mode:
+		controls = "Click a character to play it | RMB command | C centers on it"
 	if LaunchOptions.sandbox_enabled:
 		controls += " | G toggles the debug panels"
 	var lines := [
@@ -65,7 +71,7 @@ func _refresh_selection_panel() -> void:
 
 
 func _local_unit_text() -> String:
-	var id := multiplayer.get_unique_id()
+	var id := GameManager.local_peer_id()
 	if not GameManager.players.has(id):
 		return "Waiting for the roster"
 	var entry: Dictionary = GameManager.players[id]

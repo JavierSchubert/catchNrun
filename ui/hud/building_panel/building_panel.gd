@@ -378,6 +378,4 @@ func _local_is_active_runner() -> bool:
 
 
 func _local_peer_id() -> int:
-	if multiplayer != null and multiplayer.has_multiplayer_peer():
-		return multiplayer.get_unique_id()
-	return 1
+	return GameManager.local_peer_id()

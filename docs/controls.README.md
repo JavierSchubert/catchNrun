@@ -241,7 +241,7 @@ Eliminations and other roster updates must **not** auto-recenter the camera. A f
 
 ### 1.5. Debug panels (`G`)
 
-Only when the sandbox is enabled: `G` minimizes all sandbox panels (action bar, tests, game log), or expands them again when all are minimized. Each panel also has its own Minimize button. See `ui_audio.README.md` §6.
+Only when the debug sandbox panels are enabled: `G` minimizes all of them (action bar, tests, game log), or expands them again when all are minimized. Each panel also has its own Minimize button. See `ui_audio.README.md` §6.
 
 ---
 
