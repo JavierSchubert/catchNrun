@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="BuildingDef" format=3]
+[gd_resource type="Resource" script_class="BuildingDef" format=3 uid="uid://dmw0ocyglvefp"]
 
-[ext_resource type="Script" path="res://src/buildings/building_def.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://dlmlp08nohy53" path="res://src/buildings/building_def.gd" id="1_def"]
 [ext_resource type="Script" uid="uid://bdtlvfgxoutv" path="res://src/stats/stat_block.gd" id="2_stats"]
 
 [sub_resource type="Resource" id="Resource_tower_stats"]
@@ -13,7 +13,6 @@ melee_damage = 0.0
 ranged_damage = 18.0
 magic_damage = 0.0
 critical_chance = 0.0
-critical_damage_multiplier = 1.5
 lifesteal_chance = 0.0
 lifesteal_amount = 0.0
 attack_speed = 1.0
@@ -32,11 +31,4 @@ base_hp = 300.0
 hp_growth = 1.15
 base_build_seconds = 6.0
 build_time_growth = 1.08
-max_build_seconds = 20.0
 tower_base_stats = SubResource("Resource_tower_stats")
-tower_damage_per_pick = 0.3
-tower_attack_speed_per_pick = 0.2
-tower_crit_chance_per_pick = 0.08
-tower_crit_damage_per_pick = 0.15
-tower_range_per_pick = 0.15
-tower_projectile_speed = 650.0

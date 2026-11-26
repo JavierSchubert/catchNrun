@@ -1,15 +1,15 @@
-[gd_scene load_steps=6 format=3 uid="uid://bmatchhudscene01"]
+[gd_scene format=3 uid="uid://b5un4h7dglmme"]
 
-[ext_resource type="Script" path="res://game/match/hud.gd" id="1_hud"]
-[ext_resource type="PackedScene" path="res://ui/hud/minimap/minimap.tscn" id="2_minimap"]
-[ext_resource type="PackedScene" path="res://ui/hud/selection_panel/selection_panel.tscn" id="3_selection"]
-[ext_resource type="PackedScene" path="res://ui/hud/building_panel/building_panel.tscn" id="4_building"]
+[ext_resource type="Script" uid="uid://dcw1xxn706g7c" path="res://game/match/hud.gd" id="1_hud"]
+[ext_resource type="PackedScene" uid="uid://deivbpbqgk4u3" path="res://ui/hud/minimap/minimap.tscn" id="2_minimap"]
+[ext_resource type="PackedScene" uid="uid://bxadifs50at6o" path="res://ui/hud/selection_panel/selection_panel.tscn" id="3_selection"]
+[ext_resource type="PackedScene" uid="uid://dcechj3pvu0hw" path="res://ui/hud/building_panel/building_panel.tscn" id="4_building"]
 [ext_resource type="PackedScene" path="res://ui/hud/resource_bar/resource_bar.tscn" id="5_resource"]
 
-[node name="HUD" type="CanvasLayer"]
+[node name="HUD" type="CanvasLayer" unique_id=502979574]
 script = ExtResource("1_hud")
 
-[node name="Root" type="Control" parent="."]
+[node name="Root" type="Control" parent="." unique_id=705307984]
 unique_name_in_owner = true
 layout_mode = 3
 anchors_preset = 15
@@ -19,7 +19,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Status" type="Label" parent="Root"]
+[node name="Status" type="Label" parent="Root" unique_id=1216018792]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 10
@@ -29,12 +29,11 @@ offset_top = 108.0
 offset_right = -260.0
 offset_bottom = 180.0
 grow_horizontal = 2
-mouse_filter = 2
 theme_override_font_sizes/font_size = 18
-horizontal_alignment = 1
 text = "Phase status"
+horizontal_alignment = 1
 
-[node name="ResourceBar" parent="Root" instance=ExtResource("5_resource")]
+[node name="ResourceBar" parent="Root" unique_id=1206935909 instance=ExtResource("5_resource")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 5
@@ -46,7 +45,7 @@ offset_right = 130.0
 offset_bottom = 64.0
 grow_horizontal = 2
 
-[node name="Minimap" parent="Root" instance=ExtResource("2_minimap")]
+[node name="Minimap" parent="Root" unique_id=378293982 instance=ExtResource("2_minimap")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 2
@@ -58,7 +57,7 @@ offset_right = 236.0
 offset_bottom = -16.0
 grow_vertical = 0
 
-[node name="SelectionPanel" parent="Root" instance=ExtResource("3_selection")]
+[node name="SelectionPanel" parent="Root" unique_id=426094020 instance=ExtResource("3_selection")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 7
@@ -73,7 +72,7 @@ offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 0
 
-[node name="BuildingPanel" parent="Root" instance=ExtResource("4_building")]
+[node name="BuildingPanel" parent="Root" unique_id=603350835 instance=ExtResource("4_building")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 3
@@ -82,8 +81,8 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -316.0
-offset_top = -356.0
+offset_top = -740.0
 offset_right = -16.0
-offset_bottom = -16.0
+offset_bottom = -300.0
 grow_horizontal = 0
 grow_vertical = 0

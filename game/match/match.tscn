@@ -8,7 +8,7 @@
 [ext_resource type="PackedScene" uid="uid://co2dllw6ejyto" path="res://game/maps/arena_plateau.tscn" id="6_map"]
 [ext_resource type="Script" uid="uid://8ufwu7rhs85m" path="res://src/selection/selection_manager.gd" id="7_selection"]
 [ext_resource type="Texture2D" uid="uid://ct0x37wc2d5ts" path="res://assets/sprites/ui/Spawn_mark.png" id="8_spawn_mark"]
-[ext_resource type="Script" path="res://src/construction/construction_manager.gd" id="9_construction"]
+[ext_resource type="Script" uid="uid://rixlbafcveid" path="res://src/construction/construction_manager.gd" id="9_construction"]
 
 [node name="Match" type="Node2D" unique_id=1631963897]
 script = ExtResource("1_match")
@@ -59,14 +59,14 @@ spawn_path = NodePath("../Players")
 [node name="SelectionManager" type="Node2D" parent="." unique_id=1407656614]
 script = ExtResource("7_selection")
 
-[node name="BuildingsRoot" type="Node2D" parent="."]
+[node name="BuildingsRoot" type="Node2D" parent="." unique_id=1481544993]
 unique_name_in_owner = true
 
-[node name="BuildingSpawner" type="MultiplayerSpawner" parent="."]
+[node name="BuildingSpawner" type="MultiplayerSpawner" parent="." unique_id=613542569]
 unique_name_in_owner = true
 spawn_path = NodePath("../BuildingsRoot")
 
-[node name="ConstructionManager" type="Node" parent="."]
+[node name="ConstructionManager" type="Node" parent="." unique_id=1645510704]
 script = ExtResource("9_construction")
 
 [node name="MatchCamera" type="Camera2D" parent="." unique_id=785354269]

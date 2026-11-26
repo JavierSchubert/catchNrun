@@ -22,6 +22,8 @@ const PICK_ICON_STATS := [
 ]
 
 @onready var _info_label: Label = %InfoLabel
+@onready var _content: Control = %Content
+@onready var _minimize_button: Button = %MinimizeButton
 @onready var _wall_button: Button = %WallButton
 @onready var _tower_button: Button = %TowerButton
 @onready var _mine_button: Button = %MineButton
@@ -44,6 +46,9 @@ var _armed_key := ""
 var _ghost: BuildGhost
 var _pending_building_name := ""
 var _build_buttons: Dictionary = {}
+var _expanded_top_offset := 0.0
+var _expanded_minimum_height := 0.0
+var _is_minimized := false
 ## 2x2 grid, ordered to match BuildingDef.TowerPath. Every tower upgrade spends the level
 ## cost and takes exactly one of these paths.
 var _pick_buttons: Array[Button] = []
@@ -51,6 +56,9 @@ var _pick_buttons: Array[Button] = []
 
 func _ready() -> void:
 	add_to_group("building_ui")
+	_expanded_top_offset = offset_top
+	_expanded_minimum_height = custom_minimum_size.y
+	_minimize_button.pressed.connect(_on_minimize_pressed)
 	_build_buttons = {"wall": _wall_button, "tower": _tower_button, "crystal_mine": _mine_button}
 	for key in BUILD_KEYS:
 		var button: Button = _build_buttons[key]
@@ -68,6 +76,21 @@ func _ready() -> void:
 
 func is_armed() -> bool:
 	return not _armed_key.is_empty()
+
+
+func _on_minimize_pressed() -> void:
+	_is_minimized = not _is_minimized
+	_content.visible = not _is_minimized
+	if _is_minimized:
+		custom_minimum_size.y = 44.0
+		offset_top = offset_bottom - 44.0
+		_minimize_button.text = "Expand"
+		_minimize_button.tooltip_text = "Expand building panel"
+	else:
+		custom_minimum_size.y = _expanded_minimum_height
+		offset_top = _expanded_top_offset
+		_minimize_button.text = "Minimize"
+		_minimize_button.tooltip_text = "Minimize building panel"
 
 
 func _process(_delta: float) -> void:
