@@ -19,17 +19,22 @@ The Selection Panel is a **fixed-size** bottom HUD strip (`520×148`). Selection
 
 | Section | Position | Purpose |
 | --- | --- | --- |
-| Portrait ring | Left | Circular crop of the selected unit sprite; empty ring when nothing is selected |
+| Portrait XP ring | Left | Circular crop + grey double frame; violet XP fill; overlapping level badge |
 | Combat stats | Right of portrait | Two columns of icon + value rows |
 | Health bar | Under stats | Fill = current / max health; `+regen` only when not full |
 
 ```text
 Selection Panel (fixed size)
-├── Portrait ring (always; unit sprite or building icon when selected)
+├── Portrait wrap (always)
+│   ├── XpRing — grey outer ring + dark band + thick inner frame; violet fill CCW
+│   ├── Portrait — circular crop inset inside the frame
+│   └── LevelBadge — small overlapping circle with current level
 └── Right column (when a unit or Building with def is selected)
     ├── Stats grid (2 columns) — unit combat stats, or kind-specific building rows
     └── Health bar [////////////] +regen (units) / level caption (buildings)
 ```
+
+**Portrait chrome (WP-14):** grey outer ring and thicker inner frame with a darker band between. Hunter XP fills that band **violet counterclockwise** from 12 o'clock; a full ring levels the Hunter up. Runners stay **level 1** with a **full violet** band. Buildings show structure level on the badge and leave the XP band empty. Empty selection: grey double frame only (no fill, no badge).
 
 Stat values show the **final** number only: white at base, green above base, red below (`StatIcons.format_value`). Icons come from `assets/sprites/stats/clean/` via `StatIcons`. Building rows reuse the same grid with `StatIcons` and, for mine income, `BuildingIcons.crystal_icon()`.
 
@@ -39,9 +44,11 @@ Empty selection: grey panel + empty portrait ring only (no stats, no health bar)
 
 ```text
 ui/hud/selection_panel/selection_panel.tscn
+ui/hud/selection_panel/portrait_xp_ring.gd
 ui/hud/selection_panel/selection_panel_style.tres
-ui/hud/selection_panel/selection_ring_style.tres
+ui/hud/selection_panel/selection_ring_style.tres   # legacy; XpRing draws the live frame
 ui/hud/widgets/stat_icon_row.tscn   # shared icon+label row (also used by BuildingPanel)
+src/progression/xp_progress.gd
 src/stats/stat_icons.gd
 src/buildings/building_icons.gd
 assets/sprites/stats/clean/

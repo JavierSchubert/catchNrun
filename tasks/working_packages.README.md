@@ -386,16 +386,19 @@ Over-unit HUD chrome for living players.
 
 Per-player experience and leveling with selection-panel feedback.
 
-### Open
+### Done (see CP-19)
 
-- [ ] Authoritative player **level** + **XP** state (host-owned; replicated to clients)
-- [ ] XP curve where **each level requires more XP than the previous** (configurable formula / table)
-- [ ] Grant XP from agreed sources (document first: e.g. damage dealt, kills, time alive — placeholders OK until economy/combat hooks land)
+- [x] Authoritative unit **level** + **XP** (`Unit.level` / `Unit.xp`, MultiplayerSynchronizer)
+- [x] XP curve via `XpProgress` (`BASE_XP * GROWTH^(level-1)`; each level costs more)
+- [x] Grant XP: Hunter melee damage dealt (units + buildings), 1 XP per applied damage
+- [x] Selection panel: grey double frame + dark band; violet fill counterclockwise; level badge on portrait
+- [x] Runners fixed at level 1 with full violet ring; buildings show structure level, empty XP band
+- [x] Empty selection: grey frame only (no fill / badge)
+- [x] Sandbox **XP +50** button (Hunter only)
+
+### Still open
+
 - [ ] Level-up applies agreed rewards (document first: e.g. stat bumps via `StatModifier`, or none until tuned)
-- [ ] Selection panel: **larger ring around the portrait** that fills with **violet** as XP progresses toward the next level
-- [ ] Show current level somewhere on the selection panel (near portrait / ring)
-- [ ] Empty selection keeps grey portrait; XP ring hidden or empty when nothing selected
-- [ ] Sandbox / test hook to add XP for playtests (optional)
 
 ### Depends on
 

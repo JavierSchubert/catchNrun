@@ -244,6 +244,7 @@ func _build_stats_panel(root: Control) -> void:
 		_add_text_button(box, "LS amount +10", _sandbox_add_lifesteal_amount),
 		_add_text_button(box, "Damage +15", _sandbox_add_damage),
 		_add_text_button(box, "Regen +5/s", _sandbox_add_regen),
+		_add_text_button(box, "XP +50", _sandbox_add_xp),
 		_add_text_button(box, "Reset stats", _sandbox_clear_stat_mods),
 	]
 	_register_collapsible(panel, toggle, hidden)
@@ -466,6 +467,23 @@ func _sandbox_add_regen() -> void:
 	_sandbox_add_flat(StatBlock.Stat.HEALTH_REGENERATION, 5.0, "Regen +5/s")
 
 
+func _sandbox_add_xp() -> void:
+	var unit := _active_sandbox_unit()
+	if unit == null:
+		_status.text = "No active sandbox unit for XP."
+		return
+	if unit.role() != RoleConfig.Role.HUNTER:
+		_status.text = "Only the Hunter earns XP (Runners stay Lv 1, full violet ring)."
+		return
+	unit.grant_xp(50.0)
+	_status.text = "Sandbox: +50 XP → Lv %d (%.0f / %.0f)" % [
+		unit.level,
+		unit.xp,
+		XpProgress.xp_to_next(unit.level),
+	]
+	_refresh_stats_readout()
+
+
 func _sandbox_clear_stat_mods() -> void:
 	var unit := _active_sandbox_unit()
 	if unit != null:
@@ -495,7 +513,10 @@ func _refresh_stats_readout() -> void:
 		_stats_readout.text = "No active unit — enter the match and select Runner/Hunter"
 		return
 	var sheet := unit.stats
-	_stats_readout.text = "DMG %.0f | Crit %.0f%% ×%.1f\nLS %.0f%% +%.0f | Regen %.1f" % [
+	_stats_readout.text = "Lv %d | XP %.0f / %.0f\nDMG %.0f | Crit %.0f%% ×%.1f\nLS %.0f%% +%.0f | Regen %.1f" % [
+		unit.level,
+		unit.xp,
+		XpProgress.xp_to_next(unit.level),
 		sheet.final_value(StatBlock.Stat.MELEE_DAMAGE),
 		sheet.final_value(StatBlock.Stat.CRITICAL_CHANCE) * 100.0,
 		sheet.final_value(StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER),

@@ -1,7 +1,7 @@
 @tool
 class_name SelectionPanel
 extends Control
-## Fixed-size selection strip: portrait ring, combat stats, and health bar.
+## Fixed-size selection strip: portrait XP ring, combat stats, and health bar.
 ## Empty selection keeps the grey panel + empty ring (no portrait / stats).
 
 ## Row-major order for the 2-column StatsGrid.
@@ -15,6 +15,8 @@ const PANEL_STATS: Array[StatBlock.Stat] = [
 ]
 
 const PANEL_SIZE := Vector2(580, 168)
+const LEVEL_BADGE_SIZE := 28.0
+const PORTRAIT_INSET := 14.0
 
 @export var panel_style: StyleBoxFlat:
 	set(value):
@@ -36,6 +38,10 @@ const PANEL_SIZE := Vector2(580, 168)
 
 var _stat_icons: Array[TextureRect] = []
 var _stat_values: Array[RichTextLabel] = []
+var _xp_ring: PortraitXpRing
+var _level_badge: Panel
+var _level_label: Label
+var _bound: Node = null
 
 
 func _ready() -> void:
@@ -46,22 +52,91 @@ func _ready() -> void:
 	_cache_stat_rows()
 	_apply_stat_icons()
 	_apply_styles()
+	_ensure_xp_chrome()
 	if Engine.is_editor_hint():
 		return
 	_show_empty()
 
 
 func bind_selection(selected: Node, controllable: bool) -> void:
-	if selected == null or not is_instance_valid(selected):
+	_bound = selected if selected != null and is_instance_valid(selected) else null
+	if _bound == null:
 		_show_empty()
 		return
-	if selected is Unit:
-		_show_unit(selected as Unit, controllable)
+	if _bound is Unit:
+		_show_unit(_bound as Unit, controllable)
 		return
-	if selected is Building:
-		_show_building(selected as Building)
+	if _bound is Building:
+		_show_building(_bound as Building)
 		return
-	_show_generic(selected)
+	_show_generic(_bound)
+
+
+func _ensure_xp_chrome() -> void:
+	if _portrait == null:
+		return
+	var wrap := _portrait.get_parent() as Control
+	if wrap == null:
+		return
+	wrap.custom_minimum_size = Vector2(96, 96)
+	if _ring != null:
+		_ring.visible = false
+	_portrait.offset_left = PORTRAIT_INSET
+	_portrait.offset_top = PORTRAIT_INSET
+	_portrait.offset_right = -PORTRAIT_INSET
+	_portrait.offset_bottom = -PORTRAIT_INSET
+
+	if _xp_ring == null:
+		_xp_ring = PortraitXpRing.new()
+		_xp_ring.name = "XpRing"
+		_xp_ring.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_xp_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		wrap.add_child(_xp_ring)
+		wrap.move_child(_xp_ring, 0)
+
+	if _level_badge == null:
+		_level_badge = Panel.new()
+		_level_badge.name = "LevelBadge"
+		_level_badge.custom_minimum_size = Vector2(LEVEL_BADGE_SIZE, LEVEL_BADGE_SIZE)
+		_level_badge.size = Vector2(LEVEL_BADGE_SIZE, LEVEL_BADGE_SIZE)
+		_level_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_level_badge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		_level_badge.anchor_left = 1.0
+		_level_badge.anchor_top = 1.0
+		_level_badge.anchor_right = 1.0
+		_level_badge.anchor_bottom = 1.0
+		_level_badge.offset_left = -LEVEL_BADGE_SIZE + 4.0
+		_level_badge.offset_top = -LEVEL_BADGE_SIZE + 4.0
+		_level_badge.offset_right = 4.0
+		_level_badge.offset_bottom = 4.0
+		_level_badge.add_theme_stylebox_override("panel", _level_badge_style(false))
+		wrap.add_child(_level_badge)
+
+		_level_label = Label.new()
+		_level_label.name = "LevelLabel"
+		_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_level_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_level_label.add_theme_font_size_override("font_size", 12)
+		_level_label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.98))
+		_level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_level_badge.add_child(_level_label)
+
+
+func _level_badge_style(filled_violet: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.58, 0.28, 0.92, 1.0) if filled_violet else Color(0.12, 0.12, 0.16, 0.95)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(0.58, 0.58, 0.62, 0.95)
+	var radius := int(LEVEL_BADGE_SIZE * 0.5)
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_right = radius
+	style.corner_radius_bottom_left = radius
+	return style
 
 
 func _cache_stat_rows() -> void:
@@ -110,7 +185,7 @@ func _show_empty() -> void:
 	_portrait.tooltip_text = ""
 	_health_bar.value = 0.0
 	_regen_label.text = ""
-	_set_ring_color(Color(1, 1, 1, 0.25))
+	_set_xp_chrome(0.0, 0, false, false)
 
 
 func _show_unit(unit: Unit, _controllable: bool) -> void:
@@ -121,7 +196,8 @@ func _show_unit(unit: Unit, _controllable: bool) -> void:
 	_apply_stat_icons()
 	_bind_stat_values(unit.stats)
 	_bind_health(unit)
-	_set_ring_color(unit.selection_affinity_color(GameManager.local_peer_id()))
+	var is_runner := unit.role() == RoleConfig.Role.RUNNER
+	_set_xp_chrome(unit.xp_fill_ratio(), unit.level, true, is_runner)
 
 
 func _show_generic(_selected: Node) -> void:
@@ -130,7 +206,7 @@ func _show_generic(_selected: Node) -> void:
 	_portrait.tooltip_text = ""
 	_health_bar.value = 0.0
 	_regen_label.text = ""
-	_set_ring_color(Color(1, 1, 1, 0.35))
+	_set_xp_chrome(0.0, 0, false, false)
 
 
 func _show_building(building: Building) -> void:
@@ -142,8 +218,23 @@ func _show_building(building: Building) -> void:
 	_portrait.tooltip_text = "%s Lv %d" % [building.def.display_name, building.level]
 	_bind_building_stat_values(building)
 	_bind_building_health(building)
-	var own := building.is_own(GameManager.local_peer_id())
-	_set_ring_color(SelectionCircle.COLOR_OWN if own else SelectionCircle.COLOR_RUNNER_TEAM)
+	## Buildings show structure level on the badge; XP band stays empty (grey frame only).
+	_set_xp_chrome(0.0, building.level, true, false)
+
+
+func _set_xp_chrome(fill: float, level_value: int, show_badge: bool, runner_full: bool) -> void:
+	_ensure_xp_chrome()
+	if _xp_ring != null:
+		_xp_ring.show_fill = fill > 0.0 or runner_full
+		_xp_ring.progress = 1.0 if runner_full else fill
+	if _level_badge == null:
+		return
+	_level_badge.visible = show_badge and level_value > 0
+	if not _level_badge.visible:
+		return
+	_level_badge.add_theme_stylebox_override("panel", _level_badge_style(runner_full))
+	if _level_label != null:
+		_level_label.text = str(level_value)
 
 
 func _bind_building_stat_values(building: Building) -> void:
@@ -220,12 +311,3 @@ func _bind_health(unit: Unit) -> void:
 			_regen_label.text = "+%.1f" % regen
 	else:
 		_regen_label.text = ""
-
-
-func _set_ring_color(color: Color) -> void:
-	var base := ring_style if ring_style != null else _ring.get_theme_stylebox("panel")
-	if base == null:
-		return
-	var style := base.duplicate() as StyleBoxFlat
-	style.border_color = color
-	_ring.add_theme_stylebox_override("panel", style)

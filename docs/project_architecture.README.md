@@ -78,6 +78,7 @@ catchNrun/
 │   ├── inventory/
 │   ├── items/
 │   ├── navigation/
+│   ├── progression/          # XpProgress curve (WP-14)
 │   ├── selection/
 │   ├── stats/
 │   └── vision/
@@ -94,7 +95,7 @@ catchNrun/
 │   │   ├── health_bar/
 │   │   ├── minimap/
 │   │   ├── resources/
-│   │   ├── selection_panel/
+│   │   ├── selection_panel/          # portrait XP ring + level badge (WP-14)
 │   │   └── stats/
 │   │
 │   ├── menus/
@@ -194,6 +195,10 @@ Contains movement commands, path creation, path following, moving-target pursuit
 ### `src/selection/`
 
 Contains entity selection and selection-state management. It determines what is selected but does not implement the Selection Panel UI.
+
+### `src/progression/`
+
+Shared XP / level curve helpers (`XpProgress`). Unit state lives on `Unit`; the selection panel draws the portrait XP ring.
 
 ### `src/stats/`
 

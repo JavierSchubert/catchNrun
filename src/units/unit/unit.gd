@@ -32,6 +32,9 @@ const HUNTER_SPRITES := [
 var peer_id := 0
 var sync_position := Vector2.ZERO
 var sync_health := 0.0
+## Host-owned progression; replicated for the selection-panel XP ring / level badge.
+var level := 1
+var xp := 0.0
 var stats := StatSheet.new()
 
 var _intent := Vector2.ZERO
@@ -207,6 +210,34 @@ func minimap_marker_color(local_peer_id: int) -> Color:
 
 func role() -> int:
 	return config.role if config != null else RoleConfig.Role.RUNNER
+
+
+## Host-only. 1 XP per point of applied damage for Hunters. Runners stay level 1.
+func grant_xp(amount: float) -> void:
+	if not multiplayer.is_server() or amount <= 0.0:
+		return
+	if role() != RoleConfig.Role.HUNTER:
+		return
+	var before_level := level
+	var result := XpProgress.apply_gain(level, xp, amount)
+	level = int(result.level)
+	xp = float(result.xp)
+	if level > before_level:
+		GameLog.info(
+			"XP",
+			"%s reached level %d (%.0f XP into next)" % [
+				name_label.text if name_label else str(peer_id),
+				level,
+				xp,
+			]
+		)
+
+
+## Portrait ring fill 0–1. Runners always show a full violet ring at level 1.
+func xp_fill_ratio() -> float:
+	if role() == RoleConfig.Role.RUNNER:
+		return 1.0
+	return XpProgress.fill_ratio(level, xp)
 
 
 static func sprite_texture(sprite_index: int, role_id: int) -> Texture2D:
@@ -508,6 +539,7 @@ func _perform_melee_on_unit(target: Unit) -> void:
 	target.sync_health = target.health.current
 	if role() == RoleConfig.Role.HUNTER:
 		GameManager.award_damage_crystals(peer_id, applied)
+		grant_xp(applied)
 	GameLog.info(
 		"COMBAT",
 		"%s hit %s for %.1f%s" % [
@@ -543,6 +575,7 @@ func _perform_melee_on_building(target: Building) -> void:
 	var applied := target.apply_damage(raw)
 	if role() == RoleConfig.Role.HUNTER:
 		GameManager.award_damage_crystals(peer_id, applied)
+		grant_xp(applied)
 	GameLog.info(
 		"COMBAT",
 		"%s hit building %s for %.1f%s" % [
