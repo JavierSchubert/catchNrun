@@ -1,58 +1,59 @@
 [gd_scene format=4 uid="uid://co2dllw6ejyto"]
 
 [ext_resource type="TileSet" uid="uid://b2vasiedgehhj" path="res://assets/sprites/maps/tiles/v3/tileset.tres" id="1_tileset"]
-[ext_resource type="Script" path="res://game/maps/arena_plateau.gd" id="2_map_script"]
-[ext_resource type="Texture2D" path="res://assets/sprites/ui/shadow.png" id="3_shadow"]
-[ext_resource type="Texture2D" path="res://assets/sprites/ui/Spawn_mark.png" id="4_spawn"]
+[ext_resource type="Script" uid="uid://w6iidvkxsuav" path="res://game/maps/arena_plateau.gd" id="2_map_script"]
+[ext_resource type="Texture2D" uid="uid://c3m83pu6hqlf2" path="res://assets/sprites/ui/shadow.png" id="3_shadow"]
+[ext_resource type="Texture2D" uid="uid://ct0x37wc2d5ts" path="res://assets/sprites/ui/Spawn_mark.png" id="4_spawn"]
 
-[node name="ArenaPlateau" type="Node2D"]
+[node name="ArenaPlateau" type="Node2D" unique_id=146640809]
 script = ExtResource("2_map_script")
 
-[node name="FloorLayer" type="TileMapLayer" parent="."]
+[node name="FloorLayer" type="TileMapLayer" parent="." unique_id=256840506]
+tile_map_data = PackedByteArray("AAAOAAgAAAAHAAYAAADw/wgAAAAHAAYAABDx/wgAAAACAAAAAADy/wgAAAACAAAAAADz/wgAAAACAAAAAAD0/wgAAAACAAAAAAD1/wgAAAACAAAAAAD2/wgAAAACAAAAAAD3/wgAAAACAAAAAAD4/wgAAAACAAAAAAD5/wgAAAACAAAAAAD6/wgAAAACAAAAAAD7/wgAAAACAAAAAAD8/wgAAAACAAAAAAD9/wgAAAACAAAAAAD+/wgAAAACAAAAAAD//wgAAAACAAAAAAAAAAgAAAACAAAAAAABAAgAAAACAAAAAAACAAgAAAACAAAAAAADAAgAAAACAAAAAAAEAAgAAAACAAAAAAAFAAgAAAACAAAAAAAGAAgAAAACAAAAAAAHAAgAAAACAAAAAAAIAAgAAAACAAAAAAAJAAgAAAACAAAAAAAKAAgAAAACAAAAAAALAAgAAAACAAAAAAAMAAgAAAACAAAAAAANAAgAAAACAAAAAAA=")
 tile_set = ExtResource("1_tileset")
 
-[node name="OverlayLayer" type="TileMapLayer" parent="."]
+[node name="OverlayLayer" type="TileMapLayer" parent="." unique_id=102618805]
 z_index = 1
 tile_set = ExtResource("1_tileset")
 
-[node name="PropsLayer" type="Node2D" parent="."]
+[node name="PropsLayer" type="Node2D" parent="." unique_id=1520164552]
 z_index = 2
 
-[node name="ShadowNW" type="Sprite2D" parent="PropsLayer"]
+[node name="ShadowNW" type="Sprite2D" parent="PropsLayer" unique_id=873028231]
+modulate = Color(1, 1, 1, 0.35)
 position = Vector2(-1800, -1200)
 scale = Vector2(0.8, 0.8)
 texture = ExtResource("3_shadow")
-modulate = Color(1, 1, 1, 0.35)
 
-[node name="ShadowSE" type="Sprite2D" parent="PropsLayer"]
+[node name="ShadowSE" type="Sprite2D" parent="PropsLayer" unique_id=1527596782]
+modulate = Color(1, 1, 1, 0.35)
 position = Vector2(1800, 1200)
 scale = Vector2(0.8, 0.8)
 texture = ExtResource("3_shadow")
-modulate = Color(1, 1, 1, 0.35)
 
-[node name="EditorSpawnPreview" type="Node2D" parent="."]
+[node name="EditorSpawnPreview" type="Node2D" parent="." unique_id=247400160]
 z_index = 3
 
-[node name="Spawn0" type="Sprite2D" parent="EditorSpawnPreview"]
+[node name="Spawn0" type="Sprite2D" parent="EditorSpawnPreview" unique_id=1996830497]
+modulate = Color(0.45, 0.85, 0.45, 0.7)
 position = Vector2(0, -160)
-modulate = Color(0.45, 0.85, 0.45, 0.7)
 scale = Vector2(0.55, 0.55)
 texture = ExtResource("4_spawn")
 
-[node name="Spawn1" type="Sprite2D" parent="EditorSpawnPreview"]
+[node name="Spawn1" type="Sprite2D" parent="EditorSpawnPreview" unique_id=436275563]
+modulate = Color(0.45, 0.85, 0.45, 0.7)
 position = Vector2(160, 0)
-modulate = Color(0.45, 0.85, 0.45, 0.7)
 scale = Vector2(0.55, 0.55)
 texture = ExtResource("4_spawn")
 
-[node name="Spawn2" type="Sprite2D" parent="EditorSpawnPreview"]
+[node name="Spawn2" type="Sprite2D" parent="EditorSpawnPreview" unique_id=15138307]
+modulate = Color(0.45, 0.85, 0.45, 0.7)
 position = Vector2(0, 160)
-modulate = Color(0.45, 0.85, 0.45, 0.7)
 scale = Vector2(0.55, 0.55)
 texture = ExtResource("4_spawn")
 
-[node name="Spawn3" type="Sprite2D" parent="EditorSpawnPreview"]
-position = Vector2(-160, 0)
+[node name="Spawn3" type="Sprite2D" parent="EditorSpawnPreview" unique_id=552733350]
 modulate = Color(0.45, 0.85, 0.45, 0.7)
+position = Vector2(-160, 0)
 scale = Vector2(0.55, 0.55)
 texture = ExtResource("4_spawn")
