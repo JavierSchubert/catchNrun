@@ -526,8 +526,11 @@ Local-only world FX (same presentation pattern as `MoveClickMarker`): rising, fa
 | Crit damage | Yellow | Crit melee / crit tower hit |
 | Lifesteal | Green (`+N`) | HP gained from lifesteal on the attacker |
 | Regen | Green (`+N`) | Health regen tick (batched when gained ≥ 1) |
+| Crystal | Cyan / blue (`+N`) | Crystal Mine tick income |
 
 Numbers spawn with a small random offset around the affected entity, rise upward, and fade out. They do not affect sync — host resolves damage; each peer shows local FX.
+
+World health bars (`HealthBar`): **player units always show** the bar; structures and other entities only show it while below full HP (shield strips follow the same rule when a shield exists).
 
 ### 5.3. Attack Types
 

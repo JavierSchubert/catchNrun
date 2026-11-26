@@ -45,6 +45,8 @@ def test_floating_number_api() -> None:
     assert "enum Kind" in text
     assert "DAMAGE" in text and "CRIT" in text
     assert "LIFESTEAL" in text and "REGEN" in text
+    assert "CRYSTAL" in text
+    assert "COLOR_CRYSTAL" in text
     assert "static func spawn" in text
     assert "static func spawn_replicated" in text
     assert "static func receive_rpc" in text

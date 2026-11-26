@@ -75,17 +75,18 @@ func _test_hud_display_format() -> void:
 	sheet.add_modifier(_mod(StatModifier.Kind.PERCENT, StatModifier.Scope.ONE_STAT, StatBlock.Stat.MELEE_DAMAGE, 0.20))
 	sheet.add_modifier(_mod(StatModifier.Kind.PERCENT, StatModifier.Scope.ALL_DAMAGE, StatBlock.Stat.MELEE_DAMAGE, 0.10))
 	_near(sheet.modifier_delta(StatBlock.Stat.MELEE_DAMAGE), 9.5, "delta is final minus base")
+	## Final 19.5 vs base 10 → green final value (no parenthetical delta).
 	var shown := StatIcons.format_value(sheet, StatBlock.Stat.MELEE_DAMAGE)
-	if shown != "10 ([color=#6fdf8a]+9.5[/color])":
-		_failures.append("positive delta HUD format (got %s)" % shown)
+	if shown != "[color=#6fdf8a]19.5[/color]":
+		_failures.append("positive final HUD format (got %s)" % shown)
 	var lower := StatSheet.new()
 	var block := StatBlock.new()
 	block.melee_damage = 10.0
 	lower.set_base(block)
 	lower.add_modifier(_mod(StatModifier.Kind.FLAT, StatModifier.Scope.ONE_STAT, StatBlock.Stat.MELEE_DAMAGE, -4.0))
 	var negative := StatIcons.format_value(lower, StatBlock.Stat.MELEE_DAMAGE)
-	if negative != "10 ([color=#f07178]-4[/color])":
-		_failures.append("negative delta HUD format (got %s)" % negative)
+	if negative != "[color=#f07178]6[/color]":
+		_failures.append("negative final HUD format (got %s)" % negative)
 
 
 func _sheet(melee_damage: float) -> StatSheet:

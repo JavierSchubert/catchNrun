@@ -85,9 +85,14 @@ func _ready() -> void:
 	attack.acquisition_range = config.acquisition_range
 	_apply_derived_stats()
 	health.died.connect(_on_died)
-	health.health_changed.connect(health_bar.update_for_health)
+	if health_bar != null:
+		## Player characters always show their HP strip; structures hide theirs when full.
+		health_bar.show_when_full = true
+		health.health_changed.connect(health_bar.update_for_health)
 	health.setup(stats.final_value(StatBlock.Stat.MAX_HEALTH))
 	sync_health = health.current
+	if health_bar != null:
+		health_bar.update_for_health(health.current, stats.final_value(StatBlock.Stat.MAX_HEALTH))
 	var player_data: Dictionary = GameManager.players.get(peer_id, {})
 	sprite.texture = sprite_texture(int(player_data.get("sprite_index", 0)), config.role)
 	sprite.modulate = Color.WHITE

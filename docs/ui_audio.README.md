@@ -82,7 +82,7 @@ Scenes should call `SoundManager.ensure_music()` (or rely on boot). Do **not** c
 
 UI clicks: `SoundManager.play_ui()` (also wired from `AnimatedButton` when `play_click_sound` is true).
 
-World combat feedback numbers (white / yellow / green rise-and-fade) are local FX in `src/fx/floating_number.gd`, not audio — see `controls.README.md` §5.2.
+World combat / economy feedback numbers (white / yellow / green / cyan crystal rise-and-fade) are local FX in `src/fx/floating_number.gd`, not audio — see `controls.README.md` §5.2.
 
 ---
 

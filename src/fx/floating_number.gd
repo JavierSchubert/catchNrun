@@ -3,11 +3,12 @@ extends Node2D
 ## Local combat / regen feedback: a rising, fading number near the affected entity.
 ## Spawn from combat resolve sites only (not bare health_changed). Pattern matches MoveClickMarker.
 
-enum Kind { DAMAGE, CRIT, LIFESTEAL, REGEN }
+enum Kind { DAMAGE, CRIT, LIFESTEAL, REGEN, CRYSTAL }
 
 const COLOR_DAMAGE := Color(1.0, 1.0, 1.0, 1.0)
 const COLOR_CRIT := Color(1.0, 0.92, 0.25, 1.0)
 const COLOR_HEAL := Color(0.36, 0.92, 0.45, 1.0)
+const COLOR_CRYSTAL := Color(0.3, 0.85, 0.95, 1.0)
 
 const RISE_PX := 42.0
 const OFFSET_RADIUS := 18.0
@@ -54,6 +55,8 @@ static func color_for(kind: Kind) -> Color:
 			return COLOR_CRIT
 		Kind.LIFESTEAL, Kind.REGEN:
 			return COLOR_HEAL
+		Kind.CRYSTAL:
+			return COLOR_CRYSTAL
 		_:
 			return COLOR_DAMAGE
 
@@ -62,7 +65,7 @@ static func format_value(value: float, kind: Kind) -> String:
 	var rounded := value
 	var text := str(int(roundf(rounded))) if is_equal_approx(rounded, roundf(rounded)) else "%.1f" % rounded
 	match kind:
-		Kind.LIFESTEAL, Kind.REGEN:
+		Kind.LIFESTEAL, Kind.REGEN, Kind.CRYSTAL:
 			return "+%s" % text
 		_:
 			return text

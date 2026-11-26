@@ -31,7 +31,7 @@ Selection Panel (fixed size)
     └── Health bar [////////////] +regen (units) / level caption (buildings)
 ```
 
-Stat values use `base (+delta)` with green / red BBCode for the modifier. Icons come from `assets/sprites/stats/clean/` via `StatIcons`. Building rows reuse the same grid with `StatIcons` and, for mine income, `BuildingIcons.crystal_icon()`.
+Stat values show the **final** number only: white at base, green above base, red below (`StatIcons.format_value`). Icons come from `assets/sprites/stats/clean/` via `StatIcons`. Building rows reuse the same grid with `StatIcons` and, for mine income, `BuildingIcons.crystal_icon()`.
 
 Empty selection: grey panel + empty portrait ring only (no stats, no health bar).
 

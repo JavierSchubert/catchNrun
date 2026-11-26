@@ -194,7 +194,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Portrait ring always present | Done | Empty ring when nothing selected; sprite when a unit is selected |
 | Portrait ring uses selection affinity colors | Done | Own green / runner blue / hunter red |
 | Combat stats grid (2×3) with clean icons | Done | Damage / crit / defense / lifesteal / attack speed / move; `StatIcons` + `assets/sprites/stats/clean/` |
-| Stat values as `base (+delta)` | Done | Green / red BBCode modifier delta from `StatSheet` |
+| Stat values as colored final | Done | White at base, green above, red below (`StatIcons.format_value`) |
 | Health bar under stats + regen `+X` when not full | Done | Fill = current / max; regen label hidden at full HP |
 | `C` always centers on local own unit (ignores foreign selection) | Done | `game/camera/match_camera.gd`, `controls.README.md` §1.4 |
 | Bottom-left minimap with current map asset | Done | `ui/hud/minimap/minimap.tscn` + frame StyleBox `.tres` |

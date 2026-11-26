@@ -372,7 +372,11 @@ func _tick_mine(delta: float) -> void:
 	if _mine_timer < def.mine_interval:
 		return
 	_mine_timer -= def.mine_interval
-	GameManager.grant_crystals(owner_peer_id, def.mine_output_for_level(level))
+	var amount := def.mine_output_for_level(level)
+	GameManager.grant_crystals(owner_peer_id, amount)
+	## Blue crystal popups for mine ticks (local + clients via spawn_replicated).
+	if amount > 0.0:
+		_spawn_floating_number_on(self, amount, FloatingNumber.Kind.CRYSTAL)
 
 
 func _tick_tower(delta: float) -> void:
@@ -587,13 +591,18 @@ func _refresh_visuals() -> void:
 
 func _on_health_changed(current: float, maximum: float) -> void:
 	if health_bar != null:
+		## Structures: bar only while damaged (HealthBar.show_when_full is false).
 		health_bar.update_for_health(current, maximum)
 
 
 func _on_shield_changed(current: float, maximum: float) -> void:
 	if shield_bar == null:
 		return
-	shield_bar.visible = maximum > 0.0
+	if maximum <= 0.0:
+		shield_bar.visible = false
+		return
+	## Same rule as HP: hide the shield strip while it is full.
+	shield_bar.show_when_full = false
 	shield_bar.update_for_health(current, maximum)
 
 
