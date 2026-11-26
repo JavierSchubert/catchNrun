@@ -386,19 +386,22 @@ Over-unit HUD chrome for living players.
 
 Per-player experience and leveling with selection-panel feedback.
 
-### Done (see CP-19)
+### Done (see CP-19; presentation polish also CP-10 / CP-20)
 
 - [x] Authoritative unit **level** + **XP** (`Unit.level` / `Unit.xp`, MultiplayerSynchronizer)
 - [x] XP curve via `XpProgress` (`BASE_XP * GROWTH^(level-1)`; each level costs more)
 - [x] Grant XP: Hunter melee damage dealt (units + buildings), 1 XP per applied damage
-- [x] Selection panel: grey double frame + dark band; violet fill counterclockwise; level badge on portrait
+- [x] Selection panel: matching-thickness grey double frame + dark band; violet fill counterclockwise from 12 o'clock; overlapping level badge
+- [x] Stats column spaced right of portrait; **no** “Lv N” beside the health bar (badge only)
 - [x] Runners fixed at level 1 with full violet ring; buildings show structure level, empty XP band
 - [x] Empty selection: grey frame only (no fill / badge)
 - [x] Sandbox **XP +50** button (Hunter only)
+- [x] Docs + offline `tools/test/test_wp14_xp.py`
 
 ### Still open
 
 - [ ] Level-up applies agreed rewards (document first: e.g. stat bumps via `StatModifier`, or none until tuned)
+- [ ] Match / editor verification in Godot
 
 ### Depends on
 
