@@ -1,9 +1,0 @@
-[gd_scene format=3 uid="uid://carenaspace0001"]
-
-[ext_resource type="TileSet" uid="uid://cspacemaptiles01" path="res://assets/sprites/maps/tiles/space/tileset.tres" id="1_tileset"]
-
-[node name="ArenaSpace" type="Node2D"]
-
-[node name="FloorLayer" type="TileMapLayer" parent="."]
-position = Vector2(-3840, -2560)
-tile_set = ExtResource("1_tileset")

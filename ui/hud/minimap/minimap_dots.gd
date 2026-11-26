@@ -18,9 +18,7 @@ func _draw() -> void:
 
 	_draw_camera_view(minimap)
 
-	var local_id := 1
-	if multiplayer.has_multiplayer_peer():
-		local_id = multiplayer.get_unique_id()
+	var local_id := GameManager.local_peer_id()
 
 	for node in tree.get_nodes_in_group("units"):
 		if not node is Unit:

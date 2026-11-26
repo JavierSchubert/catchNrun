@@ -1,0 +1,252 @@
+[gd_scene format=3 uid="uid://dcechj3pvu0hw"]
+
+[ext_resource type="Script" uid="uid://d0nd6ccn2hd5u" path="res://ui/hud/building_panel/building_panel.gd" id="1_script"]
+[ext_resource type="StyleBox" path="res://ui/hud/minimap/minimap_frame_style.tres" id="2_frame"]
+[ext_resource type="StyleBox" path="res://ui/styles/button_normal_style.tres" id="3_button"]
+[ext_resource type="StyleBox" path="res://ui/styles/button_hover_style.tres" id="4_button_hover"]
+
+[node name="BuildingPanel" type="Control" unique_id=1885995451]
+custom_minimum_size = Vector2(360, 600)
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("1_script")
+
+[node name="Frame" type="Panel" parent="." unique_id=239980541]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("2_frame")
+
+[node name="Margin" type="MarginContainer" parent="." unique_id=263280068]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="VBox" type="VBoxContainer" parent="Margin" unique_id=1631192202]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="HBoxContainer" parent="Margin/VBox" unique_id=1772130540]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Margin/VBox/Header" unique_id=835120434]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+text = "Building"
+
+[node name="MinimizeButton" type="Button" parent="Margin/VBox/Header" unique_id=239308963]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(72, 28)
+layout_mode = 2
+tooltip_text = "Minimize building panel"
+text = "Minimize"
+
+[node name="Content" type="VBoxContainer" parent="Margin/VBox" unique_id=1408093429]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="InfoLabel" type="Label" parent="Margin/VBox/Content" unique_id=1066470502]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Select a structure to build"
+autowrap_mode = 2
+
+[node name="Buttons" type="HBoxContainer" parent="Margin/VBox/Content" unique_id=1792874166]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="WallButton" type="Button" parent="Margin/VBox/Content/Buttons" unique_id=1706914370]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/icon_max_width = 32
+theme_override_font_sizes/font_size = 12
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+autowrap_mode = 3
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/pressed = ExtResource("4_button_hover")
+theme_override_styles/hover = ExtResource("4_button_hover")
+toggle_mode = true
+text = "Wall"
+
+[node name="TowerButton" type="Button" parent="Margin/VBox/Content/Buttons" unique_id=335521882]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/icon_max_width = 32
+theme_override_font_sizes/font_size = 12
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+autowrap_mode = 3
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/pressed = ExtResource("4_button_hover")
+theme_override_styles/hover = ExtResource("4_button_hover")
+toggle_mode = true
+text = "Tower"
+
+[node name="MineButton" type="Button" parent="Margin/VBox/Content/Buttons" unique_id=174004938]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/icon_max_width = 32
+theme_override_font_sizes/font_size = 12
+icon_alignment = 1
+vertical_icon_alignment = 0
+expand_icon = true
+autowrap_mode = 3
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/pressed = ExtResource("4_button_hover")
+theme_override_styles/hover = ExtResource("4_button_hover")
+toggle_mode = true
+text = "Mine"
+
+[node name="Spacer" type="Control" parent="Margin/VBox/Content" unique_id=1772411595]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="SelectedSection" type="VBoxContainer" parent="Margin/VBox/Content" unique_id=1400970891]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="SelectedSeparator" type="HSeparator" parent="Margin/VBox/Content/SelectedSection" unique_id=1818278050]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="SelectedName" type="Label" parent="Margin/VBox/Content/SelectedSection" unique_id=1742933781]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Building"
+
+[node name="SelectedHp" type="Label" parent="Margin/VBox/Content/SelectedSection" unique_id=2052717997]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "HP 0 / 0"
+
+[node name="SelectedDetail" type="Label" parent="Margin/VBox/Content/SelectedSection" unique_id=1087607500]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.78, 0.84, 1)
+theme_override_font_sizes/font_size = 12
+autowrap_mode = 2
+
+[node name="MaxLevelLabel" type="Label" parent="Margin/VBox/Content/SelectedSection" unique_id=285842833]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.82, 0.35, 1)
+theme_override_font_sizes/font_size = 12
+text = "Max level reached"
+
+[node name="UpgradeArea" type="VBoxContainer" parent="Margin/VBox/Content/SelectedSection" unique_id=1870415447]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="UpgradeHint" type="Label" parent="Margin/VBox/Content/SelectedSection/UpgradeArea" unique_id=7457821]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.78, 0.84, 1)
+theme_override_font_sizes/font_size = 11
+autowrap_mode = 2
+
+[node name="UpgradeButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea" unique_id=150034409]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/hover = ExtResource("4_button_hover")
+text = "Upgrade"
+
+[node name="PickGrid" type="GridContainer" parent="Margin/VBox/Content/SelectedSection/UpgradeArea" unique_id=2138803659]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+columns = 2
+
+[node name="PickDamageButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid" unique_id=432793560]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/icon_max_width = 24
+theme_override_font_sizes/font_size = 11
+expand_icon = true
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/hover = ExtResource("4_button_hover")
+text = "Damage"
+
+[node name="PickSpeedButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid" unique_id=1673988243]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/icon_max_width = 24
+theme_override_font_sizes/font_size = 11
+expand_icon = true
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/hover = ExtResource("4_button_hover")
+text = "Atk Speed"
+
+[node name="PickCritButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid" unique_id=690909081]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/icon_max_width = 24
+theme_override_font_sizes/font_size = 11
+expand_icon = true
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/hover = ExtResource("4_button_hover")
+text = "Crit"
+
+[node name="PickRangeButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid" unique_id=1334997138]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/icon_max_width = 24
+theme_override_font_sizes/font_size = 11
+expand_icon = true
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/hover = ExtResource("4_button_hover")
+text = "Range"
+
+[node name="DestroyButton" type="Button" parent="Margin/VBox/Content/SelectedSection" unique_id=1804956366]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/hover = ExtResource("4_button_hover")
+text = "Destroy"

@@ -5,7 +5,18 @@ extends RefCounted
 
 
 static func resolve_melee(attacker_stats: StatSheet, target_stats: StatSheet) -> Dictionary:
-	var raw := attacker_stats.final_value(StatBlock.Stat.MELEE_DAMAGE)
+	return _resolve(attacker_stats, target_stats, StatBlock.Stat.MELEE_DAMAGE)
+
+
+## Same rules as melee, but the attack reads RANGED_DAMAGE. Used by tower projectiles.
+static func resolve_ranged(attacker_stats: StatSheet, target_stats: StatSheet) -> Dictionary:
+	return _resolve(attacker_stats, target_stats, StatBlock.Stat.RANGED_DAMAGE)
+
+
+static func _resolve(
+	attacker_stats: StatSheet, target_stats: StatSheet, damage_stat: StatBlock.Stat
+) -> Dictionary:
+	var raw := attacker_stats.final_value(damage_stat)
 	if raw <= 0.0:
 		return {"damage": 0.0, "critical": false, "lifesteal": 0.0}
 

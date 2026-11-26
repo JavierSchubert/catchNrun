@@ -114,8 +114,7 @@ func _show_unit(unit: Unit, _controllable: bool) -> void:
 	_portrait.texture = unit.sprite.texture if unit.sprite else null
 	_bind_stat_values(unit.stats)
 	_bind_health(unit)
-	var local_id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-	_set_ring_color(unit.selection_affinity_color(local_id))
+	_set_ring_color(unit.selection_affinity_color(GameManager.local_peer_id()))
 
 
 func _show_generic(_selected: Node) -> void:

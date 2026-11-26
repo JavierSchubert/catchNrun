@@ -1,13 +1,14 @@
 class_name MoveClickMarker
 extends Node2D
 ## Brief local-only ring shown for click commands.
-## Blue = move. Red = attack / attack-move.
+## Blue = move. Red = attack / attack-move. Green = repair.
 
 const RING_RADIUS := 20.0
 const RING_WIDTH := 3.0
 const DOT_RADIUS := 3.5
 const MOVE_COLOR := Color(0.4, 0.78, 1.0, 1.0)
 const ATTACK_COLOR := Color(0.95, 0.28, 0.28, 0.95)
+const REPAIR_COLOR := Color(0.36, 0.92, 0.45, 0.95)
 
 @export var pop_duration := 0.16
 @export var fade_duration := 0.28

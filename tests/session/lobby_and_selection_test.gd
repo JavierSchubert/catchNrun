@@ -19,6 +19,8 @@ func _run() -> void:
 	_test_browser_bot_request_policy()
 	_test_chain_modifiers()
 	_test_sandbox_action_bar()
+	_test_sandbox_panels_minimize()
+	_test_sandbox_roster()
 	_test_sprite_sync_data()
 	_test_health_bar()
 	_test_match_presentation()
@@ -184,6 +186,84 @@ func _test_sandbox_action_bar() -> void:
 	_check(_button_with_text(root, "Skip") != null, "sandbox has a preparation-skip button")
 	root.free()
 	sandbox.free()
+
+
+## The action bar and the log stack top-left; each panel minimizes, and G folds / unfolds all.
+func _test_sandbox_panels_minimize() -> void:
+	var stack := VBoxContainer.new()
+	add_child(stack)
+	var sandbox := Node.new()
+	sandbox.set_script(load("res://game/sandbox/sandbox_panel.gd"))
+	add_child(sandbox)
+	sandbox.set("_headless", CheckBox.new())
+	sandbox.set("_bin_edit", LineEdit.new())
+	sandbox.set("_state", Label.new())
+	sandbox.set("_peers", Label.new())
+	sandbox.set("_status", Label.new())
+	sandbox.call("_build_action_bar", stack)
+	sandbox.call("_build_status_panel", stack)
+
+	_check(stack.get_child_count() == 2, "the action bar and the log share one top-left stack")
+	var skip := _button_with_text(stack, "Skip")
+	## Index 1 = directly under the action bar (index 0).
+	var log_panel := stack.get_child(1) as Control
+	var log_scroll := _first_of_type(log_panel, "ScrollContainer") as Control
+	_check(skip != null and skip.visible, "the action bar starts expanded")
+	_check(log_scroll != null and log_scroll.visible, "the log starts expanded")
+
+	sandbox.call("_toggle_all_collapsed")
+	_check(not skip.visible, "G minimizes the action bar")
+	_check(not log_scroll.visible, "G minimizes the log")
+	_check(_button_with_text(stack, "Expand") != null, "a minimized panel offers Expand")
+	sandbox.call("_toggle_all_collapsed")
+	_check(skip.visible and log_scroll.visible, "G expands everything again")
+
+	stack.free()
+	sandbox.free()
+
+
+## Start-menu sandbox: one Runner + one Hunter, and the local player switches between them.
+func _test_sandbox_roster() -> void:
+	GameManager.prepare_sandbox()
+	_check(GameManager.sandbox_mode, "prepare_sandbox turns sandbox mode on")
+	_check(GameManager.players.size() == 2, "the sandbox has exactly two characters")
+	_check(
+		int(GameManager.players[GameManager.SANDBOX_RUNNER_ID].role) == RoleConfig.Role.RUNNER,
+		"the sandbox has a Runner"
+	)
+	_check(
+		int(GameManager.players[GameManager.SANDBOX_HUNTER_ID].role) == RoleConfig.Role.HUNTER,
+		"the sandbox has a Hunter"
+	)
+	_check(GameManager.phase == GameManager.Phase.HUNTER_ACTIVE, "the Hunter is already active in the sandbox")
+	_check(GameManager.local_peer_id() == GameManager.SANDBOX_RUNNER_ID, "the sandbox starts on the Runner")
+	_check(GameManager.crystals_for(GameManager.SANDBOX_HUNTER_ID) >= 1000.0, "the Hunter is funded for testing")
+	_check(GameManager.crystals_for(GameManager.SANDBOX_RUNNER_ID) >= 1000.0, "the Runner is funded for testing")
+
+	GameManager.set_sandbox_active(GameManager.SANDBOX_HUNTER_ID)
+	_check(GameManager.local_peer_id() == GameManager.SANDBOX_HUNTER_ID, "switching hands the controls to the Hunter")
+	_check(
+		GameManager.is_sandbox_character(GameManager.SANDBOX_HUNTER_ID) and not GameManager.is_sandbox_character(7),
+		"only the two sandbox characters are recognised"
+	)
+	GameManager.set_sandbox_active(7)
+	_check(GameManager.local_peer_id() == GameManager.SANDBOX_HUNTER_ID, "an unknown character is ignored")
+
+	## The sandbox never ends on its own, even when a whole side is down.
+	GameManager.eliminate_player(GameManager.SANDBOX_RUNNER_ID)
+	_check(GameManager.phase == GameManager.Phase.HUNTER_ACTIVE, "the sandbox does not end when the Runner falls")
+
+	GameManager._reset_to_lobby_local()
+	_check(not GameManager.sandbox_mode, "leaving the sandbox clears sandbox mode")
+	_check(GameManager.players.is_empty(), "leaving the sandbox removes the phantom roster")
+	_check(GameManager.local_peer_id() == 1, "outside the sandbox the local id is the network id again")
+
+
+func _first_of_type(root: Node, type_name: String) -> Node:
+	for node in _walk(root):
+		if node.is_class(type_name):
+			return node
+	return null
 
 
 func _test_sprite_sync_data() -> void:
@@ -356,6 +436,7 @@ func _test_lobby() -> void:
 	var buttons := _button_texts(lobby)
 	_check(buttons.has("Host local"), "lobby can host locally")
 	_check(buttons.has("Join local"), "lobby can join locally")
+	_check(buttons.has("Sandbox"), "lobby offers the Runner + Hunter sandbox")
 	_check(buttons.has("Continue (need %d players)" % GameManager.required_players()), "lobby asks for enough players before continuing")
 	_check(not buttons.has("Join Runners") and not buttons.has("Join Hunter"), "lobby does not choose roles")
 

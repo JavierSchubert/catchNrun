@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tests/combat/tower_projectile_test.gd" id="1_test"]
+[ext_resource type="Script" path="res://src/construction/construction_manager.gd" id="2_construction"]
+
+[node name="TowerProjectileTest" type="Node"]
+script = ExtResource("1_test")
+
+[node name="BuildingsRoot" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="BuildingSpawner" type="MultiplayerSpawner" parent="."]
+unique_name_in_owner = true
+spawn_path = NodePath("../BuildingsRoot")
+
+[node name="ConstructionManager" type="Node" parent="."]
+script = ExtResource("2_construction")

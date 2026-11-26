@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="BuildingDef" format=3 uid="uid://dmw0ocyglvefp"]
+
+[ext_resource type="Script" uid="uid://dlmlp08nohy53" path="res://src/buildings/building_def.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://bdtlvfgxoutv" path="res://src/stats/stat_block.gd" id="2_stats"]
+
+[sub_resource type="Resource" id="Resource_tower_stats"]
+script = ExtResource("2_stats")
+max_health = 300.0
+health_regeneration = 0.0
+defense = 0.0
+movement_speed = 0.0
+melee_damage = 0.0
+ranged_damage = 18.0
+magic_damage = 0.0
+critical_chance = 0.0
+lifesteal_chance = 0.0
+lifesteal_amount = 0.0
+attack_speed = 1.0
+attack_range = 280.0
+
+[resource]
+script = ExtResource("1_def")
+kind = 1
+id = "tower"
+display_name = "Tower"
+footprint = Vector2i(2, 2)
+max_level = 20
+base_cost = 24.0
+cost_growth = 1.8
+base_hp = 300.0
+hp_growth = 1.15
+base_build_seconds = 6.0
+build_time_growth = 1.08
+tower_base_stats = SubResource("Resource_tower_stats")

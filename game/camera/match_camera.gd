@@ -32,7 +32,7 @@ func _ready() -> void:
 	enabled = LaunchOptions.bot_role.is_empty() and DisplayServer.get_name() != "headless"
 	if enabled:
 		make_current()
-	_follow_peer_id = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	_follow_peer_id = GameManager.local_peer_id()
 	GameManager.players_changed.connect(_on_roster_changed)
 	GameManager.phase_changed.connect(func(_phase: GameManager.Phase) -> void: _on_roster_changed())
 	## Initial center only — kills / roster updates must not yank a free camera back.
@@ -121,7 +121,7 @@ func _edge_direction() -> Vector2:
 func _on_roster_changed() -> void:
 	## Keep tracking who we are; never auto-recenter on eliminations or roster noise.
 	## Explicit recenter: C key, minimap click, or the initial _ready snap.
-	_follow_peer_id = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	_follow_peer_id = GameManager.local_peer_id()
 
 
 func _snap_to_local_unit() -> void:
@@ -134,7 +134,7 @@ func _snap_to_local_unit() -> void:
 
 func _local_unit() -> Node2D:
 	## Own player only — never the currently selected foreign entity.
-	var id := multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
+	var id := GameManager.local_peer_id()
 	for node in get_tree().get_nodes_in_group("units"):
 		if node is Unit and (node as Unit).peer_id == id:
 			var unit := node as Unit

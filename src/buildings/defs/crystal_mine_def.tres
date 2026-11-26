@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BuildingDef" format=3]
+
+[ext_resource type="Script" path="res://src/buildings/building_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+kind = 2
+id = "crystal_mine"
+display_name = "Crystal Mine"
+footprint = Vector2i(2, 2)
+max_level = 11
+base_cost = 16.0
+cost_growth = 1.8
+base_hp = 150.0
+hp_growth = 1.25
+base_build_seconds = 5.0
+build_time_growth = 1.08
+max_build_seconds = 20.0
+mine_base_output = 2.0
+mine_interval = 2.0
+mine_max_output = 2048.0

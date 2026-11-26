@@ -147,7 +147,14 @@ Placement / Construction controller
 
 Building instance
 -> Footprint metadata + matching rectangular hitbox on layer `building`
+-> Health, Shield (wall), Attack (tower) child components; health / shield / build-progress bars
+-> Building.apply_damage() / repair() as the only ways structure HP changes
 ```
+
+Two runtime notes that touch the scene tree rather than the grid:
+
+- **Shield** — `building.tscn` carries a `Shield` (`ShieldComponent`) node and a `ShieldBar` above the health bar. The bar stays hidden while the structure has no shield (every non-wall, and walls below level 15). `sync_current_shield` and `max_shield` replicate like `sync_current_health`.
+- **Projectiles** — tower shots (`src/combat/projectile.tscn`) are added to the current scene, not to the Building, so they do not collide with or move with the structure. They are not on any physics layer and never block placement. Clients get a cosmetic copy over an unreliable RPC; only the host's copy applies damage.
 
 Economy spend and structure-type rules stay outside this document (`economy.README.md`, `construction.README.md`).
 
