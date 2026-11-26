@@ -120,29 +120,42 @@ func _can_build(peer_id: int) -> bool:
 		or GameManager.phase == GameManager.Phase.HUNTER_ACTIVE
 
 
-func request_upgrade(building_name: String) -> void:
+## `pick` is a BuildingDef.TowerPath index. A Tower upgrade requires one; Wall and Crystal
+## Mine ignore it, so their callers keep using the single-argument form.
+func request_upgrade(building_name: String, pick := -1) -> void:
 	if _is_net_server():
-		_server_upgrade(_local_peer_id(), building_name)
+		_server_upgrade(_local_peer_id(), building_name, pick)
 	else:
-		_rpc_request_upgrade.rpc_id(1, building_name)
+		_rpc_request_upgrade.rpc_id(1, building_name, pick)
 
 
 @rpc("any_peer", "reliable")
-func _rpc_request_upgrade(building_name: String) -> void:
+func _rpc_request_upgrade(building_name: String, pick: int) -> void:
 	if not multiplayer.is_server():
 		return
-	_server_upgrade(GameManager.sender_id(multiplayer), building_name)
+	_server_upgrade(GameManager.sender_id(multiplayer), building_name, pick)
 
 
-func _server_upgrade(peer_id: int, building_name: String) -> void:
+func _server_upgrade(peer_id: int, building_name: String, pick := -1) -> void:
 	if not multiplayer.is_server():
 		return
 	var building := buildings_root.get_node_or_null(building_name) as Building
 	if building == null or building.owner_peer_id != peer_id or not building.can_upgrade():
 		return
+	var is_tower := building.is_tower()
+	if is_tower and not Building.is_valid_tower_pick(pick):
+		## Every tower level grants a stat path. Reject before spending anything.
+		GameLog.info(
+			"CONSTRUCTION",
+			"peer %d sent tower upgrade for %s without a valid pick (%d)" % [peer_id, building_name, pick]
+		)
+		return
 	var cost := building.next_upgrade_cost()
 	if not GameManager.try_spend_crystals(peer_id, cost):
 		return
+	## Record the pick only once the Crystals are actually gone — never half-apply.
+	if is_tower:
+		building.apply_tower_pick(pick)
 	var next_level := building.level + 1
 	building.begin_upgrade()
 	GameLog.info("CONSTRUCTION", "peer %d upgraded %s to level %d" % [peer_id, building_name, next_level])

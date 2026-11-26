@@ -4,6 +4,7 @@ extends RefCounted
 ## panel has clickable images without depending on imported art assets.
 
 const SIZE := 48
+const CRYSTAL_COLOR := Color(0.3, 0.85, 0.95, 1.0)
 
 
 static func icon_for(building_key: String) -> ImageTexture:
@@ -49,12 +50,25 @@ static func _tower_icon() -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
+## Bare Crystal diamond for the HUD resource bar: the mine icon without its brown base.
+static func crystal_icon() -> ImageTexture:
+	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+	_draw_crystal(image)
+	return ImageTexture.create_from_image(image)
+
+
 static func _mine_icon() -> ImageTexture:
 	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0, 0, 0, 0))
 	var base := Color(0.4, 0.32, 0.26, 1.0)
-	var crystal := Color(0.3, 0.85, 0.95, 1.0)
 	image.fill_rect(Rect2i(8, 34, 32, 8), base)
+	_draw_crystal(image)
+	return ImageTexture.create_from_image(image)
+
+
+## Shared diamond used by the mine button icon and the resource bar icon.
+static func _draw_crystal(image: Image) -> void:
 	var center := SIZE / 2
 	var radius := 16
 	for y in range(center - radius, center + radius):
@@ -62,8 +76,7 @@ static func _mine_icon() -> ImageTexture:
 		var half_width := radius - int(dy * 1.4)
 		if half_width <= 0:
 			continue
-		image.fill_rect(Rect2i(center - half_width, y, half_width * 2, 1), crystal)
-	return ImageTexture.create_from_image(image)
+		image.fill_rect(Rect2i(center - half_width, y, half_width * 2, 1), CRYSTAL_COLOR)
 
 
 static func _fallback_icon() -> ImageTexture:

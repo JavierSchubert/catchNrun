@@ -19,6 +19,9 @@ enum Phase { LOBBY, ROLE_SELECTION, RUNNER_PREPARATION, HUNTER_ACTIVE, ENDED }
 const ANY_ROLE := -1
 const TEST_PLAYER_ID := 1000
 const SPRITE_COUNT := 5
+## Crystal income (mine ticks, Hunter damage) only replicates this often. Spends and
+## roster/phase changes bypass the throttle and flush straight away.
+const PLAYERS_SYNC_INTERVAL := 0.25
 
 var resolved_hunter_id := -1
 var _next_test_player_id := TEST_PLAYER_ID
@@ -45,6 +48,8 @@ var _loaded_peers: Dictionary = {}
 var _announced_loaded := false
 var _test_bot_processes: Dictionary = {}
 var _next_test_bot_number := 1
+var _players_dirty := false
+var _players_sync_timer := 0.0
 
 
 func _ready() -> void:
@@ -78,6 +83,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_tick_players_sync(delta)
 	if phase != Phase.RUNNER_PREPARATION:
 		return
 	time_left = maxf(time_left - delta, 0.0)
@@ -397,6 +403,8 @@ static func test_bot_request_error(
 
 @rpc("authority", "call_local", "reliable")
 func _sync_players(raw_players: Dictionary) -> void:
+	## A full roster just went out / came in, so nothing is left pending.
+	_clear_players_dirty()
 	players = _normalize_players(raw_players)
 	resolved_hunter_id = _find_assigned_hunter(players)
 	players_changed.emit()
@@ -690,6 +698,7 @@ func _apply_preparation(raw_players: Dictionary, duration: float) -> void:
 	hunter_spawned = false
 	hunter_spawned_during_preparation = false
 	players_at_hunter_phase.clear()
+	_clear_players_dirty()
 	_set_phase(Phase.RUNNER_PREPARATION)
 	players_changed.emit()
 	GameLog.info("MATCH", "runner preparation started (%.1f s)" % duration)
@@ -857,7 +866,8 @@ func try_spend_crystals(peer_id: int, amount: float) -> bool:
 		return false
 	entry["crystals"] = current - amount
 	players[peer_id] = entry
-	_broadcast_players()
+	## Spending is replicated immediately so the build UI never shows stale affordability.
+	_flush_players()
 	return true
 
 
@@ -867,7 +877,54 @@ func grant_crystals(peer_id: int, amount: float) -> void:
 	var entry: Dictionary = players[peer_id]
 	entry["crystals"] = float(entry.get("crystals", 0.0)) + amount
 	players[peer_id] = entry
+	_mark_players_dirty()
+
+
+## Host-only. Turns damage the Hunter actually applied into Crystal income. The
+## damage -> Crystal rate lives here, not at the combat call site (docs/economy.README.md §3.1).
+func award_damage_crystals(peer_id: int, applied_damage: float) -> void:
+	if not multiplayer.is_server() or applied_damage <= 0.0:
+		return
+	var rate := economy_config.hunter_crystals_per_damage if economy_config != null else 0.0
+	if rate <= 0.0:
+		return
+	grant_crystals(peer_id, applied_damage * rate)
+
+
+# --- Roster replication throttle ------------------------------------------------------
+#
+# Income arrives in a steady trickle (every mine pays out on its mine_interval, the
+# Hunter earns on every hit). A full roster RPC per grant would be a storm, so
+# grants only raise a dirty flag and _process coalesces them into one reliable
+# _sync_players at most every PLAYERS_SYNC_INTERVAL seconds.
+
+func _mark_players_dirty() -> void:
+	_players_dirty = true
+
+
+func _tick_players_sync(delta: float) -> void:
+	if not _players_dirty:
+		return
+	_players_sync_timer += delta
+	if _players_sync_timer >= PLAYERS_SYNC_INTERVAL:
+		_flush_players()
+
+
+## Sends the roster now and drops any pending dirty state.
+func _flush_players() -> void:
+	_clear_players_dirty()
 	_broadcast_players()
+
+
+func _flush_players_if_dirty() -> void:
+	if _players_dirty:
+		_flush_players()
+
+
+## Called when the roster has just been replicated or replaced by some other path.
+func _clear_players_dirty() -> void:
+	_players_dirty = false
+	_players_sync_timer = 0.0
 
 
 func _broadcast_players() -> void:
@@ -878,6 +935,8 @@ func _broadcast_players() -> void:
 
 
 func _set_phase(new_phase: int) -> void:
+	## Make sure the phase change never lands on clients ahead of pending Crystal income.
+	_flush_players_if_dirty()
 	phase = new_phase as Phase
 	if new_phase == Phase.HUNTER_ACTIVE and players_at_hunter_phase.is_empty():
 		players_at_hunter_phase = _roster()
@@ -920,6 +979,7 @@ func _phase_name(value: int) -> String:
 func _reset_state() -> void:
 	phase = Phase.LOBBY
 	players.clear()
+	_clear_players_dirty()
 	session_host_id = 0
 	_loaded_peers.clear()
 	_announced_loaded = false

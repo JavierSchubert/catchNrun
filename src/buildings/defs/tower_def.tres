@@ -1,6 +1,23 @@
 [gd_resource type="Resource" script_class="BuildingDef" format=3]
 
 [ext_resource type="Script" path="res://src/buildings/building_def.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://bdtlvfgxoutv" path="res://src/stats/stat_block.gd" id="2_stats"]
+
+[sub_resource type="Resource" id="Resource_tower_stats"]
+script = ExtResource("2_stats")
+max_health = 300.0
+health_regeneration = 0.0
+defense = 0.0
+movement_speed = 0.0
+melee_damage = 0.0
+ranged_damage = 18.0
+magic_damage = 0.0
+critical_chance = 0.0
+critical_damage_multiplier = 1.5
+lifesteal_chance = 0.0
+lifesteal_amount = 0.0
+attack_speed = 1.0
+attack_range = 280.0
 
 [resource]
 script = ExtResource("1_def")
@@ -8,14 +25,18 @@ kind = 1
 id = "tower"
 display_name = "Tower"
 footprint = Vector2i(2, 2)
-max_level = 5
-base_cost = 150.0
-cost_growth = 1.6
+max_level = 20
+base_cost = 24.0
+cost_growth = 1.8
 base_hp = 300.0
-hp_growth = 1.35
+hp_growth = 1.15
 base_build_seconds = 6.0
-build_time_growth = 1.25
-tower_base_damage = 18.0
-tower_damage_growth = 1.3
-tower_range = 280.0
-tower_attack_interval = 1.0
+build_time_growth = 1.08
+max_build_seconds = 20.0
+tower_base_stats = SubResource("Resource_tower_stats")
+tower_damage_per_pick = 0.3
+tower_attack_speed_per_pick = 0.2
+tower_crit_chance_per_pick = 0.08
+tower_crit_damage_per_pick = 0.15
+tower_range_per_pick = 0.15
+tower_projectile_speed = 650.0

@@ -427,6 +427,104 @@ Player visual customization and locomotion polish.
 
 ---
 
+## WP-16 — Crystal economy rebalance, Tower projectiles, Wall shield, Runner repair (P0 / P1)
+
+**Owning docs:** `economy.README.md`, `construction.README.md`, `building.README.md`, `controls.README.md`, `stats.README.md`
+
+Follow-up to CP-15, which shipped construction with placeholder balance (1,000,000 starting Crystals) and no Hunter income, no real tower attack, and no Wall mechanic beyond HP. Started 2026-11-26.
+
+> **Verification status: nothing in this package has been executed.** Godot is not installed on the dev machine by choice, so every item below was implemented and checked **by code review only**. A `[x]` means "written and reviewed", *not* "ran green". The whole package needs one pass in the editor before it can be called done.
+
+### How to pick this package up
+
+Everything needed to continue is in this section plus the files it names — no external plan document is required.
+
+**Environment:** Godot is **not installed on the dev machine, by choice — do not install it.** Verify by reading code. Nobody can compile-check, so be exact with GDScript syntax, Godot 4 API names, and `.tscn` / `.tres` format. Work one package at a time: one agent implements, a **second, independent agent reviews** before the next package starts (A and B were done this way; it caught three defects that would each have detonated later).
+
+**Hard invariants — breaking any of these is silent, not loud:**
+
+- `Building` with `def == null` is a supported legacy path (`tests/construction/building_grid_test.tscn` places footprint-only buildings with no health / stats / economy). Nothing may assume `def != null`.
+- `StatBlock.Stat` is **append-only**. Inserting a value silently rewrites every serialized `.tres`.
+- `load_steps` in a `[gd_scene]` header must equal `[ext_resource]` + `[sub_resource]` count **+ 1**.
+- Any node a script reaches via `%Name` needs `unique_name_in_owner = true`, or `@onready` resolves to null at runtime.
+- `BuildingPanel.is_armed()` and the `"building_ui"` group are called by `unit.gd` and `selection_manager.gd` — that contract must not change.
+- `HealthComponent.setup(0.0)` yields `_alive = false` **without** emitting `died` → an invulnerable, un-targetable, never-removed entity. Never feed a possibly-zero max health into it.
+- Host-authoritative throughout: gate state changes on `multiplayer.is_server()`; clients send intent via RPC. Offline play uses `OfflineMultiplayerPeer`, where the local peer *counts as* the server.
+- UI presents state and forwards intent only. Gameplay rules live in managers; balance lives in `.tres` (root `README.md`, "Implementation Principle").
+
+**Reuse instead of rewriting:** `HealthComponent` · `StatSheet` / `StatModifier` / `StatIcons` · `AttackController` · `CombatDamage` · `MoveClickMarker` (local-only click feedback) · `BuildGrid` / `PlacementValidator` · the request → RPC → `_server_*` pattern in `ConstructionManager` · the `_check` / `_near` + `print("PASS: …")` + `get_tree().quit(code)` convention in `tests/construction/building_economy_test.gd` and its `scripts/test/*.ps1` runner.
+
+**Balance source of truth:** section A below and the three `src/buildings/defs/*.tres`. The `docs/` files are **stale until E lands** — see the warning in E.
+
+### A — Economy and data foundation — landed, reviewed
+
+- [x] `starting_crystals = 20`, new `hunter_crystals_per_damage = 0.2` (`src/economy/economy_config.*`)
+- [x] Costs Lv1 Mine 16 / Wall 8 / Tower 24, growth ×1.8; max level Mine 11, Wall 20, Tower 20
+- [x] Mine output `2 * 2^(level-1)`, 2 → 2048, capped at Lv 11
+- [x] Wall shield data: unlock Lv 15, base / growth / recharge delay / recharge rate
+- [x] Tower stat-path data + `BuildingDef.TowerPath` enum + `tower_base_stats` StatBlock
+- [x] `max_build_seconds` cap (only binds for the Tower, from Lv 17)
+- [x] `StatBlock.Stat.ATTACK_RANGE` appended (never inserted) + `StatIcons` mapping
+- [x] `CombatDamage.resolve_ranged()` next to an unchanged `resolve_melee()`
+- [x] `GameManager.award_damage_crystals()` + coalesced 4 Hz roster broadcast (mine ticks and Hunter hits no longer fire a reliable full-roster RPC each time)
+- [x] Headless assertions updated to the new numbers (`tests/construction/building_economy_test.gd`)
+
+### B — Crystal HUD and build-panel restructure — landed, reviewed
+
+- [x] `ui/hud/resource_bar/` top-center, visible to **both** roles, with `+X/s` mine income
+- [x] `BuildingIcons.crystal_icon()` (runtime-drawn, no art dependency, headless-safe)
+- [x] Build panel 260×224 → 300×340: `CrystalsLabel` removed, per-structure detail line, "Max level" state, 2×2 tower pick grid staged
+- [x] Interactive harness `tests/construction/building_system_test.tscn` shows the bar without the lobby flow
+- [x] Income readout counts a mine that is mid-upgrade (it keeps producing in `State.UPGRADING`)
+
+### C — Tower stats, projectiles, upgrade picks — implemented, **review outstanding**
+
+- [x] Tower migrated onto `StatSheet` / `CombatDamage.resolve_ranged`
+- [x] `src/combat/projectile.{gd,tscn}` using `assets/sprites/items/projectiles/projectile_lvl1.png`
+- [x] Replicated `tower_picks`, one of 4 paths per upgrade, host-validated in `ConstructionManager`
+- [x] Four pick buttons wired in the build panel
+- [x] Headless `tests/combat/tower_projectile_test.*` + `scripts/test/tower_projectile_test.ps1`
+- [ ] **Independent feature review of C** (A and B each had one; C has not)
+- [ ] Interactive `tests/construction/tower_combat_test.tscn` — dropped to save budget, still wanted
+
+### D — Wall shield and Runner `repair` skill — **not started**
+
+- [ ] `src/components/shield/shield_component.gd` (mirrors `HealthComponent`'s shape)
+- [ ] `Building.apply_damage()` as the single structure damage entry point: shield first, then health, returns applied
+- [ ] Replicate `sync_current_shield` / `max_shield`; shield bar above the health bar in `building.tscn`
+- [ ] **Hunter Crystal income wired** — `award_damage_crystals()` exists but has no caller yet; it belongs at the two melee sites in `unit.gd` (vs Runners *and* vs structures). Until this lands the Hunter earns nothing.
+- [ ] `src/skills/skill_def.gd` + `defs/repair_def.tres` (first entry in a skill system that does not exist yet)
+- [ ] Runner RMB on an own finished structure → walk into range, heal `value_per_second`; green `MoveClickMarker.REPAIR_COLOR`
+- [ ] Host validation: Runner role, owner match, alive, damaged, not `UNDER_CONSTRUCTION`
+- [ ] Interactive `tests/construction/wall_repair_test.tscn` (Lv 1 + Lv 15 wall, damage button, repairing Runner)
+- [ ] Headless `tests/skills/repair_skill_test.*` + `scripts/test/repair_skill_test.ps1`
+
+### E — Match integration and documentation — **not started**
+
+- [ ] Confirm the restructured HUD in the real match flow (sandbox quick-start 1 Hunter + 2 Runners, skip prep)
+- [ ] Run every `scripts/test/*.ps1` runner + `smoke_test.ps1`
+- [ ] `economy.README.md` — ⚠️ **the file is corrupted**: §1–§5 appear twice, the second copy nested inside the §4 code fence. Repair it, then correct the mine table (2 → 2048, Lv 1–11), starting Crystals 20, build costs, `hunter_crystals_per_damage = 0.2`. Every citation added in A currently points at superseded text.
+- [ ] `construction.README.md` — tower upgrade paths, wall shield, repair
+- [ ] `controls.README.md` — RMB on own structure = repair
+- [ ] `stats.README.md` — `ATTACK_RANGE`; towers consume `StatSheet`
+- [ ] `building.README.md` — shield + projectile notes
+- [ ] `tasks/checkpoints.README.md` — CP-16 changelog row + section (CP-15's row still claims 1,000,000 Crystals and `2^(level-1)`)
+
+### Open decisions for the user — not bugs, judgement calls
+
+- [ ] **Late-level costs are unreachable by construction.** ×1.8 over 20 levels puts Wall Lv 20 at ~566k and Tower Lv 20 at ~1.7M Crystals; cumulative ~1.27M / ~3.82M. A maxed mine pays 1024/s and mine output caps at Lv 11 while costs keep compounding, so levels past ~15 cannot be reached in a realistic match. Faithful to the confirmed ×1.8 decision — change `cost_growth` in the three `.tres` if that is not the intent.
+- [ ] **Build panel vertical margin is ~2px** in the worst case (Tower below max level selected *while* a structure is armed): ~322px of content in 324px. Inside the reviewer's font-metric error bar. Fix = panel height 340 → 364 plus the two instance offsets in `hud.tscn` and `building_system_test.tscn`.
+- [ ] **Build-button row overflows horizontally** (~418px of buttons in 280px) because of the 48px icon + `"Crystal Mine"`. Pre-existing, not a WP-16 regression.
+- [ ] **`StatBlock.attack_range` duplicates `RoleConfig.attack_range`.** Units report `ATTACK_RANGE = 0.0` through their sheet while `RoleConfig` holds the real 70.0 / 64.0. Harmless today (the selection panel's stat grid is fixed and does not show it), a trap once anything enumerates it.
+- [ ] **`ATTACK_RANGE` and `RANGED_DAMAGE` render the same icon.** `assets/sprites/stats/attack_range2.png` exists if a distinct one is wanted.
+
+### Depends on
+
+- CP-15 construction + economy scaffold (done)
+- Stats modifiers (CP-05) for the tower paths and any future skill effects
+
+---
+
 ## Suggested next milestones
 
 Compare against `checkpoints.README.md` (first milestone = session skeleton ≈ done).
@@ -443,6 +541,8 @@ Milestone A — Fight and finish
 Milestone B — Build and earn
   WP-02 Construction: grid foundation ✅ (CP-11); match-integrated build UI + Wall / Tower / Crystal Mine ✅ (CP-15)
   WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income / Hunter Shop still open
+  WP-16 ◀ ACTIVE — economy rebalance + crystal HUD ✅ A/B; tower projectiles ⏳ C (review open);
+         wall shield + runner repair ❌ D; integration + docs ❌ E. Nothing run in Godot yet.
   WP-14 Player XP / levels + violet portrait XP ring
 
 Milestone C — Command and HUD

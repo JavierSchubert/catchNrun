@@ -61,7 +61,7 @@ static func constrain(stat: StatBlock.Stat, value: float) -> float:
 			return clampf(value, 0.0, 1.0)
 		StatBlock.Stat.MAX_HEALTH, StatBlock.Stat.HEALTH_REGENERATION, StatBlock.Stat.MOVEMENT_SPEED, \
 				StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER, StatBlock.Stat.LIFESTEAL_AMOUNT, \
-				StatBlock.Stat.ATTACK_SPEED:
+				StatBlock.Stat.ATTACK_SPEED, StatBlock.Stat.ATTACK_RANGE:
 			return maxf(value, 0.0)
 		_:
 			return value
