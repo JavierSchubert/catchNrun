@@ -22,6 +22,10 @@ enum TowerPath { RANGED_DAMAGE, ATTACK_SPEED, CRIT, ATTACK_RANGE }
 @export var footprint := Vector2i(1, 1)
 @export var max_level := 5
 
+## Radius (pixels) of the circle a finished structure reveals for its owner's team
+## (docs/vision.README.md). Same for every kind and level by default.
+@export var vision_range := 320.0
+
 ## cost(level) = base_cost * cost_growth^(level - 1). Paid both to build level 1 and to
 ## upgrade into each later level (docs/economy.README.md §2.1, §5).
 @export var base_cost := 50.0

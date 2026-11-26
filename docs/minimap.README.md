@@ -26,7 +26,7 @@ Examples may include different representations for:
 
 ### 2.1. Unit pixel colors (current milestone)
 
-Until fog of war lands, living units are always shown on the minimap as small equal-sized pixels. Colors are **viewer-relative** (`Unit.minimap_marker_color`), not identical to selection-circle affinity in every case:
+Until minimap fog lands, living units are always shown on the minimap as small equal-sized pixels. Once it does, only units the Vision system allows (own team always; enemy units only while currently visible) are drawn, see §5. Colors are **viewer-relative** (`Unit.minimap_marker_color`), not identical to selection-circle affinity in every case:
 
 | Viewer | Own unit | Allied Runners | Enemy / Hunter |
 | --- | --- | --- | --- |
@@ -84,9 +84,13 @@ Display current information and positions for minimap-relevant entities.
 
 Display permitted last-known information without receiving hidden live updates.
 
+Only **structures** have last-known information. Units never do (§5).
+
+The authoritative rules and API live in `vision.README.md`.
+
 ## 4. Last-Known Structure Information
 
-Static structures can remain visible on the minimap at their last-known position after leaving vision.
+Static structures persist on the minimap at their last-known position after leaving vision (`VisionSystem.hidden_last_known_buildings()`). This is the only last-known information the minimap keeps.
 
 ```text
 Structure becomes visible
@@ -119,11 +123,20 @@ Tower location becomes visible again
 
 ## 5. Moving Units
 
-Moving entities such as Runners and the Hunter should only expose information permitted by the Vision system.
+Moving entities such as Runners and the Hunter only expose information permitted by the Vision system.
 
-A moving unit leaving vision must not continue to move live on the opposing team's minimap.
+```text
+Own-team unit
+-> Always shown, live position
 
-If last-known positions are displayed, the marker represents the last observed location rather than the current hidden location.
+Enemy unit inside current vision
+-> Shown, live position
+
+Enemy unit leaves vision
+-> Marker is removed immediately
+```
+
+Units have **no last-known ghosts**: there is no frozen marker at the last observed position, and a unit leaving vision must not keep moving live on the opposing team's minimap. Only structures persist (§4).
 
 ## 6. Team Separation
 

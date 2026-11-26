@@ -19,6 +19,8 @@ static func pick(candidates: Array, local_peer_id: int, rng: RandomNumberGenerat
 	for candidate in candidates:
 		if candidate == null or not is_instance_valid(candidate):
 			continue
+		if not is_visible_to_local(candidate):
+			continue
 		match _tier(candidate, local_peer_id):
 			Tier.OWN:
 				own.append(candidate)
@@ -33,6 +35,14 @@ static func pick(candidates: Array, local_peer_id: int, rng: RandomNumberGenerat
 	if not npcs.is_empty():
 		return _pick_random(npcs, rng)
 	return null
+
+
+## Fog of war: entities the local team cannot currently see are not clickable
+## (docs/vision.README.md). True when there is no VisionSystem or the node is not fogged.
+static func is_visible_to_local(candidate: Object) -> bool:
+	if candidate is Node:
+		return VisionPresentation.can_local_see(candidate as Node)
+	return true
 
 
 static func _tier(candidate: Object, local_peer_id: int) -> Tier:

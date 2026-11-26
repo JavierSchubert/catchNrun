@@ -56,6 +56,7 @@ func notify_clickable_ready(entity: Node) -> void:
 
 
 func _process(_delta: float) -> void:
+	_drop_unseen_selection()
 	if LaunchOptions.bot_role.is_empty() == false:
 		return
 	if DisplayServer.get_name() == "headless":
@@ -65,6 +66,16 @@ func _process(_delta: float) -> void:
 		_clear_hover()
 		return
 	_update_hover()
+
+
+## A selected enemy that walks out of vision (or a structure whose footprint goes dark) is
+## deselected, so the selection panel never keeps tracking something the team cannot see.
+func _drop_unseen_selection() -> void:
+	if hovered != null and is_instance_valid(hovered) and not SelectionResolver.is_visible_to_local(hovered):
+		_set_hovered(null)
+	if selected != null and is_instance_valid(selected) \
+			and not SelectionResolver.is_visible_to_local(selected):
+		clear_selection()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -366,6 +377,9 @@ func _is_selectable(node: Node) -> bool:
 	if node == null or not is_instance_valid(node) or not node is Node2D:
 		return false
 	if node.has_method("is_alive") and not bool(node.call("is_alive")):
+		return false
+	## Fog of war: entities the local team cannot see right now cannot be hovered or picked.
+	if not SelectionResolver.is_visible_to_local(node):
 		return false
 	if node.has_method("is_clickable"):
 		return bool(node.call("is_clickable"))

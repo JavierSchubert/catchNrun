@@ -212,6 +212,16 @@ func role() -> int:
 	return config.role if config != null else RoleConfig.Role.RUNNER
 
 
+## Team id for vision purposes: the role itself (Runners share one team, the Hunter the other).
+func team_role() -> int:
+	return role()
+
+
+## Radius in pixels this unit reveals for its team (RoleConfig.vision_range).
+func get_vision_range() -> float:
+	return maxf(config.vision_range, 0.0) if config != null else 0.0
+
+
 ## Host-only. 1 XP per point of applied damage for Hunters. Runners stay level 1.
 func grant_xp(amount: float) -> void:
 	if not multiplayer.is_server() or amount <= 0.0:
@@ -991,6 +1001,9 @@ func _clickable_enemy_at(world_pos: Vector2) -> Unit:
 		var unit := node as Unit
 		if unit == null or not unit.is_attackable():
 			continue
+		## Fog of war: a click cannot target an enemy the team does not see.
+		if not VisionPresentation.can_local_see(unit):
+			continue
 		## Match selection feel, with a floor so large sprites stay easy to click.
 		var hit_radius := maxf(unit.selection_hit_radius(), unit.selection_circle_radius() * 1.35)
 		hit_radius = maxf(hit_radius, 56.0)
@@ -1009,6 +1022,9 @@ func _clickable_enemy_building_at(world_pos: Vector2) -> Building:
 			continue
 		var building := node as Building
 		if not building.is_attackable():
+			continue
+		## Fog of war: only structures the team currently sees can be clicked (ghosts cannot).
+		if not VisionPresentation.can_local_see(building):
 			continue
 		## Same floor as unit clicks so 1×1 walls stay easy to RMB.
 		var hit_radius := maxf(building.selection_hit_radius(), building.selection_circle_radius() * 1.15)

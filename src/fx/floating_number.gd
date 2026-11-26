@@ -106,6 +106,9 @@ static func spawn(
 static func spawn_on(target: Node2D, value: float, kind: Kind = Kind.DAMAGE) -> FloatingNumber:
 	if target == null or not is_instance_valid(target):
 		return null
+	## Fog of war: no combat / income popups over entities the local team cannot see.
+	if not VisionPresentation.can_local_see(target):
+		return null
 	var host := target.get_tree().current_scene if target.get_tree() != null else null
 	if host == null:
 		host = target.get_parent()
