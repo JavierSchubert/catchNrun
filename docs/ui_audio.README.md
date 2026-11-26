@@ -130,7 +130,7 @@ Visible when `LaunchOptions.sandbox_enabled` (debug builds, `--sandbox`, or brow
 
 Every panel has a **Minimize / Expand** button in its header; a minimized panel shrinks to its header and keeps its anchor corner. `G` (god mode) minimizes all panels at once, or expands them all again when everything is already minimized. `G` is ignored while the Godot-path field has focus.
 
-Match HUD status sits **top-center under** the action bar so it does not collide with sandbox chrome. The log stacks under the action bar (a minimized bar pulls it up); the minimap keeps the bottom-left corner alone, the selection strip is bottom-center, and the Runner building panel (~300×360) owns the bottom-right corner (`game/match/hud.tscn`). Build vs manage visibility is gated by `HudMode` (`src/hud/hud_mode.gd`). Shared HUD widget: `ui/hud/widgets/stat_icon_row.tscn`. Optional `ui/widgets/ui_kit/ui_kit.tscn` may instance the building panel for editor gallery previews.
+Match HUD status sits **top-center under** the action bar so it does not collide with sandbox chrome. The log stacks under the action bar (a minimized bar pulls it up); the minimap keeps the bottom-left corner alone, the selection strip is bottom-center (~580×168), and the Runner building panel (~380×480) owns the bottom-right corner (`game/match/hud.tscn`). Build vs manage visibility is gated by `HudMode` (`src/hud/hud_mode.gd`). Shared HUD widget: `ui/hud/widgets/stat_icon_row.tscn`. Optional `ui/widgets/ui_kit/ui_kit.tscn` may instance the building panel for editor gallery previews. Sandbox hosts a top-right **Stats (active)** panel to bump crit / lifesteal / damage / regen on the controlled character for combat FX testing.
 
 ### 6.1. Start-menu Sandbox (Runner + Hunter)
 

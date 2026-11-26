@@ -99,7 +99,7 @@ custom_minimum_size = Vector2(48, 48)
 layout_mode = 2
 
 [node name="SelectionPanel" parent="Margin/Scroll/Content" instance=ExtResource("6_sel")]
-custom_minimum_size = Vector2(520, 148)
+custom_minimum_size = Vector2(580, 168)
 layout_mode = 2
 
 [node name="Minimap" parent="Margin/Scroll/Content" instance=ExtResource("7_map")]
@@ -110,5 +110,5 @@ layout_mode = 2
 layout_mode = 2
 
 [node name="BuildingPanel" parent="Margin/Scroll/Content" instance=ExtResource("8_build")]
-custom_minimum_size = Vector2(300, 360)
+custom_minimum_size = Vector2(380, 480)
 layout_mode = 2

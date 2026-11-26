@@ -24,6 +24,7 @@ Placement is **grid-based**. Footprint size in cells defines the structure hitbo
 Select Structure (UNIT_BUILD — local unit selected)
 -> Enter Placement Mode
 -> Show grid-snapped Placement Preview
+-> LMB places one structure and exits; Shift/Ctrl+LMB places and **stays armed** (chain build, same modifiers as move chains)
 -> Validate footprint (bounds + blocker layers)
 -> Left Click Valid Position
 -> Spend Required Crystals

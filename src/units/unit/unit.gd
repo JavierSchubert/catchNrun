@@ -460,12 +460,10 @@ func _server_combat_tick(delta: float) -> void:
 		return
 
 	var player_engage := attack.explicit_target != null or attack.attack_move_active
-	## A plain player move outranks opportunistic auto-attack — unless the unit is already
-	## inside melee reach of the acquired target (common when pathing into a building footprint).
+	## Plain RMB move outranks opportunistic auto-attack for the whole path (controls §1.2).
+	## Do not clear the order when already in range — that re-engaged melee and made cancel impossible.
 	if not player_engage and movement.has_order():
-		if not attack.in_attack_range(global_position, target):
-			return
-		movement.clear_order()
+		return
 
 	if not attack.in_attack_range(global_position, target):
 		_chase_combat_target(target)

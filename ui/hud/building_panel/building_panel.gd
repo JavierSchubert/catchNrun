@@ -220,7 +220,9 @@ func _refresh_build_buttons() -> void:
 		button.disabled = crystals < cost
 	if is_armed():
 		var def := ConstructionManager.def_for(_armed_key)
-		_info_label.text = "Placing %s — LMB place, RMB/Esc cancel" % (def.display_name if def else _armed_key)
+		_info_label.text = "Placing %s — LMB place, Shift+LMB chain, RMB/Esc cancel" % (
+			def.display_name if def else _armed_key
+		)
 	else:
 		_info_label.text = "Select a structure to build"
 
@@ -250,6 +252,9 @@ func _try_place() -> void:
 	if not manager.can_place_preview(_armed_key, anchor):
 		return
 	manager.request_build(_armed_key, anchor)
+	## Shift/Ctrl+LMB keeps placement armed so you can chain buildings like move waypoints.
+	if SelectionManager.is_chain_modifier_held():
+		return
 	_disarm()
 
 

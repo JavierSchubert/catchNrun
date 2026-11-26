@@ -166,7 +166,7 @@ Right Click Ground
 -> Calculate shortest valid path
 -> Move along path
 
-A newly issued movement command replaces the current movement or attack command. Right-click on empty ground always takes priority: it cancels the current attack / attack-move / shift-click chain and walks to the click. Opportunistic auto-attack must not interrupt that plain player move while the path is still active.
+A newly issued movement command replaces the current movement or attack command. Right-click on empty ground always takes priority: it clears the explicit attack target and attack-move, cancels any shift-click chain, and walks to the click. Opportunistic auto-attack must **not** interrupt that plain player move while the path is still active (including when the destination is already inside melee range of an enemy or building).
 
 #### Shift-click move chain
 
@@ -196,7 +196,7 @@ Right Click Attackable Entity
 
 The Hunter can **right-click structures** to attack them explicitly (`Unit._request_attack_building`). Auto-acquire of nearby buildings still applies when combat acquisition is allowed. Attack-move (`A` + left click) can also engage structures the same way once acquired.
 
-Melee vs buildings is **footprint-aware** (`StructureMelee` in `src/combat/structure_melee.gd`): reach and in-range add the structure's selection hit radius, and chase / server attack walk to an **approach point** just outside the footprint (same idea as Runner repair) instead of the solid center. `AttackController.in_attack_range` uses that helper for `Building` targets. Building click picking uses a minimum hit radius of 56 px; stuck movement clears when the Hunter is already in melee range of the acquired building. Structures flash a red attack ring via `Building.flash_attack_target_circle`. The Hunter bot also considers buildings in `_nearest_hunter_target`.
+Melee vs buildings is **footprint-aware** (`StructureMelee` in `src/combat/structure_melee.gd`): reach and in-range add the structure's selection hit radius, and chase / server attack walk to an **approach point** just outside the footprint (same idea as Runner repair) instead of the solid center. `AttackController.in_attack_range` uses that helper for `Building` targets. Building click picking uses a minimum hit radius of 56 px. Structures flash a red attack ring via `Building.flash_attack_target_circle`. The Hunter bot also considers buildings in `_nearest_hunter_target`.
 
 #### Repair Command
 

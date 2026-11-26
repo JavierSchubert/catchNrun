@@ -95,8 +95,8 @@ def test_hud_tscn_corner_anchors() -> None:
     assert re.search(r'\[node name="SelectionPanel".*?anchors_preset = 7', text, re.S)
     # Building bottom-right: preset 3
     assert re.search(r'\[node name="BuildingPanel".*?anchors_preset = 3', text, re.S)
-    assert "offset_left = -316.0" in text
-    assert "offset_top = -376.0" in text
+    assert "offset_left = -396.0" in text
+    assert "offset_top = -496.0" in text
 
 
 def test_building_panel_has_stat_rows_and_sections() -> None:

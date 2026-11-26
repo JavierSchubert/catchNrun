@@ -14,7 +14,7 @@ const PANEL_STATS: Array[StatBlock.Stat] = [
 	StatBlock.Stat.MOVEMENT_SPEED,
 ]
 
-const PANEL_SIZE := Vector2(520, 148)
+const PANEL_SIZE := Vector2(580, 168)
 
 @export var panel_style: StyleBoxFlat:
 	set(value):
