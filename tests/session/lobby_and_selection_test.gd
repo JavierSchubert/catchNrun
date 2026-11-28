@@ -208,15 +208,15 @@ func _test_sandbox_panels_minimize() -> void:
 	## Index 1 = directly under the action bar (index 0).
 	var log_panel := stack.get_child(1) as Control
 	var log_scroll := _first_of_type(log_panel, "ScrollContainer") as Control
-	_check(skip != null and skip.visible, "the action bar starts expanded")
-	_check(log_scroll != null and log_scroll.visible, "the log starts expanded")
+	_check(skip != null and not skip.visible, "the action bar starts minimized")
+	_check(log_scroll != null and not log_scroll.visible, "the log starts minimized")
+	_check(_button_with_text(stack, "Expand") != null, "minimized panels offer Expand")
 
 	sandbox.call("_toggle_all_collapsed")
-	_check(not skip.visible, "G minimizes the action bar")
-	_check(not log_scroll.visible, "G minimizes the log")
-	_check(_button_with_text(stack, "Expand") != null, "a minimized panel offers Expand")
+	_check(skip.visible, "G expands the action bar")
+	_check(log_scroll.visible, "G expands the log")
 	sandbox.call("_toggle_all_collapsed")
-	_check(skip.visible and log_scroll.visible, "G expands everything again")
+	_check(not skip.visible and not log_scroll.visible, "G minimizes everything again")
 
 	stack.free()
 	sandbox.free()

@@ -340,7 +340,7 @@ func _register_collapsible(
 		SoundManager.play_ui()
 		_set_collapsed(entry, not bool(entry["collapsed"]))
 	)
-	_set_collapsed(entry, false)
+	_set_collapsed(entry, true)
 
 
 func _set_collapsed(entry: Dictionary, collapsed: bool) -> void:
