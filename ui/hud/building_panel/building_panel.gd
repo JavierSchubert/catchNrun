@@ -252,7 +252,7 @@ func _refresh_build_buttons() -> void:
 		var cost := int(def.cost_for_level(1))
 		button.text = "%s [%s]\n%d" % [short_name, hotkey, cost]
 		button.tooltip_text = "%s [%s] — %d Crystals" % [def.display_name, hotkey, cost]
-		var blocked_by_mine_cap := key == "crystal_mine" and construction != null \
+		var blocked_by_mine_cap: bool = key == "crystal_mine" and construction != null \
 				and construction.owns_crystal_mine(_local_peer_id())
 		if blocked_by_mine_cap:
 			button.disabled = true
