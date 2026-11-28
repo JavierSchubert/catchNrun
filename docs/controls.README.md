@@ -72,7 +72,7 @@ Own-group green takes priority over the Hunter red when the local player is the 
 
 #### Double-click type select (own buildings)
 
-Double-clicking one of the local player's own structures selects every owned structure of the same kind (`BuildingDef.Kind`). All selected buildings show selection circles; the BuildingPanel Upgrade / Destroy / tower-pick actions apply to the whole group. Single-click and drag-box selection remain single-entity.
+Double-clicking one of the local player's own structures selects every owned structure of the same kind (`BuildingDef.Kind`). All selected buildings show selection circles; the BuildingPanel Upgrade / Destroy / tower-pick actions apply to the whole group. Press **U** to upgrade (for Towers, then press **1–4** to choose a stat path); press **D** to destroy. Single-click and drag-box selection remain single-entity.
 
 #### Drag-box selection
 

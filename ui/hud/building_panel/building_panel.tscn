@@ -7,7 +7,7 @@
 [ext_resource type="PackedScene" path="res://ui/hud/widgets/stat_icon_row.tscn" id="5_stat_row"]
 
 [node name="BuildingPanel" type="Control"]
-custom_minimum_size = Vector2(380, 480)
+custom_minimum_size = Vector2(380, 520)
 layout_mode = 3
 anchors_preset = 0
 mouse_filter = 2
@@ -48,14 +48,15 @@ theme_override_constants/separation = 6
 [node name="Title" type="Label" parent="Margin/VBox/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 15
 text = "Build"
 
 [node name="MinimizeButton" type="Button" parent="Margin/VBox/Header"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(72, 28)
+custom_minimum_size = Vector2(92, 32)
 layout_mode = 2
 tooltip_text = "Minimize building panel"
+theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
 text = "Minimize"
@@ -71,7 +72,7 @@ theme_override_constants/separation = 6
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.78, 0.84, 1)
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 15
 text = "Select your Runner to build"
 autowrap_mode = 2
 
@@ -88,13 +89,18 @@ theme_override_constants/h_separation = 8
 theme_override_constants/v_separation = 8
 columns = 2
 
-[node name="WallButton" type="Button" parent="Margin/VBox/Content/BuildSection/Buttons"]
+[node name="WallOption" type="VBoxContainer" parent="Margin/VBox/Content/BuildSection/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="WallButton" type="Button" parent="Margin/VBox/Content/BuildSection/Buttons/WallOption"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 112)
+custom_minimum_size = Vector2(0, 104)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/icon_max_width = 72
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 15
 icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
@@ -106,13 +112,37 @@ theme_override_styles/disabled = ExtResource("3_button")
 toggle_mode = true
 text = "Wall"
 
-[node name="TowerButton" type="Button" parent="Margin/VBox/Content/BuildSection/Buttons"]
+[node name="WallCost" type="HBoxContainer" parent="Margin/VBox/Content/BuildSection/Buttons/WallOption"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="WallCostIcon" type="TextureRect" parent="Margin/VBox/Content/BuildSection/Buttons/WallOption/WallCost"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 112)
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WallCostLabel" type="Label" parent="Margin/VBox/Content/BuildSection/Buttons/WallOption/WallCost"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "0"
+
+[node name="TowerOption" type="VBoxContainer" parent="Margin/VBox/Content/BuildSection/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="TowerButton" type="Button" parent="Margin/VBox/Content/BuildSection/Buttons/TowerOption"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 104)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/icon_max_width = 72
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 15
 icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
@@ -124,13 +154,37 @@ theme_override_styles/disabled = ExtResource("3_button")
 toggle_mode = true
 text = "Tower"
 
-[node name="MineButton" type="Button" parent="Margin/VBox/Content/BuildSection/Buttons"]
+[node name="TowerCost" type="HBoxContainer" parent="Margin/VBox/Content/BuildSection/Buttons/TowerOption"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="TowerCostIcon" type="TextureRect" parent="Margin/VBox/Content/BuildSection/Buttons/TowerOption/TowerCost"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 112)
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TowerCostLabel" type="Label" parent="Margin/VBox/Content/BuildSection/Buttons/TowerOption/TowerCost"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "0"
+
+[node name="MineOption" type="VBoxContainer" parent="Margin/VBox/Content/BuildSection/Buttons"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="MineButton" type="Button" parent="Margin/VBox/Content/BuildSection/Buttons/MineOption"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 104)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/icon_max_width = 72
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 15
 icon_alignment = 1
 vertical_icon_alignment = 0
 expand_icon = true
@@ -141,6 +195,25 @@ theme_override_styles/hover = ExtResource("4_button_hover")
 theme_override_styles/disabled = ExtResource("3_button")
 toggle_mode = true
 text = "Mine"
+
+[node name="MineCost" type="HBoxContainer" parent="Margin/VBox/Content/BuildSection/Buttons/MineOption"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 4
+
+[node name="MineCostIcon" type="TextureRect" parent="Margin/VBox/Content/BuildSection/Buttons/MineOption/MineCost"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MineCostLabel" type="Label" parent="Margin/VBox/Content/BuildSection/Buttons/MineOption/MineCost"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "0"
 
 [node name="SelectedSection" type="VBoxContainer" parent="Margin/VBox/Content"]
 unique_name_in_owner = true
@@ -188,7 +261,7 @@ stretch_mode = 5
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_colors/font_color = Color(0.72, 0.9, 0.82, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 15
 text = "RMB to repair damaged structure"
 
 [node name="StatHp" parent="Margin/VBox/Content/SelectedSection" instance=ExtResource("5_stat_row")]
@@ -211,7 +284,7 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.82, 0.35, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 15
 text = "Max level reached"
 
 [node name="UpgradeArea" type="VBoxContainer" parent="Margin/VBox/Content/SelectedSection"]
@@ -224,15 +297,34 @@ theme_override_constants/separation = 4
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.78, 0.84, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 15
 autowrap_mode = 2
+
+[node name="UpgradeCostRow" type="HBoxContainer" parent="Margin/VBox/Content/SelectedSection/UpgradeArea"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="UpgradeCostIcon" type="TextureRect" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/UpgradeCostRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="UpgradeCostLabel" type="Label" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/UpgradeCostRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "0"
 
 [node name="UpgradeButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 theme_override_constants/icon_max_width = 24
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 15
 expand_icon = true
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
@@ -249,11 +341,11 @@ columns = 2
 
 [node name="PickDamageButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/icon_max_width = 24
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 15
 expand_icon = true
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
@@ -262,11 +354,11 @@ text = "Damage"
 
 [node name="PickSpeedButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/icon_max_width = 24
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 15
 expand_icon = true
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
@@ -275,11 +367,11 @@ text = "Atk Speed"
 
 [node name="PickCritButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/icon_max_width = 24
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 15
 expand_icon = true
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
@@ -288,11 +380,11 @@ text = "Crit"
 
 [node name="PickRangeButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/icon_max_width = 24
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 15
 expand_icon = true
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
@@ -301,9 +393,9 @@ text = "Range"
 
 [node name="DestroyButton" type="Button" parent="Margin/VBox/Content/SelectedSection"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 36)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_override_font_sizes/font_size = 15
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
 text = "Destroy"
