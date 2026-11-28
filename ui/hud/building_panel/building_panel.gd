@@ -274,7 +274,7 @@ func _refresh_selected_building() -> void:
 	var def := building.def
 	var level_suffix := " (building...)" if building.is_under_construction() and building.level < 2 else ""
 	_selected_name.text = "%s — Lv %d / %d%s" % [def.display_name, building.level, def.max_level, level_suffix]
-	_selected_icon.texture = BuildingIcons.icon_for_def(def)
+	_selected_icon.texture = BuildingIcons.icon_for_def(def, building.level)
 	_bind_building_stat_rows(building)
 	_refresh_upgrade_area(building)
 

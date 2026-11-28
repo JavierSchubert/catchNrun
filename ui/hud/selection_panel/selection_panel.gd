@@ -214,7 +214,7 @@ func _show_building(building: Building) -> void:
 		_show_generic(building)
 		return
 	_right_col.visible = true
-	_portrait.texture = BuildingIcons.icon_for_def(building.def)
+	_portrait.texture = BuildingIcons.icon_for_def(building.def, building.level)
 	_portrait.tooltip_text = "%s Lv %d" % [building.def.display_name, building.level]
 	_bind_building_stat_values(building)
 	_bind_building_health(building)

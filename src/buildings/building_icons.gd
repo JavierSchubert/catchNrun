@@ -1,10 +1,29 @@
 class_name BuildingIcons
 extends RefCounted
-## Small placeholder icons for the building UI buttons, drawn at runtime so the build
-## panel has clickable images without depending on imported art assets.
 
-const SIZE := 48
+const SIZE := 128
+const CRYSTAL_ICON_SIZE := 48
 const CRYSTAL_COLOR := Color(0.3, 0.85, 0.95, 1.0)
+
+const BUILDING_TEXTURES := {
+	"wall": [
+		preload("res://assets/sprites/buildings/crystal_assets_128/wall_blue_01.png"),
+		preload("res://assets/sprites/buildings/crystal_assets_128/wall_blue_02.png"),
+		preload("res://assets/sprites/buildings/crystal_assets_128/wall_blue_03.png"),
+		preload("res://assets/sprites/buildings/crystal_assets_128/wall_blue_04.png"),
+	],
+	"tower": [
+		preload("res://assets/sprites/buildings/crystal_assets_128/tower_blue_01.png"),
+		preload("res://assets/sprites/buildings/crystal_assets_128/tower_blue_02.png"),
+		preload("res://assets/sprites/buildings/crystal_assets_128/tower_blue_03.png"),
+		preload("res://assets/sprites/buildings/crystal_assets_128/tower_blue_04.png"),
+	],
+	"crystal_mine": [
+		preload("res://assets/sprites/buildings/crystal_assets_128/mine_blue_01.png"),
+		preload("res://assets/sprites/buildings/crystal_assets_128/mine_blue_02.png"),
+		preload("res://assets/sprites/buildings/crystal_assets_128/mine_blue_03.png"),
+	],
+}
 
 
 static func key_for_kind(kind: BuildingDef.Kind) -> String:
@@ -18,82 +37,39 @@ static func key_for_kind(kind: BuildingDef.Kind) -> String:
 	return "wall"
 
 
-static func icon_for_kind(kind: BuildingDef.Kind) -> ImageTexture:
+static func icon_for_kind(kind: BuildingDef.Kind) -> Texture2D:
 	return icon_for(key_for_kind(kind))
 
 
-## Prefer def.id when set; fall back to kind so HUD sites share one mapping.
-static func icon_for_def(def: BuildingDef) -> ImageTexture:
+static func icon_for_def(def: BuildingDef, level: int = 1) -> Texture2D:
 	if def == null:
 		return _fallback_icon()
-	if not def.id.is_empty():
-		return icon_for(def.id)
-	return icon_for_kind(def.kind)
+	return texture_for_level(key_for_kind(def.kind), level, def.max_level)
 
 
-static func icon_for(building_key: String) -> ImageTexture:
-	match building_key:
-		"wall":
-			return _wall_icon()
-		"tower":
-			return _tower_icon()
-		"crystal_mine":
-			return _mine_icon()
-	return _fallback_icon()
+static func icon_for(building_key: String) -> Texture2D:
+	return texture_for_level(building_key, 1, 20)
 
 
-static func _wall_icon() -> ImageTexture:
-	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0, 0, 0, 0))
-	var mortar := Color(0.55, 0.52, 0.48, 1.0)
-	var brick := Color(0.74, 0.44, 0.3, 1.0)
-	image.fill_rect(Rect2i(4, 4, 40, 40), mortar)
-	var row := 0
-	var y := 7
-	while y < 40:
-		var offset := 0 if row % 2 == 0 else 9
-		var x := 6 + offset
-		while x < 40:
-			image.fill_rect(Rect2i(x, y, 7, 5), brick)
-			x += 9
-		y += 7
-		row += 1
-	return ImageTexture.create_from_image(image)
+static func texture_for_level(building_key: String, level: int, max_level: int) -> Texture2D:
+	var textures: Array = BUILDING_TEXTURES.get(building_key, [])
+	if textures.is_empty():
+		return _fallback_icon()
+	var levels_per_texture := maxi(ceili(float(maxi(max_level, 1)) / textures.size()), 1)
+	var texture_index := mini((maxi(level, 1) - 1) / levels_per_texture, textures.size() - 1)
+	return textures[texture_index]
 
 
-static func _tower_icon() -> ImageTexture:
-	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0, 0, 0, 0))
-	var stone := Color(0.58, 0.58, 0.63, 1.0)
-	var banner := Color(0.75, 0.18, 0.18, 1.0)
-	image.fill_rect(Rect2i(16, 20, 16, 24), stone)
-	image.fill_rect(Rect2i(10, 10, 28, 10), stone)
-	for i in range(4):
-		image.fill_rect(Rect2i(10 + i * 7, 4, 5, 7), stone)
-	image.fill_rect(Rect2i(21, 22, 6, 14), banner)
-	return ImageTexture.create_from_image(image)
-
-
-## Bare Crystal diamond for the HUD resource bar: the mine icon without its brown base.
+## Bare Crystal diamond for the resource bar, separate from the building sprites.
 static func crystal_icon() -> ImageTexture:
-	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
+	var image := Image.create(CRYSTAL_ICON_SIZE, CRYSTAL_ICON_SIZE, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0, 0, 0, 0))
 	_draw_crystal(image)
 	return ImageTexture.create_from_image(image)
 
 
-static func _mine_icon() -> ImageTexture:
-	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0, 0, 0, 0))
-	var base := Color(0.4, 0.32, 0.26, 1.0)
-	image.fill_rect(Rect2i(8, 34, 32, 8), base)
-	_draw_crystal(image)
-	return ImageTexture.create_from_image(image)
-
-
-## Shared diamond used by the mine button icon and the resource bar icon.
 static func _draw_crystal(image: Image) -> void:
-	var center := SIZE / 2
+	var center := CRYSTAL_ICON_SIZE / 2
 	var radius := 16
 	for y in range(center - radius, center + radius):
 		var dy := absi(y - center)
@@ -106,5 +82,5 @@ static func _draw_crystal(image: Image) -> void:
 static func _fallback_icon() -> ImageTexture:
 	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0, 0, 0, 0))
-	image.fill_rect(Rect2i(4, 4, 40, 40), Color(0.6, 0.6, 0.6, 1.0))
+	image.fill_rect(Rect2i(4, 4, SIZE - 8, SIZE - 8), Color(0.6, 0.6, 0.6, 1.0))
 	return ImageTexture.create_from_image(image)

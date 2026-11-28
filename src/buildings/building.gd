@@ -56,6 +56,7 @@ var _attack_flash_remaining := 0.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var visual: Polygon2D = $Visual
+@onready var art: Sprite2D = $Art
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
 @onready var shield: ShieldComponent = $Shield
@@ -617,6 +618,7 @@ func _refresh_visuals() -> void:
 		progress_bar.visible = state != State.IDLE
 		progress_bar.value = progress_ratio * 100.0
 	modulate = Color(1, 1, 1, 0.6) if state == State.UNDER_CONSTRUCTION else Color.WHITE
+	_refresh_building_art()
 
 
 func _on_health_changed(current: float, maximum: float) -> void:
@@ -697,3 +699,19 @@ func _apply_footprint_visual() -> void:
 		Vector2(-half.x, half.y),
 	])
 	visual.color = fill_color
+	visual.visible = def == null
+	if art != null:
+		art.visible = def != null
+		_refresh_building_art()
+
+
+func _refresh_building_art() -> void:
+	if def == null or art == null:
+		return
+	var texture := BuildingIcons.icon_for_def(def, level)
+	if art.texture != texture:
+		art.texture = texture
+	var size_cells := BuildGrid.positive_footprint(footprint)
+	var cell := grid.cell_size if grid != null else 32.0
+	var pixel_size := Vector2(size_cells) * cell
+	art.scale = pixel_size / Vector2(texture.get_size())
