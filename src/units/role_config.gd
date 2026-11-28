@@ -17,6 +17,6 @@ enum Role { HUNTER, RUNNER }
 @export var vision_range := 450.0
 ## Seconds without taking damage before HEALTH_REGENERATION ticks. 0 = regenerate always
 ## (while the regen stat is > 0). Uses real seconds, not physics ticks — same as wall
-## shield_recharge_delay. Hunter default 5s: longer than a Tower shot (~1/s) so regen
+## shield_recharge_delay. Hunter default 3s: longer than a Tower shot (~1/s) so regen
 ## never ticks under fire, short enough to recover after disengaging.
 @export var regen_delay_after_damage := 0.0

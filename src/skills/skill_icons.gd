@@ -6,6 +6,8 @@ extends RefCounted
 const SIZE := 64
 const SEEK_COLOR := Color(0.35, 0.7, 1.0, 1.0)
 const SEEK_ACCENT := Color(0.85, 0.95, 1.0, 1.0)
+const REPAIR_COLOR := Color(0.35, 0.9, 0.65, 1.0)
+const REPAIR_ACCENT := Color(0.85, 1.0, 0.9, 1.0)
 
 static var _cache: Dictionary = {}
 
@@ -17,6 +19,8 @@ static func icon_for(skill_id: String) -> Texture2D:
 	match skill_id:
 		"seek":
 			texture = seek_icon()
+		"repair":
+			texture = repair_icon()
 		_:
 			texture = _fallback_icon()
 	_cache[skill_id] = texture
@@ -35,6 +39,16 @@ static func seek_icon() -> ImageTexture:
 	_draw_arrow(image, center, Vector2(-0.87, 0.5), SEEK_COLOR)
 	## Center pip.
 	image.fill_rect(Rect2i(int(center.x) - 2, int(center.y) - 2, 4, 4), SEEK_ACCENT)
+	return ImageTexture.create_from_image(image)
+
+
+static func repair_icon() -> ImageTexture:
+	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+	var center := Vector2(SIZE * 0.5, SIZE * 0.5)
+	_draw_ring(image, center, 22, REPAIR_COLOR, 2)
+	image.fill_rect(Rect2i(int(center.x) - 2, int(center.y) - 10, 4, 20), REPAIR_ACCENT)
+	image.fill_rect(Rect2i(int(center.x) - 10, int(center.y) - 2, 20, 4), REPAIR_ACCENT)
 	return ImageTexture.create_from_image(image)
 
 

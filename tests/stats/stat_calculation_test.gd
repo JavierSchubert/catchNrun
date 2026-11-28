@@ -2,6 +2,8 @@ extends Node
 ## Checks final stat values from docs/stats.README.md.
 ##   godot --headless --path . res://tests/stats/stat_calculation_test.tscn
 
+const HUNTER_CONFIG: RoleConfig = preload("res://src/units/hunter/hunter_config.tres")
+
 var _failures: PackedStringArray = PackedStringArray()
 
 
@@ -11,6 +13,8 @@ func _ready() -> void:
 	_test_constraints()
 	_test_hud_display_format()
 	_test_hunter_upgrade_rolls()
+	_test_hunter_survivability_balance()
+	_test_hunter_reward_icons()
 	if _failures.is_empty():
 		print("PASS: stat calculation")
 		get_tree().quit(0)
@@ -127,6 +131,25 @@ func _test_hunter_upgrade_rolls() -> void:
 		_failures.append("Legendary Hunter choices use the gold rarity color")
 	if HunterUpgradeProgression.format_bonus(StatBlock.Stat.LUCK, 0.05) != "+5% Luck":
 		_failures.append("Hunter Luck reward displays as a percentage")
+
+
+func _test_hunter_survivability_balance() -> void:
+	_near(
+		HUNTER_CONFIG.base_stats.health_regeneration,
+		3.0,
+		"Hunter regenerates 3 HP per second"
+	)
+	_near(
+		HUNTER_CONFIG.regen_delay_after_damage,
+		3.0,
+		"Hunter regeneration resumes 3 seconds after damage"
+	)
+
+
+func _test_hunter_reward_icons() -> void:
+	for stat in HunterUpgradeProgression.OPTION_STATS:
+		if StatIcons.icon(stat) == null:
+			_failures.append("Hunter reward stat %s has a shared icon" % StatIcons.display_name(stat))
 
 
 func _sheet(melee_damage: float) -> StatSheet:

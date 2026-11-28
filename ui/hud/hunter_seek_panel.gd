@@ -9,7 +9,7 @@ extends Control
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_button.pressed.connect(_on_seek_pressed)
-	_button.icon = SkillIcons.icon_for("seek")
+	_button.icon = SkillIcons.icon_for(SeekSkill.DEF.id)
 	visible = false
 	set_process(true)
 
@@ -24,7 +24,7 @@ func _process(_delta: float) -> void:
 	var active_left := hunter.seek_active_left()
 	var cd := hunter.seek_cooldown_left()
 	_button.disabled = not ready
-	_button.icon = SkillIcons.icon_for("seek")
+	_button.icon = SkillIcons.icon_for(SeekSkill.DEF.id)
 	if active_left > 0.0:
 		_button.text = "Seek\n%.0fs" % ceilf(active_left)
 		_button.tooltip_text = "Seek active — directions on minimap (%.0fs left)" % active_left

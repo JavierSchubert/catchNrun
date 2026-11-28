@@ -170,6 +170,27 @@ theme_override_font_sizes/font_size = 15
 text = "Building"
 autowrap_mode = 2
 
+[node name="RepairHintRow" type="HBoxContainer" parent="Margin/VBox/Content/SelectedSection"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="RepairHintIcon" type="TextureRect" parent="Margin/VBox/Content/SelectedSection/RepairHintRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(18, 18)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RepairHint" type="Label" parent="Margin/VBox/Content/SelectedSection/RepairHintRow"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0.72, 0.9, 0.82, 1)
+theme_override_font_sizes/font_size = 11
+text = "RMB to repair damaged structure"
+
 [node name="StatHp" parent="Margin/VBox/Content/SelectedSection" instance=ExtResource("5_stat_row")]
 unique_name_in_owner = true
 layout_mode = 2

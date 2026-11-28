@@ -46,11 +46,14 @@ func _process(_delta: float) -> void:
 		var button := _choice_buttons[index]
 		button.disabled = not complete
 		if not complete:
+			button.icon = null
 			button.text = "Rolling..."
 			continue
 		var stat_id := hunter.pending_upgrade_choice_stats[index]
+		var stat: StatBlock.Stat = stat_id
 		var rarity := hunter.pending_upgrade_choice_rarities[index]
 		var value := hunter.pending_upgrade_choice_values[index]
+		button.icon = StatIcons.icon(stat)
 		button.text = "%s\n\n%s\n\nRange: %s" % [
 			HunterUpgradeProgression.rarity_name(rarity),
 			HunterUpgradeProgression.format_bonus(stat_id, value),

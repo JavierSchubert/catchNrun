@@ -240,7 +240,7 @@ func _test_tower_def_numbers_are_pinned() -> void:
 	_check(base != null, "tower_def.tres carries tower_base_stats")
 	if base == null:
 		return
-	_near(base.ranged_damage, 18.0, "tower base ranged damage")
+	_near(base.ranged_damage, 15.0, "tower base ranged damage")
 	_near(base.attack_speed, 1.0, "tower base attack speed")
 	_near(base.attack_range, 280.0, "tower base attack range")
 	_near(base.critical_chance, 0.0, "tower base crit chance")

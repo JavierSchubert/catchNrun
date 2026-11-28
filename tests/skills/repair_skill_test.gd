@@ -26,6 +26,7 @@ func _ready() -> void:
 	_test_only_walls_get_a_shield()
 	_test_legacy_building_ignores_damage_and_repair()
 	_test_repair_validation()
+	_test_shared_skill_icons()
 	_test_repair_channel_heals_until_full()
 	_test_repair_walks_into_range()
 	_test_other_commands_cancel_repair()
@@ -205,6 +206,17 @@ func _test_repair_validation() -> void:
 	wall.queue_free()
 	foreign.queue_free()
 	fresh.queue_free()
+
+
+func _test_shared_skill_icons() -> void:
+	_check(
+		SkillIcons.icon_for(RepairSkill.DEF.id) != null,
+		"Runner Repair has a shared skill icon"
+	)
+	_check(
+		SkillIcons.icon_for(SeekSkill.DEF.id) != null,
+		"Hunter Seek has a shared skill icon"
+	)
 
 
 func _test_repair_channel_heals_until_full() -> void:

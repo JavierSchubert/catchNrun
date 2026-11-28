@@ -33,6 +33,8 @@ const PICK_ICON_STATS := [
 @onready var _selected_section: Control = %SelectedSection
 @onready var _selected_icon: TextureRect = %SelectedIcon
 @onready var _selected_name: Label = %SelectedName
+@onready var _repair_hint_row: HBoxContainer = %RepairHintRow
+@onready var _repair_hint_icon: TextureRect = %RepairHintIcon
 @onready var _stat_hp: StatIconRow = %StatHp
 @onready var _stat_secondary: StatIconRow = %StatSecondary
 @onready var _stat_tertiary: StatIconRow = %StatTertiary
@@ -76,6 +78,8 @@ func _ready() -> void:
 	_destroy_button.pressed.connect(_on_destroy_pressed)
 	_selected_section.visible = false
 	_build_section.visible = false
+	_repair_hint_icon.texture = SkillIcons.icon_for(RepairSkill.DEF.id)
+	_repair_hint_icon.tooltip_text = RepairSkill.DEF.display_name
 	set_process(true)
 	set_process_unhandled_input(true)
 
@@ -317,6 +321,7 @@ func _refresh_selected_building() -> void:
 		_pending_building_name = ""
 		return
 	_selected_section.visible = true
+	_repair_hint_row.visible = _has_repairable_building(buildings)
 	_pending_building_name = building.name
 	var def := building.def
 	var level_suffix := " (building...)" if building.is_under_construction() and building.level < 2 else ""
@@ -341,6 +346,13 @@ func _refresh_selected_building() -> void:
 	var group_count := buildings.size()
 	_destroy_button.text = "Destroy [D]" if group_count <= 1 else "Destroy all [D]"
 	_destroy_button.tooltip_text = "Destroy selected structure(s) (D)"
+
+
+func _has_repairable_building(buildings: Array[Building]) -> bool:
+	for building in buildings:
+		if building.state != Building.State.UNDER_CONSTRUCTION and building.is_damaged():
+			return true
+	return false
 
 
 func _bind_building_stat_rows(building: Building) -> void:
