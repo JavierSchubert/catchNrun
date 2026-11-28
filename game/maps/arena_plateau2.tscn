@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://dtf11dtys04dw"]
+
+[ext_resource type="Script" uid="uid://w6iidvkxsuav" path="res://game/maps/arena_plateau.gd" id="1_6s0vu"]
+[ext_resource type="TileSet" uid="uid://b2vasiedgehhj" path="res://assets/sprites/maps/tiles/v3/tileset.tres" id="2_fesph"]
+[ext_resource type="Texture2D" uid="uid://ct0x37wc2d5ts" path="res://assets/sprites/ui/Spawn_mark.png" id="4_f5vpv"]
+
+[node name="ArenaPlateau" type="Node2D" unique_id=146640809]
+script = ExtResource("1_6s0vu")
+
+[node name="FloorLayer" type="TileMapLayer" parent="." unique_id=256840506]
+tile_set = ExtResource("2_fesph")
+
+[node name="OverlayLayer" type="TileMapLayer" parent="." unique_id=102618805]
+z_index = 1
+tile_set = ExtResource("2_fesph")
+
+[node name="EditorSpawnPreview" type="Node2D" parent="." unique_id=247400160]
+z_index = 3
+
+[node name="Spawn0" type="Sprite2D" parent="EditorSpawnPreview" unique_id=1996830497]
+modulate = Color(0.45, 0.85, 0.45, 0.7)
+position = Vector2(0, -160)
+scale = Vector2(0.55, 0.55)
+texture = ExtResource("4_f5vpv")
+
+[node name="Spawn1" type="Sprite2D" parent="EditorSpawnPreview" unique_id=436275563]
+modulate = Color(0.45, 0.85, 0.45, 0.7)
+position = Vector2(160, 0)
+scale = Vector2(0.55, 0.55)
+texture = ExtResource("4_f5vpv")
+
+[node name="Spawn2" type="Sprite2D" parent="EditorSpawnPreview" unique_id=15138307]
+modulate = Color(0.45, 0.85, 0.45, 0.7)
+position = Vector2(0, 160)
+scale = Vector2(0.55, 0.55)
+texture = ExtResource("4_f5vpv")
+
+[node name="Spawn3" type="Sprite2D" parent="EditorSpawnPreview" unique_id=552733350]
+modulate = Color(0.45, 0.85, 0.45, 0.7)
+position = Vector2(-160, 0)
+scale = Vector2(0.55, 0.55)
+texture = ExtResource("4_f5vpv")
