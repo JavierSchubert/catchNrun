@@ -23,6 +23,27 @@ properties/2/replication_mode = 1
 properties/3/path = NodePath(".:xp")
 properties/3/spawn = true
 properties/3/replication_mode = 1
+properties/4/path = NodePath(".:hunter_upgrade_flat_bonuses")
+properties/4/spawn = true
+properties/4/replication_mode = 1
+properties/5/path = NodePath(".:hunter_upgrade_percent_bonuses")
+properties/5/spawn = true
+properties/5/replication_mode = 1
+properties/6/path = NodePath(".:pending_upgrade_levels")
+properties/6/spawn = true
+properties/6/replication_mode = 1
+properties/7/path = NodePath(".:pending_upgrade_choice_level")
+properties/7/spawn = true
+properties/7/replication_mode = 1
+properties/8/path = NodePath(".:pending_upgrade_choice_stats")
+properties/8/spawn = true
+properties/8/replication_mode = 1
+properties/9/path = NodePath(".:pending_upgrade_choice_rarities")
+properties/9/spawn = true
+properties/9/replication_mode = 1
+properties/10/path = NodePath(".:pending_upgrade_choice_values")
+properties/10/spawn = true
+properties/10/replication_mode = 1
 
 [node name="Unit" type="CharacterBody2D" unique_id=679634324]
 z_index = 1

@@ -8,13 +8,14 @@ script = ExtResource("2_stats")
 health_regeneration = 0.0
 defense = 0.0
 movement_speed = 230.0
-melee_damage = 25.0
+melee_damage = 22.5
 ranged_damage = 0.0
 magic_damage = 0.0
 critical_chance = 0.0
+luck = 0.1
 lifesteal_chance = 0.0
 lifesteal_amount = 0.0
-attack_speed = 1.333333
+attack_speed = 1.25
 
 [resource]
 script = ExtResource("1_role")
@@ -25,4 +26,4 @@ base_stats = SubResource("Resource_stats")
 move_speed = 230.0
 attack_range = 70.0
 acquisition_range = 500.0
-attack_interval = 0.75
+attack_interval = 0.8

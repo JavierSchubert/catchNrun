@@ -100,6 +100,7 @@ The initial character stat system supports the following stats.
 | `lifesteal_amount` | Lifesteal | 5 | Health restored when lifesteal is triggered |
 | `attack_speed` | Attack | 1.25 | Attacks per second; the attack interval is `1 / attack_speed` |
 | `attack_range` | Attack | 0 | Reach of an attack in pixels; read by Towers. Units ignore it and use `RoleConfig.attack_range` |
+| `luck` | Progression | 0.10 for the Hunter | Improves the rarity odds of Hunter level-up rewards; clamped to `0.0`–`1.0` |
 
 All supported stats use the standard stat calculation unless explicitly documented otherwise.
 
@@ -117,7 +118,12 @@ Units carry host-owned `level` and `xp` (replicated). Curve math lives in `XpPro
 xp_to_next(level) = 100 * 1.35^(level - 1)
 ```
 
-- **Hunter:** gains **1 XP per point of applied melee damage** (units and buildings). Filling the portrait XP ring levels up; overflow XP carries into the next level. Level-up **stat rewards** are not applied yet.
+- **Hunter:** gains **1 XP per point of applied melee damage** (units and buildings). Filling the portrait XP ring levels up; overflow XP carries into the next level.
+- **Starting Hunter balance (CP-22):** `22.5` melee damage at `1.25` attacks/sec (`0.8s` interval), down from `25` at `1.333` attacks/sec. This reduces opening sustained damage by about `16%`; Hunter health and movement are unchanged.
+- **Hunter rewards:** each gained level queues three different stat choices. The host rolls each choice's stat, rarity, and bonus; the Hunter chooses one in the bottom-right HUD panel. Overflow levels remain queued and show one offer at a time.
+- **Rarity:** Basic (blue), Advanced (green), Rare (violet), and Legendary (gold) scale the base stat ranges by `1.0×`, `1.5×`, `2.25×`, and `3.5×`. Luck shifts the default rarity weights from `60/27/10/3` toward `43/27/20/10` at maximum Luck.
+- **Luck:** starts at `0.10` for Hunters, is displayed in the upgrade prompt, and can itself be upgraded. It affects future offers only.
+- Max-health choices raise current health by the same amount, up to the new maximum. Movement speed, melee damage, and attack speed rewards are percentage modifiers; chance and other numeric rewards are flat additions.
 - **Runner:** stays at **level 1**; the selection-panel XP band is always fully violet (no XP gain).
 - HUD: violet fill is counterclockwise from 12 o'clock on the dark band between the grey portrait rings (`PortraitXpRing`).
 

@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://b5un4h7dglmme"]
+[gd_scene load_steps=7 format=3 uid="uid://b5un4h7dglmme"]
 
 [ext_resource type="Script" uid="uid://dcw1xxn706g7c" path="res://game/match/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" uid="uid://deivbpbqgk4u3" path="res://ui/hud/minimap/minimap.tscn" id="2_minimap"]
 [ext_resource type="PackedScene" uid="uid://bxadifs50at6o" path="res://ui/hud/selection_panel/selection_panel.tscn" id="3_selection"]
 [ext_resource type="PackedScene" uid="uid://dcechj3pvu0hw" path="res://ui/hud/building_panel/building_panel.tscn" id="4_building"]
 [ext_resource type="PackedScene" path="res://ui/hud/resource_bar/resource_bar.tscn" id="5_resource"]
+[ext_resource type="PackedScene" path="res://ui/hud/hunter_upgrade_panel.tscn" id="6_hunter_upgrades"]
 
 [node name="HUD" type="CanvasLayer" unique_id=502979574]
 script = ExtResource("1_hud")
@@ -68,7 +69,7 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -290.0
-offset_top = -188.0
+offset_top = -216.0
 offset_right = 290.0
 offset_bottom = -16.0
 grow_horizontal = 2
@@ -84,6 +85,21 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -396.0
 offset_top = -496.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="HunterUpgradePanel" parent="Root" instance=ExtResource("6_hunter_upgrades")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -446.0
+offset_top = -266.0
 offset_right = -16.0
 offset_bottom = -16.0
 grow_horizontal = 0

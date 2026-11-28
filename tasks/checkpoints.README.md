@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-26** (WP-14 / CP-19 Hunter XP + portrait XP ring + selection chrome polish; CP-20 HUD/combat presentation polish — code-reviewed, no Godot run).
+Last reviewed: **2026-11-28** (CP-22 Hunter opening balance adjustment).
 
 ---
 
@@ -44,6 +44,8 @@ Last reviewed: **2026-11-26** (WP-14 / CP-19 Hunter XP + portrait XP ring + sele
 | 2026-11-26 | **CP-18** Hunter structure attack + floating numbers (WP-18 A–C / WP-09) | **Code-reviewed only — not yet run in Godot.** `StructureMelee` footprint reach / approach; `AttackController` building range; Hunter chase / attack / stuck-clear / bot target buildings; building attack flash; `FloatingNumber` (DAMAGE/CRIT/LIFESTEAL/REGEN → white/yellow/green, rise+fade, MoveClickMarker-style `spawn` / `spawn_on`) wired from melee, lifesteal, regen, tower hits; controls / WP docs updated |
 | 2026-11-26 | **CP-19** Hunter XP + portrait XP ring (WP-14) | **Code-reviewed only — not yet run in Godot.** `XpProgress` (`BASE_XP=100`, `GROWTH=1.35`); host `Unit.level`/`xp` + MultiplayerSynchronizer; Hunter 1 XP per applied melee damage (units + buildings); overflow level-ups; no level-up stat rewards yet; `PortraitXpRing` matching-thickness grey rings + dark band + violet CCW fill from 12 o'clock; overlapping LevelBadge; Runners fixed Lv1 full violet; buildings structure level on badge / empty XP band; empty selection grey frame only; SelectionPanel stats Body separation 28; no “Lv N” beside health bar; sandbox **XP +50**; docs + `tools/test/test_wp14_xp.py` |
 | 2026-11-26 | **CP-20** HUD / combat presentation polish | **Code-reviewed only — not yet run in Godot.** Sandbox Stats panel (crit / LS / damage / regen / reset); Shift-chain build placement; larger health bars / selection + build UI; HP bars hide when full except player units (`HealthBar.show_when_full`); blue crystal mine floating numbers (`FloatingNumber.Kind.CRYSTAL`); plain RMB move outranks auto-attack (cancel polish) |
+| 2026-11-26 | **CP-21** Hunter level-up rewards and Luck | Hunter gains one queued reward offer per XP level, including overflow levels; host rolls three distinct stat options with randomized ranges and Basic/Advanced/Rare/Legendary rarity multipliers; Luck shifts rarity odds and is upgradeable and visible in the stat strip; host validates the Hunter's selection and replicates chosen bonuses; max-health rewards also restore the same amount of health; bottom-right three-card HUD uses blue/green/violet/gold rarity-tinted cards; stats and checkpoint docs updated; focused roll tests added. Godot executable was unavailable for runtime tests. |
+| 2026-11-28 | **CP-22** Hunter opening balance adjustment | Reduced starting Hunter melee damage from 25 to 22.5 and attack speed from 1.333 to 1.25 attacks/sec (interval 0.75s to 0.8s), lowering opening sustained damage by about 16%; movement, health, and level-up progression are unchanged. Stats documentation updated. |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 

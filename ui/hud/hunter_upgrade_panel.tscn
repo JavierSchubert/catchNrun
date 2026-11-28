@@ -1,0 +1,97 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://ui/hud/hunter_upgrade_panel.gd" id="1_script"]
+[ext_resource type="StyleBox" path="res://ui/hud/minimap/minimap_frame_style.tres" id="2_frame"]
+[ext_resource type="StyleBox" path="res://ui/styles/button_normal_style.tres" id="3_button"]
+
+[node name="HunterUpgradePanel" type="Control"]
+custom_minimum_size = Vector2(430, 238)
+layout_mode = 3
+anchors_preset = 0
+visible = false
+mouse_filter = 2
+script = ExtResource("1_script")
+
+[node name="Frame" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("2_frame")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 16
+text = "Hunter Upgrade"
+
+[node name="Hint" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.72, 0.78, 0.84, 1)
+theme_override_font_sizes/font_size = 11
+text = "Choose one reward. Luck improves rarity odds."
+
+[node name="Choices" type="GridContainer" parent="Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 3
+
+[node name="ChoiceOne" type="Button" parent="Margin/VBox/Choices"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 150)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/hover = ExtResource("3_button")
+text = "Rolling..."
+autowrap_mode = 2
+
+[node name="ChoiceTwo" type="Button" parent="Margin/VBox/Choices"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 150)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/hover = ExtResource("3_button")
+text = "Rolling..."
+autowrap_mode = 2
+
+[node name="ChoiceThree" type="Button" parent="Margin/VBox/Choices"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 150)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 12
+theme_override_styles/normal = ExtResource("3_button")
+theme_override_styles/hover = ExtResource("3_button")
+text = "Rolling..."
+autowrap_mode = 2

@@ -36,6 +36,14 @@ var sync_health := 0.0
 var level := 1
 var xp := 0.0
 var stats := StatSheet.new()
+## Host-owned Hunter rewards, replicated as accumulated bonuses for client stat sheets.
+var hunter_upgrade_flat_bonuses := PackedFloat32Array()
+var hunter_upgrade_percent_bonuses := PackedFloat32Array()
+var pending_upgrade_levels := PackedInt32Array()
+var pending_upgrade_choice_level := 0
+var pending_upgrade_choice_stats := PackedInt32Array()
+var pending_upgrade_choice_rarities := PackedInt32Array()
+var pending_upgrade_choice_values := PackedFloat32Array()
 
 var _intent := Vector2.ZERO
 var _eliminated := false
@@ -65,6 +73,11 @@ var _chain_visual: MoveChainVisual
 ## Host-only. Own structure this Runner is walking to / channelling `repair` on.
 var _repair_target: Building = null
 var _repair_repath_in := 0.0
+var _applied_max_health := 0.0
+var _health_initialized := false
+var _hunter_upgrade_modifiers: Array[StatModifier] = []
+var _applied_upgrade_flat := PackedFloat32Array()
+var _applied_upgrade_percent := PackedFloat32Array()
 
 
 func _enter_tree() -> void:
@@ -80,10 +93,12 @@ func _ready() -> void:
 	if config == null:
 		push_error("Unit %s is missing a role config." % name)
 		return
+	_ensure_hunter_upgrade_arrays()
 	_clamp_to_map()
 	sync_position = position
 	stats.stats_changed.connect(_apply_derived_stats)
 	stats.set_base(_base_stats())
+	_apply_synced_hunter_upgrade_bonuses()
 	attack.attack_range = config.attack_range
 	attack.acquisition_range = config.acquisition_range
 	_apply_derived_stats()
@@ -93,6 +108,7 @@ func _ready() -> void:
 		health_bar.show_when_full = true
 		health.health_changed.connect(health_bar.update_for_health)
 	health.setup(stats.final_value(StatBlock.Stat.MAX_HEALTH))
+	_health_initialized = true
 	sync_health = health.current
 	if health_bar != null:
 		health_bar.update_for_health(health.current, stats.final_value(StatBlock.Stat.MAX_HEALTH))
@@ -124,6 +140,12 @@ func _apply_derived_stats() -> void:
 		attack.attack_interval = 1.0 / attack_speed
 	elif config != null and config.attack_interval > 0.0:
 		attack.attack_interval = config.attack_interval
+	var next_max_health := stats.final_value(StatBlock.Stat.MAX_HEALTH)
+	if _health_initialized and _applied_max_health > 0.0 \
+			and next_max_health > _applied_max_health and _is_net_server():
+		health.heal(next_max_health - _applied_max_health, next_max_health)
+		sync_health = health.current
+	_applied_max_health = next_max_health
 
 
 func is_alive() -> bool:
@@ -233,6 +255,9 @@ func grant_xp(amount: float) -> void:
 	level = int(result.level)
 	xp = float(result.xp)
 	if level > before_level:
+		for gained_level in range(before_level + 1, level + 1):
+			pending_upgrade_levels.append(gained_level)
+		_offer_next_hunter_upgrade()
 		GameLog.info(
 			"XP",
 			"%s reached level %d (%.0f XP into next)" % [
@@ -241,6 +266,116 @@ func grant_xp(amount: float) -> void:
 				xp,
 			]
 		)
+
+
+func request_hunter_upgrade(choice_index: int) -> void:
+	if role() != RoleConfig.Role.HUNTER or not is_inside_tree():
+		return
+	if _is_net_server():
+		_server_choose_hunter_upgrade(choice_index)
+	else:
+		rpc_id(1, "_submit_hunter_upgrade_choice", choice_index)
+
+
+@rpc("any_peer", "reliable")
+func _submit_hunter_upgrade_choice(choice_index: int) -> void:
+	if not _is_net_server() or GameManager.sender_id(multiplayer) != peer_id:
+		return
+	_server_choose_hunter_upgrade(choice_index)
+
+
+func _ensure_hunter_upgrade_arrays() -> void:
+	var stat_count := StatBlock.Stat.size()
+	if hunter_upgrade_flat_bonuses.size() != stat_count:
+		hunter_upgrade_flat_bonuses.resize(stat_count)
+	if hunter_upgrade_percent_bonuses.size() != stat_count:
+		hunter_upgrade_percent_bonuses.resize(stat_count)
+
+
+func _offer_next_hunter_upgrade() -> void:
+	if role() != RoleConfig.Role.HUNTER or pending_upgrade_choice_level > 0 \
+			or pending_upgrade_levels.is_empty():
+		return
+	pending_upgrade_choice_level = pending_upgrade_levels[0]
+	pending_upgrade_levels.remove_at(0)
+	pending_upgrade_choice_stats.clear()
+	pending_upgrade_choice_rarities.clear()
+	pending_upgrade_choice_values.clear()
+	var choices := HunterUpgradeProgression.roll_choices(
+		stats.final_value(StatBlock.Stat.LUCK)
+	)
+	for choice in choices:
+		pending_upgrade_choice_stats.append(int(choice.stat))
+		pending_upgrade_choice_rarities.append(int(choice.rarity))
+		pending_upgrade_choice_values.append(float(choice.value))
+
+
+func _server_choose_hunter_upgrade(choice_index: int) -> void:
+	if not _is_net_server() or role() != RoleConfig.Role.HUNTER:
+		return
+	var choice_count := pending_upgrade_choice_stats.size()
+	if pending_upgrade_choice_level <= 0 or choice_index < 0 or choice_index >= choice_count:
+		return
+	if pending_upgrade_choice_rarities.size() != choice_count \
+			or pending_upgrade_choice_values.size() != choice_count:
+		return
+	var stat_id := pending_upgrade_choice_stats[choice_index]
+	if stat_id < 0 or stat_id >= StatBlock.Stat.size():
+		return
+	var value := pending_upgrade_choice_values[choice_index]
+	var is_percent := HunterUpgradeProgression.is_percent_stat(stat_id)
+	if is_percent:
+		hunter_upgrade_percent_bonuses[stat_id] += value
+	else:
+		hunter_upgrade_flat_bonuses[stat_id] += value
+	var modifier := StatModifier.new()
+	modifier.kind = StatModifier.Kind.PERCENT if is_percent else StatModifier.Kind.FLAT
+	modifier.stat = stat_id
+	modifier.value = value
+	_hunter_upgrade_modifiers.append(modifier)
+	stats.add_modifier(modifier)
+	_applied_upgrade_flat = hunter_upgrade_flat_bonuses.duplicate()
+	_applied_upgrade_percent = hunter_upgrade_percent_bonuses.duplicate()
+	GameLog.info(
+		"XP",
+		"%s chose %s at level %d" % [
+			name_label.text if name_label else str(peer_id),
+			HunterUpgradeProgression.format_bonus(stat_id, value),
+			pending_upgrade_choice_level,
+		]
+	)
+	pending_upgrade_choice_level = 0
+	pending_upgrade_choice_stats.clear()
+	pending_upgrade_choice_rarities.clear()
+	pending_upgrade_choice_values.clear()
+	_offer_next_hunter_upgrade()
+
+
+func _apply_synced_hunter_upgrade_bonuses() -> void:
+	if hunter_upgrade_flat_bonuses == _applied_upgrade_flat \
+			and hunter_upgrade_percent_bonuses == _applied_upgrade_percent:
+		return
+	for modifier in _hunter_upgrade_modifiers:
+		stats.remove_modifier(modifier)
+	_hunter_upgrade_modifiers.clear()
+	for stat_id in StatBlock.Stat.size():
+		var flat_value := hunter_upgrade_flat_bonuses[stat_id]
+		if not is_zero_approx(flat_value):
+			_add_synced_hunter_modifier(stat_id, StatModifier.Kind.FLAT, flat_value)
+		var percent_value := hunter_upgrade_percent_bonuses[stat_id]
+		if not is_zero_approx(percent_value):
+			_add_synced_hunter_modifier(stat_id, StatModifier.Kind.PERCENT, percent_value)
+	_applied_upgrade_flat = hunter_upgrade_flat_bonuses.duplicate()
+	_applied_upgrade_percent = hunter_upgrade_percent_bonuses.duplicate()
+
+
+func _add_synced_hunter_modifier(stat_id: int, kind: StatModifier.Kind, value: float) -> void:
+	var modifier := StatModifier.new()
+	modifier.kind = kind
+	modifier.stat = stat_id
+	modifier.value = value
+	_hunter_upgrade_modifiers.append(modifier)
+	stats.add_modifier(modifier)
 
 
 ## Portrait ring fill 0–1. Runners always show a full violet ring at level 1.
@@ -401,6 +536,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		_follow_sync_position(delta)
 		_clamp_to_map()
+		_apply_synced_hunter_upgrade_bonuses()
 		_apply_synced_health()
 
 

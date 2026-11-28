@@ -19,6 +19,7 @@ enum Stat {
 	ATTACK_SPEED,
 	# Append new stats at the end: the ordinals are serialized in .tres role configs.
 	ATTACK_RANGE,
+	LUCK,
 }
 
 @export var max_health := 100.0
@@ -34,6 +35,7 @@ enum Stat {
 @export var lifesteal_amount := 5.0
 @export var attack_speed := 1.25 ## Attacks per second. Interval = 1 / attack_speed.
 @export var attack_range := 0.0 ## Reach in pixels. Towers read it; units ignore it and use RoleConfig.attack_range.
+@export_range(0.0, 1.0, 0.01) var luck := 0.0 ## Improves Hunter level-up rarity rolls.
 
 
 func get_base(stat: Stat) -> float:
@@ -64,6 +66,8 @@ func get_base(stat: Stat) -> float:
 			return attack_speed
 		Stat.ATTACK_RANGE:
 			return attack_range
+		Stat.LUCK:
+			return luck
 	return 0.0
 
 

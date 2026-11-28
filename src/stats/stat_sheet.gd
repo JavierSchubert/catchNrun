@@ -57,7 +57,7 @@ func modifier_delta(stat: StatBlock.Stat) -> float:
 
 static func constrain(stat: StatBlock.Stat, value: float) -> float:
 	match stat:
-		StatBlock.Stat.CRITICAL_CHANCE, StatBlock.Stat.LIFESTEAL_CHANCE:
+		StatBlock.Stat.CRITICAL_CHANCE, StatBlock.Stat.LIFESTEAL_CHANCE, StatBlock.Stat.LUCK:
 			return clampf(value, 0.0, 1.0)
 		StatBlock.Stat.MAX_HEALTH, StatBlock.Stat.HEALTH_REGENERATION, StatBlock.Stat.MOVEMENT_SPEED, \
 				StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER, StatBlock.Stat.LIFESTEAL_AMOUNT, \
