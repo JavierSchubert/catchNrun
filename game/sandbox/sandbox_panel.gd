@@ -320,7 +320,7 @@ func _add_toggle_button(parent: Node) -> Button:
 ## and shrinks toward it, to COLLAPSED_HEIGHT tall. Either way it becomes `collapsed_width`
 ## wide (or keeps its width when 0).
 func _register_collapsible(
-	panel: Control, button: Button, hidden: Array, collapsed_width := 0.0
+	panel: Control, button: Button, hidden: Array, collapsed_width: float = 0.0
 ) -> void:
 	var entry := {
 		"panel": panel,
