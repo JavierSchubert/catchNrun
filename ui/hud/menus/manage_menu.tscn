@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://ui/hud/building_panel/building_panel.tscn" id="1_panel"]
+
+[node name="ManageMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+## Editor entry for the structure manage strip (stats grid + Upgrade / Destroy footer).
+## Live match uses BuildingPanel SelectedSection / ActionsFooter.
+
+[node name="BuildingPanel" parent="." instance=ExtResource("1_panel")]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -436.0
+offset_top = -616.0
+offset_right = -16.0
+offset_bottom = -16.0

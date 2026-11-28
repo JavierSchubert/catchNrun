@@ -30,6 +30,7 @@ const PICK_ICON_STATS := [
 ]
 
 @onready var _info_label: Label = %InfoLabel
+@onready var _title_label: Label = $Margin/VBox/Header/Title
 @onready var _content: Control = %Content
 @onready var _minimize_button: Button = %MinimizeButton
 @onready var _build_section: Control = %BuildSection
@@ -165,6 +166,14 @@ func _refresh_mode() -> void:
 		if not HudMode.can_build(next):
 			_disarm()
 		_mode = next
+	if _title_label != null:
+		if HudMode.can_manage_building(_mode):
+			_title_label.text = "Manage"
+		else:
+			_title_label.text = "Build"
+	if _info_label != null:
+		_info_label.visible = false
+		_info_label.text = ""
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -296,7 +305,7 @@ func _on_upgrade_hotkey_pressed() -> void:
 	if GameManager.crystals_for(_local_peer_id()) < building.next_upgrade_cost():
 		return
 	_tower_upgrade_hotkey_pending = true
-	_upgrade_hint.text = "Choose a path: 1 Damage, 2 Speed, 3 Crit, 4 Range (Esc cancels)"
+	## Path choice is shown on the pick buttons themselves (`Label [Key]`).
 
 
 func _refresh_build_buttons() -> void:
@@ -307,10 +316,6 @@ func _refresh_build_buttons() -> void:
 			var button: Button = _build_buttons[key]
 			button.button_pressed = false
 			button.disabled = true
-		if HudMode.can_manage_building(_mode):
-			_info_label.text = "Manage selected: U upgrade, D destroy"
-		else:
-			_info_label.text = "Select your Runner to build"
 		return
 	var crystals := GameManager.crystals_for(_local_peer_id())
 	var construction := _construction_manager()
@@ -338,13 +343,6 @@ func _refresh_build_buttons() -> void:
 				_disarm()
 		else:
 			button.disabled = crystals < cost
-	if is_armed():
-		var def := ConstructionManager.def_for(_armed_key)
-		_info_label.text = "Placing %s — LMB place, Shift+LMB chain, RMB/Esc cancel" % (
-			def.display_name if def else _armed_key
-		)
-	else:
-		_info_label.text = "Select a structure to build — W Wall, T Tower, C Mine"
 
 
 func _update_ghost() -> void:
@@ -490,42 +488,39 @@ func _refresh_upgrade_area(building: Building) -> void:
 	var at_max_level := building.level >= def.max_level
 	_max_level_label.visible = at_max_level
 	_upgrade_area.visible = not at_max_level
+	if _upgrade_hint != null:
+		_upgrade_hint.visible = false
 	if at_max_level:
 		return
 	var is_tower := def.kind == BuildingDef.Kind.TOWER
 	var cost := building.next_upgrade_cost()
 	var affordable := GameManager.crystals_for(_local_peer_id()) >= cost
-	_upgrade_cost_row.visible = building.state != Building.State.UPGRADING
+	## Keep the cost row mounted so Upgrade / Destroy stay pinned while upgrading.
+	_upgrade_cost_row.visible = true
+	_upgrade_cost_row.modulate.a = 1.0 if building.state != Building.State.UPGRADING else 0.45
 	_upgrade_cost_label.text = str(int(cost))
 	_upgrade_button.visible = not is_tower
 	_pick_grid.visible = is_tower
-	_upgrade_hint.visible = is_tower
 	if is_tower:
 		if building.state == Building.State.UPGRADING:
-			_upgrade_hint.text = "Upgrading to Lv %d…" % (building.level + 1)
 			_tower_upgrade_hotkey_pending = false
-		elif _tower_upgrade_hotkey_pending:
-			_upgrade_hint.text = "Choose a path: 1 Damage, 2 Speed, 3 Crit, 4 Range (Esc cancels)"
-		else:
-			_upgrade_hint.text = "Upgrade to Lv %d — U, then 1–4 to choose:" % [
-				building.level + 1,
-			]
 		var can_pick := building.can_upgrade() and affordable
 		for path in _pick_buttons.size():
 			var pick_button := _pick_buttons[path]
 			pick_button.icon = StatIcons.icon(PICK_ICON_STATS[path])
-			pick_button.text = "%d: %s" % [path + 1, _pick_grant_short(def, path)]
-			pick_button.tooltip_text = _pick_grant_long(def, path)
-			pick_button.disabled = not can_pick
+			pick_button.text = "%s [%d]" % [_pick_grant_short(def, path), path + 1]
+			pick_button.tooltip_text = "%s [%d]" % [_pick_grant_long(def, path), path + 1]
+			pick_button.disabled = not can_pick or building.state == Building.State.UPGRADING
 		return
 	_upgrade_button.icon = _upgrade_icon_for(def.kind)
+	var delta := _upgrade_delta_text(building)
 	if building.state == Building.State.UPGRADING:
 		_upgrade_button.text = "Upgrading to Lv %d…" % (building.level + 1)
 	elif _managed_buildings().size() > 1:
-		_upgrade_button.text = "Upgrade all [U]"
+		_upgrade_button.text = "Upgrade all [U]\n%s" % delta
 	else:
-		_upgrade_button.text = "Upgrade [U]"
-	_upgrade_button.tooltip_text = _upgrade_tooltip_for(def.kind)
+		_upgrade_button.text = "Upgrade [U]\n%s" % delta
+	_upgrade_button.tooltip_text = "%s [%s]" % [_upgrade_tooltip_for(def.kind), "U"]
 	_upgrade_button.disabled = not building.can_upgrade() or not affordable
 
 
@@ -571,6 +566,35 @@ func _upgrade_tooltip_for(kind: BuildingDef.Kind) -> String:
 			return "Double crystal output"
 		_:
 			return "Upgrade"
+
+
+func _upgrade_delta_text(building: Building) -> String:
+	var def := building.def
+	if def == null:
+		return ""
+	var next_level := building.level + 1
+	match def.kind:
+		BuildingDef.Kind.WALL:
+			var hp_gain := def.hp_for_level(next_level) - def.hp_for_level(building.level)
+			var parts: PackedStringArray = ["+%s HP" % StatIcons.short_number(hp_gain)]
+			var next_shield := def.shield_for_level(next_level)
+			var cur_shield := def.shield_for_level(building.level)
+			if next_shield > cur_shield:
+				parts.append("+%s Shield" % StatIcons.short_number(next_shield - cur_shield))
+			elif cur_shield <= 0.0 and next_level >= def.shield_unlock_level:
+				parts.append("Shield unlocks")
+			return " · ".join(parts)
+		BuildingDef.Kind.CRYSTAL_MINE:
+			var cur_out := def.mine_output_for_level(building.level)
+			var next_out := def.mine_output_for_level(next_level)
+			var hp_gain := def.hp_for_level(next_level) - def.hp_for_level(building.level)
+			return "+%s / %ss · +%s HP" % [
+				StatIcons.short_number(next_out - cur_out),
+				StatIcons.short_number(def.mine_interval),
+				StatIcons.short_number(hp_gain),
+			]
+		_:
+			return ""
 
 
 func _pick_grant_short(def: BuildingDef, path: int) -> String:

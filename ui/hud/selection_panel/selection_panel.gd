@@ -15,7 +15,7 @@ const PANEL_STATS: Array[StatBlock.Stat] = [
 	StatBlock.Stat.LUCK,
 ]
 
-const PANEL_SIZE := Vector2(580, 196)
+const PANEL_SIZE := Vector2(640, 200)
 const LEVEL_BADGE_SIZE := 28.0
 const PORTRAIT_INSET := 14.0
 

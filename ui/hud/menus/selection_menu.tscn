@@ -1,0 +1,32 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://ui/hud/selection_panel/selection_panel.tscn" id="1_selection"]
+[ext_resource type="PackedScene" path="res://ui/hud/hunter_seek_panel.tscn" id="2_seek"]
+
+[node name="SelectionMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+## Editor entry for selection strip + in-panel Seek skill slot.
+
+[node name="SelectionPanel" parent="." instance=ExtResource("1_selection")]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -320.0
+offset_top = -216.0
+offset_right = 320.0
+offset_bottom = -16.0
+
+[node name="HunterSeekPanel" parent="SelectionPanel" instance=ExtResource("2_seek")]
+layout_mode = 0
+offset_left = 520.0
+offset_top = 20.0
+offset_right = 640.0
+offset_bottom = 170.0

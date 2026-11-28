@@ -20,8 +20,10 @@ def test_hud_has_runtime_layout() -> None:
     assert "BUILDING_SIZE" in hud
     assert "UPGRADE_SIZE" in hud
     assert "notify_hud_layout" in hud
+    assert "_nest_seek_into_selection" in hud
+    assert "SkillSlot" in hud
     ## Upgrade sits above the selection band.
-    assert "SELECTION_SIZE.y + GAP" in hud or "SELECTION_SIZE.y + GAP" in hud.replace(" ", "")
+    assert "SELECTION_SIZE.y + GAP" in hud
 
 
 def test_building_panel_keeps_minimize_after_layout() -> None:
@@ -40,8 +42,7 @@ def test_layout_math_no_overlaps() -> None:
     margin = 16.0
     gap = 12.0
     minimap_w, minimap_h = 220.0, 146.0
-    seek_w, seek_h = 136.0, 150.0
-    sel_max_w, sel_h = 520.0, 200.0
+    sel_max_w, sel_h = 640.0, 200.0
     build_w, build_h = 420.0, 600.0
     up_w, up_h = 430.0, 250.0
 
@@ -52,17 +53,14 @@ def test_layout_math_no_overlaps() -> None:
         if runner:
             right_bound -= build_w + gap
         middle = max(right_bound - left_bound, 0.0)
-        seek_slot = seek_w + gap if hunter else 0.0
-        sel_w = max(0.0, min(sel_max_w, middle - seek_slot))
-        cluster = sel_w + seek_slot
-        cluster_left = left_bound + max((middle - cluster) * 0.5, 0.0)
+        ## Seek lives inside the selection strip skill slot — no separate rect.
+        sel_w = max(0.0, min(sel_max_w, middle))
+        cluster_left = left_bound + max((middle - sel_w) * 0.5, 0.0)
         rects = {
             "Minimap": (margin, bottom - minimap_h, margin + minimap_w, bottom),
             "Selection": (cluster_left, bottom - sel_h, cluster_left + sel_w, bottom),
         }
         if hunter:
-            seek_left = cluster_left + sel_w + gap
-            rects["Seek"] = (seek_left, bottom - seek_h, seek_left + seek_w, bottom)
             upgrade_bottom = bottom - sel_h - gap
             rects["Upgrade"] = (
                 width - margin - up_w,

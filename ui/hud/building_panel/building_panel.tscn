@@ -70,10 +70,11 @@ theme_override_constants/separation = 6
 
 [node name="InfoLabel" type="Label" parent="Margin/VBox/Content"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.78, 0.84, 1)
 theme_override_font_sizes/font_size = 18
-text = "Select your Runner to build"
+text = ""
 autowrap_mode = 2
 
 [node name="BuildSection" type="VBoxContainer" parent="Margin/VBox/Content"]
@@ -262,23 +263,35 @@ layout_mode = 2
 size_flags_vertical = 4
 theme_override_colors/font_color = Color(0.72, 0.9, 0.82, 1)
 theme_override_font_sizes/font_size = 18
-text = "RMB to repair damaged structure"
+text = "Repair [RMB]"
 
-[node name="StatHp" parent="Margin/VBox/Content/SelectedSection" instance=ExtResource("5_stat_row")]
+[node name="StatsGrid" type="GridContainer" parent="Margin/VBox/Content/SelectedSection"]
 unique_name_in_owner = true
 layout_mode = 2
+mouse_filter = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 4
+columns = 2
 
-[node name="StatSecondary" parent="Margin/VBox/Content/SelectedSection" instance=ExtResource("5_stat_row")]
+[node name="StatHp" parent="Margin/VBox/Content/SelectedSection/StatsGrid" instance=ExtResource("5_stat_row")]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 
-[node name="StatTertiary" parent="Margin/VBox/Content/SelectedSection" instance=ExtResource("5_stat_row")]
+[node name="StatSecondary" parent="Margin/VBox/Content/SelectedSection/StatsGrid" instance=ExtResource("5_stat_row")]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 
-[node name="StatQuaternary" parent="Margin/VBox/Content/SelectedSection" instance=ExtResource("5_stat_row")]
+[node name="StatTertiary" parent="Margin/VBox/Content/SelectedSection/StatsGrid" instance=ExtResource("5_stat_row")]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatQuaternary" parent="Margin/VBox/Content/SelectedSection/StatsGrid" instance=ExtResource("5_stat_row")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="MaxLevelLabel" type="Label" parent="Margin/VBox/Content/SelectedSection"]
 unique_name_in_owner = true
@@ -287,25 +300,39 @@ theme_override_colors/font_color = Color(0.95, 0.82, 0.35, 1)
 theme_override_font_sizes/font_size = 18
 text = "Max level reached"
 
-[node name="UpgradeArea" type="VBoxContainer" parent="Margin/VBox/Content/SelectedSection"]
+[node name="FooterSpacer" type="Control" parent="Margin/VBox/Content/SelectedSection"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="ActionsFooter" type="VBoxContainer" parent="Margin/VBox/Content/SelectedSection"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="UpgradeArea" type="VBoxContainer" parent="Margin/VBox/Content/SelectedSection/ActionsFooter"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 4
 
-[node name="UpgradeHint" type="Label" parent="Margin/VBox/Content/SelectedSection/UpgradeArea"]
+[node name="UpgradeHint" type="Label" parent="Margin/VBox/Content/SelectedSection/ActionsFooter/UpgradeArea"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.78, 0.84, 1)
 theme_override_font_sizes/font_size = 18
 autowrap_mode = 2
 
-[node name="UpgradeCostRow" type="HBoxContainer" parent="Margin/VBox/Content/SelectedSection/UpgradeArea"]
+[node name="UpgradeCostRow" type="HBoxContainer" parent="Margin/VBox/Content/SelectedSection/ActionsFooter/UpgradeArea"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="UpgradeCostIcon" type="TextureRect" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/UpgradeCostRow"]
+[node name="UpgradeCostIcon" type="TextureRect" parent="Margin/VBox/Content/SelectedSection/ActionsFooter/UpgradeArea/UpgradeCostRow"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(22, 22)
 layout_mode = 2
@@ -313,13 +340,13 @@ mouse_filter = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="UpgradeCostLabel" type="Label" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/UpgradeCostRow"]
+[node name="UpgradeCostLabel" type="Label" parent="Margin/VBox/Content/SelectedSection/ActionsFooter/UpgradeArea/UpgradeCostRow"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "0"
 
-[node name="UpgradeButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea"]
+[node name="UpgradeButton" type="Button" parent="Margin/VBox/Content/SelectedSection/ActionsFooter/UpgradeArea"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
@@ -329,9 +356,9 @@ expand_icon = true
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
 theme_override_styles/disabled = ExtResource("3_button")
-text = "Upgrade"
+text = "Upgrade [U]"
 
-[node name="PickGrid" type="GridContainer" parent="Margin/VBox/Content/SelectedSection/UpgradeArea"]
+[node name="PickGrid" type="GridContainer" parent="Margin/VBox/Content/SelectedSection/ActionsFooter/UpgradeArea"]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
@@ -339,7 +366,7 @@ theme_override_constants/h_separation = 6
 theme_override_constants/v_separation = 6
 columns = 2
 
-[node name="PickDamageButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid"]
+[node name="PickDamageButton" type="Button" parent="Margin/VBox/Content/SelectedSection/ActionsFooter/UpgradeArea/PickGrid"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 58)
 layout_mode = 2
@@ -350,9 +377,9 @@ expand_icon = true
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
 theme_override_styles/disabled = ExtResource("3_button")
-text = "Damage"
+text = "Damage [1]"
 
-[node name="PickSpeedButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid"]
+[node name="PickSpeedButton" type="Button" parent="Margin/VBox/Content/SelectedSection/ActionsFooter/UpgradeArea/PickGrid"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 58)
 layout_mode = 2
@@ -363,9 +390,9 @@ expand_icon = true
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
 theme_override_styles/disabled = ExtResource("3_button")
-text = "Atk Speed"
+text = "Atk Speed [2]"
 
-[node name="PickCritButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid"]
+[node name="PickCritButton" type="Button" parent="Margin/VBox/Content/SelectedSection/ActionsFooter/UpgradeArea/PickGrid"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 58)
 layout_mode = 2
@@ -376,9 +403,9 @@ expand_icon = true
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
 theme_override_styles/disabled = ExtResource("3_button")
-text = "Crit"
+text = "Crit [3]"
 
-[node name="PickRangeButton" type="Button" parent="Margin/VBox/Content/SelectedSection/UpgradeArea/PickGrid"]
+[node name="PickRangeButton" type="Button" parent="Margin/VBox/Content/SelectedSection/ActionsFooter/UpgradeArea/PickGrid"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 58)
 layout_mode = 2
@@ -389,13 +416,13 @@ expand_icon = true
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
 theme_override_styles/disabled = ExtResource("3_button")
-text = "Range"
+text = "Range [4]"
 
-[node name="DestroyButton" type="Button" parent="Margin/VBox/Content/SelectedSection"]
+[node name="DestroyButton" type="Button" parent="Margin/VBox/Content/SelectedSection/ActionsFooter"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 theme_override_styles/normal = ExtResource("3_button")
 theme_override_styles/hover = ExtResource("4_button_hover")
-text = "Destroy"
+text = "Destroy [D]"

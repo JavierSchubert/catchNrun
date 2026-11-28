@@ -7,8 +7,9 @@ const SANDBOX_CONTROLS := preload("res://game/match/sandbox_controls.gd")
 const MARGIN := 16.0
 const GAP := 12.0
 const MINIMAP_SIZE := Vector2(220.0, 146.0)
-const SEEK_SIZE := Vector2(136.0, 150.0)
-const SELECTION_SIZE := Vector2(520.0, 200.0)
+const SEEK_SIZE := Vector2(120.0, 150.0)
+## Includes in-panel skill slot (LoL-style) so Seek no longer sits beside the strip.
+const SELECTION_SIZE := Vector2(640.0, 200.0)
 const BUILDING_SIZE := Vector2(420.0, 600.0)
 const UPGRADE_SIZE := Vector2(430.0, 250.0)
 const STATUS_TOP := 72.0
@@ -37,6 +38,7 @@ func _ready() -> void:
 	GameManager.phase_changed.connect(_on_phase_changed)
 	if not get_viewport().size_changed.is_connected(_on_viewport_size_changed):
 		get_viewport().size_changed.connect(_on_viewport_size_changed)
+	_nest_seek_into_selection()
 	_layout_chrome(true)
 	_refresh()
 
@@ -45,6 +47,23 @@ func _process(_delta: float) -> void:
 	_refresh()
 	## Layout only when role / upgrade visibility / size signature changes.
 	_layout_chrome(false)
+
+
+func _nest_seek_into_selection() -> void:
+	if _hunter_seek_panel == null or _selection_panel == null:
+		return
+	var slot := _selection_panel.get_node_or_null("%SkillSlot") as Control
+	if slot == null:
+		return
+	if _hunter_seek_panel.get_parent() != slot:
+		_hunter_seek_panel.reparent(slot)
+	_hunter_seek_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_hunter_seek_panel.offset_left = 0.0
+	_hunter_seek_panel.offset_top = 0.0
+	_hunter_seek_panel.offset_right = 0.0
+	_hunter_seek_panel.offset_bottom = 0.0
+	_hunter_seek_panel.custom_minimum_size = SEEK_SIZE
+	slot.visible = _local_role() == RoleConfig.Role.HUNTER
 
 
 func _on_viewport_size_changed() -> void:
@@ -117,7 +136,6 @@ func _layout_chrome(force: bool) -> void:
 		return
 	_layout_signature = signature
 
-	var reserve_seek := is_hunter
 	var reserve_building := is_runner
 	var bottom := view.y - MARGIN
 	var left_bound := MARGIN + MINIMAP_SIZE.x + GAP
@@ -126,11 +144,9 @@ func _layout_chrome(force: bool) -> void:
 		right_bound -= BUILDING_SIZE.x + GAP
 
 	var middle := maxf(right_bound - left_bound, 0.0)
-	var seek_slot := SEEK_SIZE.x + GAP if reserve_seek else 0.0
-	## Fill the middle band without crossing Minimap / Building reserves.
-	var selection_width := clampf(middle - seek_slot, 0.0, SELECTION_SIZE.x)
-	var cluster := selection_width + seek_slot
-	var cluster_left := left_bound + maxf((middle - cluster) * 0.5, 0.0)
+	## Selection strip owns the Seek skill slot internally (no side overlap).
+	var selection_width := clampf(middle, 0.0, SELECTION_SIZE.x)
+	var cluster_left := left_bound + maxf((middle - selection_width) * 0.5, 0.0)
 	var bottom_inset := MARGIN
 
 	_place_anchored(
@@ -151,17 +167,11 @@ func _layout_chrome(force: bool) -> void:
 		bottom_inset,
 		Vector2(selection_width, SELECTION_SIZE.y)
 	)
-	if _hunter_seek_panel != null:
-		var seek_left := cluster_left + selection_width + GAP
-		_place_anchored(
-			_hunter_seek_panel,
-			Control.PRESET_BOTTOM_LEFT,
-			seek_left,
-			seek_left + SEEK_SIZE.x,
-			bottom_inset + SEEK_SIZE.y,
-			bottom_inset,
-			SEEK_SIZE
-		)
+	var skill_slot := _selection_panel.get_node_or_null("%SkillSlot") as Control
+	if skill_slot != null:
+		skill_slot.visible = is_hunter
+		if _hunter_seek_panel != null and _hunter_seek_panel.get_parent() != skill_slot:
+			_nest_seek_into_selection()
 
 	if _building_panel != null:
 		_place_anchored(
