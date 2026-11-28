@@ -1,18 +1,21 @@
 [gd_scene format=3 uid="uid://dtf11dtys04dw"]
 
 [ext_resource type="Script" uid="uid://w6iidvkxsuav" path="res://game/maps/arena_plateau.gd" id="1_6s0vu"]
-[ext_resource type="TileSet" uid="uid://b2vasiedgehhj" path="res://assets/sprites/maps/tiles/v3/tileset.tres" id="2_fesph"]
 [ext_resource type="Texture2D" uid="uid://ct0x37wc2d5ts" path="res://assets/sprites/ui/Spawn_mark.png" id="4_f5vpv"]
+[ext_resource type="Texture2D" path="res://assets/sprites/maps/lava.png" id="5_lava"]
 
 [node name="ArenaPlateau" type="Node2D" unique_id=146640809]
 script = ExtResource("1_6s0vu")
 
+[node name="LavaPlaceholder" type="Sprite2D" parent="." unique_id=201847362]
+z_index = -10
+texture = ExtResource("5_lava")
+scale = Vector2(5, 5)
+
 [node name="FloorLayer" type="TileMapLayer" parent="." unique_id=256840506]
-tile_set = ExtResource("2_fesph")
 
 [node name="OverlayLayer" type="TileMapLayer" parent="." unique_id=102618805]
 z_index = 1
-tile_set = ExtResource("2_fesph")
 
 [node name="EditorSpawnPreview" type="Node2D" parent="." unique_id=247400160]
 z_index = 3

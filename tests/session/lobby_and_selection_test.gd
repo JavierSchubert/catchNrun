@@ -368,18 +368,19 @@ func _test_match_presentation() -> void:
 	var arena := match_root.get_node_or_null("ArenaPlateau")
 	var floor_layer := arena.get_node_or_null("FloorLayer") as TileMapLayer if arena != null else null
 	var overlay_layer := arena.get_node_or_null("OverlayLayer") as TileMapLayer if arena != null else null
+	var lava := arena.get_node_or_null("LavaPlaceholder") as Sprite2D if arena != null else null
 	var camera := match_root.get_node_or_null("MatchCamera") as Camera2D
 	var camera_script := load("res://game/camera/match_camera.gd") as Script
 	var default_camera := Camera2D.new()
 	default_camera.set_script(camera_script)
 	_check(
 		arena != null and floor_layer != null and overlay_layer != null,
-		"the match scene uses the painted lava TileMap arena"
+		"the match scene uses the lava placeholder arena"
 	)
 	_check(
-		floor_layer != null and floor_layer.tile_set != null
-			and str(floor_layer.tile_set.resource_path).ends_with("tiles/v3/tileset.tres"),
-		"the arena FloorLayer uses the lava (v3) TileSet"
+		lava != null and lava.texture != null
+			and str(lava.texture.resource_path).ends_with("sprites/maps/lava.png"),
+		"the arena uses lava.png as a placeholder"
 	)
 	_check(
 		PlateauMap.world_bounds().is_equal_approx(Unit.MAP_BOUNDS),

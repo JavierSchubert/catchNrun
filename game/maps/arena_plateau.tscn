@@ -1,20 +1,22 @@
 [gd_scene format=4 uid="uid://co2dllw6ejyto"]
 
-[ext_resource type="TileSet" uid="uid://b2vasiedgehhj" path="res://assets/sprites/maps/tiles/v3/tileset.tres" id="1_tileset"]
 [ext_resource type="Script" uid="uid://w6iidvkxsuav" path="res://game/maps/arena_plateau.gd" id="2_map_script"]
 [ext_resource type="Texture2D" uid="uid://c3m83pu6hqlf2" path="res://assets/sprites/ui/shadow.png" id="3_shadow"]
 [ext_resource type="Texture2D" uid="uid://ct0x37wc2d5ts" path="res://assets/sprites/ui/Spawn_mark.png" id="4_spawn"]
+[ext_resource type="Texture2D" path="res://assets/sprites/maps/lava.png" id="5_lava"]
 
 [node name="ArenaPlateau" type="Node2D" unique_id=146640809]
 script = ExtResource("2_map_script")
 
+[node name="LavaPlaceholder" type="Sprite2D" parent="." unique_id=201847361]
+z_index = -10
+texture = ExtResource("5_lava")
+scale = Vector2(5, 5)
+
 [node name="FloorLayer" type="TileMapLayer" parent="." unique_id=256840506]
-tile_map_data = PackedByteArray("AAAOAAgAAAAHAAYAAADw/wgAAAAHAAYAABDx/wgAAAACAAAAAADy/wgAAAACAAAAAADz/wgAAAACAAAAAAD0/wgAAAACAAAAAAD1/wgAAAACAAAAAAD2/wgAAAACAAAAAAD3/wgAAAACAAAAAAD4/wgAAAACAAAAAAD5/wgAAAACAAAAAAD6/wgAAAACAAAAAAD7/wgAAAACAAAAAAD8/wgAAAACAAAAAAD9/wgAAAACAAAAAAD+/wgAAAACAAAAAAD//wgAAAACAAAAAAAAAAgAAAACAAAAAAABAAgAAAACAAAAAAACAAgAAAACAAAAAAADAAgAAAACAAAAAAAEAAgAAAACAAAAAAAFAAgAAAACAAAAAAAGAAgAAAACAAAAAAAHAAgAAAACAAAAAAAIAAgAAAACAAAAAAAJAAgAAAACAAAAAAAKAAgAAAACAAAAAAALAAgAAAACAAAAAAAMAAgAAAACAAAAAAANAAgAAAACAAAAAAA=")
-tile_set = ExtResource("1_tileset")
 
 [node name="OverlayLayer" type="TileMapLayer" parent="." unique_id=102618805]
 z_index = 1
-tile_set = ExtResource("1_tileset")
 
 [node name="PropsLayer" type="Node2D" parent="." unique_id=1520164552]
 z_index = 2
