@@ -12,3 +12,6 @@ enum Role { HUNTER, RUNNER }
 @export var attack_range := 64.0 ## Distance at which a melee swing can start.
 @export var acquisition_range := 900.0 ## Distance for automatic target acquisition.
 @export var attack_interval := 0.8 ## Seconds between melee swings.
+## Radius (pixels) of the circle this unit reveals for its team (docs/vision.README.md).
+## Runner 450, Hunter 500 in the shipped configs.
+@export var vision_range := 450.0

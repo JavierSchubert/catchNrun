@@ -12,9 +12,10 @@ const PANEL_STATS: Array[StatBlock.Stat] = [
 	StatBlock.Stat.LIFESTEAL_CHANCE,
 	StatBlock.Stat.ATTACK_SPEED,
 	StatBlock.Stat.MOVEMENT_SPEED,
+	StatBlock.Stat.LUCK,
 ]
 
-const PANEL_SIZE := Vector2(580, 168)
+const PANEL_SIZE := Vector2(580, 196)
 const LEVEL_BADGE_SIZE := 28.0
 const PORTRAIT_INSET := 14.0
 
@@ -214,7 +215,7 @@ func _show_building(building: Building) -> void:
 		_show_generic(building)
 		return
 	_right_col.visible = true
-	_portrait.texture = BuildingIcons.icon_for_def(building.def)
+	_portrait.texture = BuildingIcons.icon_for_def(building.def, building.level)
 	_portrait.tooltip_text = "%s Lv %d" % [building.def.display_name, building.level]
 	_bind_building_stat_values(building)
 	_bind_building_health(building)

@@ -54,6 +54,8 @@ script = ExtResource("1_building")
 color = Color(0.35, 0.7, 0.95, 0.9)
 polygon = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
 
+[node name="Art" type="Sprite2D" parent="."]
+
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("rect")
 

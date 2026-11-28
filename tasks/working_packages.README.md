@@ -161,7 +161,7 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 ## WP-05 — Vision, fog of war, and minimap (P1)
 
-**Owning docs:** `gameplay.README.md` §7, `minimap.README.md`, referenced `vision.README.md` (**file missing**)
+**Owning docs:** `gameplay.README.md` §7, `minimap.README.md`, `vision.README.md`
 
 ### Done (partial, pre-FoW — see CP-10 / CP-14)
 
@@ -174,16 +174,16 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 ### Open
 
-- [ ] Author `docs/vision.README.md` (referenced but absent)
-- [ ] Team vision ranges and fog-of-war state
-- [ ] Vision states: Unexplored / Currently Visible / Previously Seen
-- [ ] Last-known entity / structure information
-- [ ] `src/vision/` implementation
-- [ ] Minimap presentation from known information only (hide units outside vision)
-- [ ] Configurable structure icons on minimap
-- [ ] Separate Runner vs Hunter knowledge
-- [ ] Moving units do not leak live positions outside vision
-- [ ] Vision / minimap test coverage
+- [x] Author `docs/vision.README.md`
+- [x] Team vision ranges and fog-of-war state (`RoleConfig.vision_range`, `BuildingDef.vision_range`, shared per team)
+- [x] Vision states: Unexplored / Currently Visible / Previously Seen
+- [x] Last-known structure information (structures only; units are intentionally never remembered)
+- [x] `src/vision/` implementation (`VisionSystem`, `VisionKnowledge`, fog overlay, entity presenter, last-known ghost layer)
+- [x] Minimap presentation from known information only (fog, hidden enemy units, last-known structure ghosts)
+- [ ] Configurable structure icons on minimap (structures are footprint-colored rects today; no configurable icons)
+- [x] Separate Runner vs Hunter knowledge (switching the viewing team discards the old team's knowledge)
+- [x] Moving units do not leak live positions outside vision
+- [x] Vision test coverage: `tests/vision/vision_test.tscn` (headless; runner `scripts/test/vision_test.ps1`). Covers the `VisionSystem` API that the minimap and ghost layer draw from. Minimap pixel drawing itself is not asserted. **Not yet executed in Godot** (no Godot binary available when written)
 
 ### Depends on
 
@@ -386,19 +386,22 @@ Over-unit HUD chrome for living players.
 
 Per-player experience and leveling with selection-panel feedback.
 
-### Done (see CP-19)
+### Done (see CP-19; presentation polish also CP-10 / CP-20)
 
 - [x] Authoritative unit **level** + **XP** (`Unit.level` / `Unit.xp`, MultiplayerSynchronizer)
 - [x] XP curve via `XpProgress` (`BASE_XP * GROWTH^(level-1)`; each level costs more)
 - [x] Grant XP: Hunter melee damage dealt (units + buildings), 1 XP per applied damage
-- [x] Selection panel: grey double frame + dark band; violet fill counterclockwise; level badge on portrait
+- [x] Selection panel: matching-thickness grey double frame + dark band; violet fill counterclockwise from 12 o'clock; overlapping level badge
+- [x] Stats column spaced right of portrait; **no** “Lv N” beside the health bar (badge only)
 - [x] Runners fixed at level 1 with full violet ring; buildings show structure level, empty XP band
 - [x] Empty selection: grey frame only (no fill / badge)
 - [x] Sandbox **XP +50** button (Hunter only)
+- [x] Docs + offline `tools/test/test_wp14_xp.py`
 
 ### Still open
 
 - [ ] Level-up applies agreed rewards (document first: e.g. stat bumps via `StatModifier`, or none until tuned)
+- [ ] Match / editor verification in Godot
 
 ### Depends on
 
@@ -708,7 +711,9 @@ Milestone C — Command and HUD
   Hunter Shop as an extension of B
 
 Milestone D — Fog and map awareness
-  WP-05 Vision doc + FoW still open; live minimap + command clicks ✅ (CP-10 / CP-14)
+  WP-05 Vision doc + FoW + last-known structures + fogged minimap ✅ (headless `vision_test` written, not yet run);
+         configurable minimap structure icons still open; sandbox FoW toggle is WP-06
+         live minimap + command clicks ✅ (CP-10 / CP-14)
 
 Milestone E — Hardening
   WP-06 Sandbox basics / reset / log / hunter bot ✅; deeper tools still open

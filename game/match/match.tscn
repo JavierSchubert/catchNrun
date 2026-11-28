@@ -9,6 +9,10 @@
 [ext_resource type="Script" uid="uid://8ufwu7rhs85m" path="res://src/selection/selection_manager.gd" id="7_selection"]
 [ext_resource type="Texture2D" uid="uid://ct0x37wc2d5ts" path="res://assets/sprites/ui/Spawn_mark.png" id="8_spawn_mark"]
 [ext_resource type="Script" uid="uid://rixlbafcveid" path="res://src/construction/construction_manager.gd" id="9_construction"]
+[ext_resource type="Script" path="res://src/vision/vision_system.gd" id="10_vision"]
+[ext_resource type="Script" path="res://src/vision/entity_vision_presenter.gd" id="11_presenter"]
+[ext_resource type="Script" path="res://src/vision/last_known_building_layer.gd" id="12_ghosts"]
+[ext_resource type="Script" path="res://src/vision/world_fog_overlay.gd" id="13_fog"]
 
 [node name="Match" type="Node2D" unique_id=1631963897]
 script = ExtResource("1_match")
@@ -68,6 +72,18 @@ spawn_path = NodePath("../BuildingsRoot")
 
 [node name="ConstructionManager" type="Node" parent="." unique_id=1645510704]
 script = ExtResource("9_construction")
+
+[node name="VisionSystem" type="Node" parent="." unique_id=1735820946]
+script = ExtResource("10_vision")
+
+[node name="EntityVisionPresenter" type="Node" parent="." unique_id=1735820947]
+script = ExtResource("11_presenter")
+
+[node name="LastKnownBuildingLayer" type="Node2D" parent="." unique_id=1735820948]
+script = ExtResource("12_ghosts")
+
+[node name="WorldFogOverlay" type="Node2D" parent="." unique_id=1735820949]
+script = ExtResource("13_fog")
 
 [node name="MatchCamera" type="Camera2D" parent="." unique_id=785354269]
 script = ExtResource("5_camera")

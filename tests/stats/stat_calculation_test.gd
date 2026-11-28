@@ -10,6 +10,7 @@ func _ready() -> void:
 	_test_documented_damage_example()
 	_test_constraints()
 	_test_hud_display_format()
+	_test_hunter_upgrade_rolls()
 	if _failures.is_empty():
 		print("PASS: stat calculation")
 		get_tree().quit(0)
@@ -52,6 +53,9 @@ func _test_constraints() -> void:
 	sheet.add_modifier(_mod(StatModifier.Kind.FLAT, StatModifier.Scope.ONE_STAT, StatBlock.Stat.CRITICAL_CHANCE, 2.0))
 	_near(sheet.final_value(StatBlock.Stat.CRITICAL_CHANCE), 1.0, "critical chance clamps to 1")
 	sheet.clear_modifiers()
+	sheet.add_modifier(_mod(StatModifier.Kind.FLAT, StatModifier.Scope.ONE_STAT, StatBlock.Stat.LUCK, 2.0))
+	_near(sheet.final_value(StatBlock.Stat.LUCK), 1.0, "Luck clamps to 1")
+	sheet.clear_modifiers()
 	sheet.add_modifier(_mod(StatModifier.Kind.FLAT, StatModifier.Scope.ONE_STAT, StatBlock.Stat.LIFESTEAL_CHANCE, -1.0))
 	_near(sheet.final_value(StatBlock.Stat.LIFESTEAL_CHANCE), 0.0, "lifesteal chance clamps to 0")
 	sheet.clear_modifiers()
@@ -87,6 +91,42 @@ func _test_hud_display_format() -> void:
 	var negative := StatIcons.format_value(lower, StatBlock.Stat.MELEE_DAMAGE)
 	if negative != "[color=#f07178]6[/color]":
 		_failures.append("negative final HUD format (got %s)" % negative)
+
+
+func _test_hunter_upgrade_rolls() -> void:
+	var weights_without_luck := HunterUpgradeProgression.rarity_weights(0.0)
+	var weights_with_luck := HunterUpgradeProgression.rarity_weights(1.0)
+	_near(weights_without_luck[3], 3.0, "base legendary roll weight")
+	_near(weights_with_luck[3], 10.0, "maximum luck improves legendary roll weight")
+	_near(HunterUpgradeProgression.rarity_for_roll(0.95, 0.0), HunterUpgradeProgression.Rarity.RARE, "0.95 roll is rare without Luck")
+	_near(HunterUpgradeProgression.rarity_for_roll(0.95, 1.0), HunterUpgradeProgression.Rarity.LEGENDARY, "0.95 roll is legendary with maximum Luck")
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7341
+	var choices := HunterUpgradeProgression.roll_choices(0.1, rng)
+	if choices.size() != HunterUpgradeProgression.CHOICE_COUNT:
+		_failures.append("Hunter receives three upgrade choices")
+		return
+	var seen_stats := {}
+	for choice in choices:
+		var stat_id: int = choice.stat
+		var rarity: int = choice.rarity
+		var stat: StatBlock.Stat = stat_id
+		if seen_stats.has(stat_id):
+			_failures.append("Hunter choices do not repeat a stat")
+		seen_stats[stat_id] = true
+		if rarity < HunterUpgradeProgression.Rarity.BASIC \
+				or rarity > HunterUpgradeProgression.Rarity.LEGENDARY:
+			_failures.append("Hunter choice has a known rarity")
+			continue
+		var value_range := HunterUpgradeProgression.value_range(stat, rarity)
+		if choice.value < value_range.x or choice.value > value_range.y:
+			_failures.append("Hunter rolled stat value respects its rarity range")
+	if HunterUpgradeProgression.rarity_color(HunterUpgradeProgression.Rarity.LEGENDARY) \
+			!= Color("#e7ad3d"):
+		_failures.append("Legendary Hunter choices use the gold rarity color")
+	if HunterUpgradeProgression.format_bonus(StatBlock.Stat.LUCK, 0.05) != "+5% Luck":
+		_failures.append("Hunter Luck reward displays as a percentage")
 
 
 func _sheet(melee_damage: float) -> StatSheet:

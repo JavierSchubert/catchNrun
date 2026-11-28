@@ -5,7 +5,7 @@ extends Control
 ## Frame / texture live in minimap.tscn + minimap_frame_style.tres.
 ## LMB recenters the camera. RMB issues a move. A-armed LMB issues attack-move.
 
-const DEFAULT_MAP_TEXTURE := preload("res://assets/sprites/maps/tiles/v3/floor.png")
+const DEFAULT_MAP_TEXTURE := preload("res://assets/sprites/maps/lava.png")
 const MAP_INSET := 3.0
 
 @export var map_bounds: Rect2 = Unit.MAP_BOUNDS

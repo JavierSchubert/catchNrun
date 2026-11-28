@@ -56,6 +56,7 @@ var _attack_flash_remaining := 0.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var visual: Polygon2D = $Visual
+@onready var art: Sprite2D = $Art
 @onready var health: HealthComponent = $Health
 @onready var health_bar: HealthBar = $HealthBar
 @onready var shield: ShieldComponent = $Shield
@@ -145,6 +146,36 @@ func is_alive() -> bool:
 
 func is_own(local_peer_id: int) -> bool:
 	return owner_peer_id == local_peer_id
+
+
+## Team id for vision purposes: the owner's role (structures belong to the Runner team in
+## practice). Falls back to Runner when the owner is not in the roster.
+func team_role() -> int:
+	var entry: Variant = GameManager.players.get(owner_peer_id)
+	if entry is Dictionary:
+		return int((entry as Dictionary).get("role", RoleConfig.Role.RUNNER))
+	return RoleConfig.Role.RUNNER
+
+
+## Radius in pixels this structure reveals for its owner's team (BuildingDef.vision_range).
+## 0.0 for legacy footprint-only buildings, which never act as vision sources.
+func get_vision_range() -> float:
+	return maxf(def.vision_range, 0.0) if def != null else 0.0
+
+
+## True once the structure may reveal terrain: alive and past its first construction.
+## An upgrading structure keeps its vision.
+func provides_vision() -> bool:
+	return def != null and is_attackable() and state != State.UNDER_CONSTRUCTION \
+		and not is_queued_for_deletion()
+
+
+## Axis-aligned world rectangle covered by the footprint (same cell size as the hitbox).
+func world_rect() -> Rect2:
+	var size_cells := BuildGrid.positive_footprint(footprint)
+	var cell := grid.cell_size if grid != null else 32.0
+	var pixel_size := Vector2(size_cells) * cell
+	return Rect2(global_position - pixel_size * 0.5, pixel_size)
 
 
 func selection_circle_radius() -> float:
@@ -587,6 +618,7 @@ func _refresh_visuals() -> void:
 		progress_bar.visible = state != State.IDLE
 		progress_bar.value = progress_ratio * 100.0
 	modulate = Color(1, 1, 1, 0.6) if state == State.UNDER_CONSTRUCTION else Color.WHITE
+	_refresh_building_art()
 
 
 func _on_health_changed(current: float, maximum: float) -> void:
@@ -667,3 +699,19 @@ func _apply_footprint_visual() -> void:
 		Vector2(-half.x, half.y),
 	])
 	visual.color = fill_color
+	visual.visible = def == null
+	if art != null:
+		art.visible = def != null
+		_refresh_building_art()
+
+
+func _refresh_building_art() -> void:
+	if def == null or art == null:
+		return
+	var texture := BuildingIcons.icon_for_def(def, level)
+	if art.texture != texture:
+		art.texture = texture
+	var size_cells := BuildGrid.positive_footprint(footprint)
+	var cell := grid.cell_size if grid != null else 32.0
+	var pixel_size := Vector2(size_cells) * cell
+	art.scale = pixel_size / Vector2(texture.get_size())

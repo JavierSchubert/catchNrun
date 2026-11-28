@@ -1,7 +1,7 @@
 class_name PlateauMap
 extends RefCounted
-## Meta for the painted lava TileMap arena (see game/maps/arena_plateau.tscn, v3 tileset).
-## Tile painting lives in the editor on FloorLayer / OverlayLayer.
+## Meta for the lava-image placeholder arena (see game/maps/arena_plateau.tscn).
+## FloorLayer and OverlayLayer remain available for future TileMap art.
 
 const TILE := 128.0
 const COLS := 60

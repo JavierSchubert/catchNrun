@@ -117,9 +117,34 @@ func _test_construction_catalog() -> void:
 func _test_building_icons() -> void:
 	for key in ["wall", "tower", "crystal_mine"]:
 		var icon := BuildingIcons.icon_for(key)
-		_check(icon != null, "%s has a generated icon" % key)
+		_check(icon != null, "%s has a building icon" % key)
 		if icon != null:
 			_check(icon.get_width() == BuildingIcons.SIZE, "%s icon has the expected width" % key)
+	_check(
+		BuildingIcons.texture_for_level("tower", 5, 20)
+			== load("res://assets/sprites/buildings/crystal_assets_128/tower_blue_01.png"),
+		"tower uses its first art through level 5"
+	)
+	_check(
+		BuildingIcons.texture_for_level("tower", 6, 20)
+			== load("res://assets/sprites/buildings/crystal_assets_128/tower_blue_02.png"),
+		"tower switches to its second art at level 6"
+	)
+	_check(
+		BuildingIcons.texture_for_level("tower", 10, 20)
+			== load("res://assets/sprites/buildings/crystal_assets_128/tower_blue_02.png"),
+		"tower level 10 uses the second art"
+	)
+	_check(
+		BuildingIcons.texture_for_level("tower", 20, 20)
+			== load("res://assets/sprites/buildings/crystal_assets_128/tower_blue_04.png"),
+		"tower uses its fourth art at max level"
+	)
+	_check(
+		BuildingIcons.texture_for_level("crystal_mine", 9, 11)
+			== load("res://assets/sprites/buildings/crystal_assets_128/mine_blue_03.png"),
+		"mine uses its third art from level 9"
+	)
 
 
 func _test_economy_spend_and_grant() -> void:

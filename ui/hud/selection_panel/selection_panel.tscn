@@ -95,7 +95,7 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [node name="SelectionPanel" type="Control" unique_id=2141706432]
-custom_minimum_size = Vector2(580, 168)
+custom_minimum_size = Vector2(580, 196)
 layout_mode = 3
 anchors_preset = 0
 mouse_filter = 2
@@ -105,7 +105,7 @@ ring_style = ExtResource("3_ring")
 
 [node name="Root" type="Panel" parent="." unique_id=378648403]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(580, 168)
+custom_minimum_size = Vector2(580, 196)
 clip_contents = true
 layout_mode = 1
 anchors_preset = 15
@@ -374,6 +374,34 @@ theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
 theme_override_font_sizes/normal_font_size = 17
 bbcode_enabled = true
 text = "220"
+fit_content = true
+scroll_active = false
+autowrap_mode = 0
+
+[node name="StatLuck" type="HBoxContainer" parent="Root/Content/Body/RightCol/StatsGrid"]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 5
+
+[node name="Icon" type="TextureRect" parent="Root/Content/Body/RightCol/StatsGrid/StatLuck"]
+custom_minimum_size = Vector2(34, 34)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 0
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Value" type="RichTextLabel" parent="Root/Content/Body/RightCol/StatsGrid/StatLuck"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.78, 0.82, 0.86, 0.95)
+theme_override_font_sizes/normal_font_size = 17
+bbcode_enabled = true
+text = "10%"
 fit_content = true
 scroll_active = false
 autowrap_mode = 0
