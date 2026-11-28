@@ -5,6 +5,8 @@ extends Control
 
 @onready var _button: Button = %SeekButton
 
+var _display_signature := ""
+
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -15,14 +17,25 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	if not _local_is_hunter():
+		visible = false
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_display_signature = ""
+		return
 	var hunter := _local_hunter_if_selected()
 	visible = hunter != null
 	if hunter == null:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_display_signature = ""
 		return
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var ready := hunter.seek_is_ready()
 	var active_left := hunter.seek_active_left()
 	var cd := hunter.seek_cooldown_left()
+	var signature := "%s:%.0f:%.0f" % [str(ready), ceilf(active_left), ceilf(cd)]
+	if signature == _display_signature:
+		return
+	_display_signature = signature
 	_button.disabled = not ready
 	_button.icon = SkillIcons.icon_for(SeekSkill.DEF.id)
 	if active_left > 0.0:
@@ -43,14 +56,14 @@ func _on_seek_pressed() -> void:
 	hunter.request_seek()
 
 
+func _local_is_hunter() -> bool:
+	var local_id := GameManager.local_peer_id()
+	return int(GameManager.players.get(local_id, {}).get("role", GameManager.ANY_ROLE)) \
+			== RoleConfig.Role.HUNTER
+
+
 func _local_hunter_if_selected() -> Unit:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	var manager := tree.get_first_node_in_group("selection_manager") as SelectionManager
-	if manager == null or not manager.is_controllable_selected():
-		return null
-	var unit := manager.selected as Unit
+	var unit := SelectionQueries.selected_controllable(get_tree())
 	if unit == null or unit.role() != RoleConfig.Role.HUNTER:
 		return null
 	return unit

@@ -237,13 +237,11 @@ func _issue_armed_attack_move() -> void:
 		## Runner A+LMB on empty ground / foreign target: disarm only.
 		_disarm_attack_move()
 		return
-	if chain_modifier_held and selected.has_method("issue_attack_chain_append"):
+	if chain_modifier_held:
 		## Shift/Ctrl+A+LMB appends a red attack-move waypoint; stay armed for more.
-		selected.call("issue_attack_chain_append", destination)
+		SelectionQueries.issue_attack_chain_append(get_tree(), destination)
 		return
-	_disarm_attack_move()
-	if selected.has_method("issue_attack_move"):
-		selected.call("issue_attack_move", destination)
+	SelectionQueries.issue_attack_move(get_tree(), destination)
 
 
 func _own_building_at(world_pos: Vector2) -> Building:

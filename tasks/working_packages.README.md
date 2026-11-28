@@ -32,7 +32,7 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 - [x] Acquisition range vs attack range (melee)
 - [x] Minimal melee attack path (instant swing, no hitbox scene yet)
 - [x] Crit / lifesteal / defense hooks in `CombatDamage` (role defaults currently 0 for clear fights)
-- [x] Health regeneration tick (role defaults currently 0)
+- [x] Health regeneration tick (Hunter has non-zero regen + damage delay; Runner still 0)
 - [x] Runner / Hunter elimination when health ≤ 0
 - [x] Dead Runners become observers (free camera + HUD)
 - [x] Enter `Phase.ENDED` and resolve win / loss
@@ -46,8 +46,7 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 - [ ] Hitbox / hurtbox scenes for wind-up / projectile contact
 - [ ] Ranged / magic attack execution paths
-- [ ] Structure health (needs WP-02 buildings)
-- [ ] Tune non-zero crit / lifesteal / regen / defense for playtests
+- [ ] Tune non-zero crit / lifesteal / defense for playtests (Hunter regen already non-zero)
 
 ### Depends on
 
@@ -235,19 +234,20 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 ### Done
 
-- [x] `src/` folders landed with features: `components/health`, `buildings`, `combat`, `construction`, `selection` (+ `fx`, `logging`, `navigation`, `stats`, `units`, `match`)
-- [x] HUD folders under `ui/hud/`: `selection_panel`, `minimap`, `health_bar`
+- [x] `src/` folders landed with features: `components/health`, `buildings`, `combat`, `construction`, `selection` (+ `fx`, `logging`, `navigation`, `stats`, `units`, `match`, `economy`, `vision`, `shop`, `skills`, `progression`)
+- [x] HUD folders under `ui/hud/`: `selection_panel`, `minimap`, `health_bar`, `resource_bar`, `building_panel`, `item_shop_panel`
 - [x] Dedicated camera module: `game/camera/match_camera.gd`
 - [x] GodotSteam / unused Steam paths removed (ENet-only)
+- [x] Empty legacy shells removed (`addons/`, root `components/`, `common/`, `data/`, `entities/`, `game/player/`, `game/arena/`, empty test shells)
+- [x] Unused WASD / attack input map leftovers removed
 
 ### Open
 
-- [ ] Create remaining `src/` folders as features land: `economy`, `inventory`, `items`, `vision`
-- [ ] HUD folders still missing: `resources`, `stats` (if needed beyond selection panel)
+- [ ] Create remaining `src/` folders as features land: `inventory`, `items`
+- [ ] HUD folders still missing: `stats` (if needed beyond selection panel)
 - [ ] Real `game/arena/` (optional split from current match/maps layout)
-- [ ] Remove or document empty legacy shells (`components/`, `common/`, `data/`, `entities/`, `game/player/`) if any remain
-- [ ] Drop unused WASD / attack input map leftovers if mouse-only controls stay the standard
 - [ ] Keep scenes + primary scripts co-located per feature (ongoing)
+- [ ] Optional later: prune large orphan asset packs (colored building sets, unused tile pipelines)
 
 ---
 
@@ -345,11 +345,15 @@ Combat and regen feedback as rising world-space numbers that spawn near the enti
 
 Audit and refactor duplicated code so the game **behaves identically** after cleanup.
 
+### Done (safe pass — Option A)
+
+- [x] Inventory of high-value redundant paths (selection lookup, minimap issue wrappers, local unit scan, HUD `_process`)
+- [x] Extract `SelectionQueries` for manager / controllable / peer unit / issue_* helpers
+- [x] Route minimap + armed A-click + HUD panels through `SelectionQueries` (behavior-identical)
+- [x] Tighten idle `_process` (shop gated; seek/upgrade role early-out; icon fallback caches)
+
 ### Open
 
-- [ ] Inventory of redundant paths (duplicated clamp / marker host / selection lookup / multiplayer-ready guards / command issue helpers)
-- [ ] Extract shared helpers only where call sites stay behavior-identical
-- [ ] Deduplicate minimap vs world command issuance (move / chain / attack-move) behind one unit API where safe
 - [ ] Review combat tick / chain resume / attack-move resume for repeated “resume path” patterns
 - [ ] Review sandbox / GameLog / scene transition reset paths for duplicated lobby reset logic
 - [ ] No intentional gameplay changes; verify with existing headless tests + manual smoke (move, attack, chain, minimap, reset)
@@ -406,9 +410,12 @@ Per-player experience and leveling with selection-panel feedback.
 - [x] Sandbox **XP +50** button (Hunter only)
 - [x] Docs + offline `tools/test/test_wp14_xp.py`
 
+### Done (see CP-21)
+
+- [x] Level-up applies agreed rewards (`HunterUpgradeProgression` → `StatModifier`)
+
 ### Still open
 
-- [ ] Level-up applies agreed rewards (document first: e.g. stat bumps via `StatModifier`, or none until tuned)
 - [ ] Match / editor verification in Godot
 
 ### Depends on

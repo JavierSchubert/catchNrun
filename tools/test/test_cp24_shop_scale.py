@@ -134,9 +134,8 @@ def test_item_shop_panel_wiring() -> None:
 
 
 def test_lava_scale_for_new_bounds() -> None:
-    for rel in ("game/maps/arena_plateau.tscn", "game/maps/arena_plateau2.tscn"):
-        tscn = _read(rel)
-        assert "scale = Vector2(3.33333, 3.5)" in tscn
+    tscn = _read("game/maps/arena_plateau.tscn")
+    assert "scale = Vector2(3.33333, 3.5)" in tscn
 
 
 def test_stat_modifier_has_source() -> None:

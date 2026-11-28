@@ -895,10 +895,7 @@ func _can_issue_commands() -> bool:
 
 
 func _selection_manager() -> SelectionManager:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	return tree.get_first_node_in_group("selection_manager") as SelectionManager
+	return SelectionQueries.manager(get_tree())
 
 
 func _build_mode_armed() -> bool:

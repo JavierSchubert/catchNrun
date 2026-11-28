@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-28** (CP-24 Map Scale, HP Bars, Crystal Icon + Central Item Shop).
+Last reviewed: **2026-11-28** (safe cleanup pass — leftovers / SelectionQueries / HUD process).
 
 ---
 
@@ -49,6 +49,7 @@ Last reviewed: **2026-11-28** (CP-24 Map Scale, HP Bars, Crystal Icon + Central 
 | 2026-11-28 | **CP-23** Hunter Seek + Runner build hotkeys / multi-select | **Code-reviewed only — not yet run in Godot.** Hunter Seek skill (30s CD / 10s minimap direction arrows, Q + skill button); Runner build hotkeys W/T/C (context-sensitive C vs camera); Destroy `D`; double-click type-select own buildings + mass upgrade/destroy; one Crystal Mine per player; confirmed Hunter damage→crystals already wired (WP-03 checkbox); docs + `tools/test/test_cp23_seek_build.py`. |
 | 2026-11-28 | CP-23 follow-up (regen / tower / icons) | Hunter out-of-combat regen delay; Tower base damage / upgrade tuning; shared stat/skill icons on level-up and Seek/Repair; Seek RPCs skip disconnected peers. |
 | 2026-11-28 | **CP-24** Map Scale, HP Bars, Crystal Icon + Central Item Shop | **Code-reviewed only — not yet run in Godot.** Map 40×28 tiles (5120×3584); `CELL_SIZE` 48; unit/building HP bars raised above sprites; `BuildingIcons.crystal_icon` uses `crystal_currency_128.png`; central `ItemShop` (3×3, `shop_128.png`) with RMB open, Hunter buy/sell catalog (`ShopCatalog` → `StatModifier`, 100% Crystal refund); HUD `ItemShopPanel`; hunter spawn off-center; docs + `tools/test/test_cp24_shop_scale.py`. |
+| 2026-11-28 | Safe cleanup (WP-07 / WP-12 subset) | Empty legacy dirs removed; unused WASD/attack input dropped; dead `item_weapon.gd` + unused `arena_plateau2.tscn` removed; `SelectionQueries` for selection/issue/local-unit; shop/seek/upgrade process tighten; icon fallback caches; stale WP/CP checkboxes synced; `tools/test/test_cleanup_dry.py`. |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -133,7 +134,7 @@ Older CP-01 … CP-07 rows without a date above were already present before this
 | Right-click move marker (pop + fade; blue move / red attack) | Done | `src/fx/move_click_marker.gd` (local only) |
 | Shift-click move / attack-move chain (green + red, mixable) | Done | `MoveChainVisual`; chain path outranks in-range auto-attack |
 | Move-marker automated tests | Done | `tests/fx/move_click_marker_test.gd` |
-| Straight-line paths (no obstacles) | Partial | `navigation_paths.gd` stub; no walls yet |
+| Straight-line paths (no obstacles) | Partial | `navigation_paths.gd` stub; walls exist and block movement but paths still ignore them |
 | Move-command automated tests | Done | `tests/navigation/move_command_test.gd` |
 
 **Doc owners:** `controls.README.md` §1.2 / §1.3 / §2 camera subset, `minimap.README.md` §2.3, `project_architecture.README.md` § navigation
@@ -367,7 +368,7 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 | Replicated to clients | Done | `unit.tscn` MultiplayerSynchronizer paths `.:level`, `.:xp` (on-change) |
 | Hunter gains XP from applied melee damage | Done | `Unit.grant_xp(applied)` after crystals on `_perform_melee_on_unit` and `_perform_melee_on_building` (1 XP per damage point) |
 | Overflow level-ups | Done | `XpProgress.apply_gain` carries remainder into the next level(s); logs `XP` on level-up |
-| Level-up stat rewards | Open | Documented as deferred — no `StatModifier` on level-up yet |
+| Level-up stat rewards | Done | CP-21 — `HunterUpgradeProgression` + `HunterUpgradePanel` |
 | Runners do not earn XP | Done | `grant_xp` no-ops unless role is Hunter; `xp_fill_ratio()` always `1.0` for Runners |
 
 ### Selection-panel chrome
@@ -551,4 +552,4 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 
 Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, attack-move, shift-click move/attack chains, hunter-bot hunting, elimination/observer, free camera (edge-scroll + MMB drag), editor-previewable HUD shells (CP-13), and persistent UI/audio settings are also in.
 
-Still open in `working_packages.README.md`: Hunter shop passive income, Runner shop catalog, fog of war (minimap FoW), cursors, SelectionPanel context-action buttons. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14; match-integrated construction + Crystal economy is CP-15; crystal rebalance / tower projectiles / wall shield / repair is CP-16 (editor pass open); HUD overhaul (HudMode, building selection, Runner A-destroy) is CP-17 (editor pass open); Hunter structure melee polish + floating numbers is CP-18 (editor pass open); Hunter XP + portrait XP ring is CP-19; HUD / combat presentation polish is CP-20; Hunter Seek + Runner build hotkeys / multi-select / one-mine limit is CP-23 (editor pass open); map scale + central Item Shop buy/sell is CP-24 (editor pass open).
+Still open in `working_packages.README.md`: Hunter shop passive income, Runner shop catalog, minimap structure icons, cursors, SelectionPanel context-action buttons, deeper sandbox tools, CI/export, remaining WP-12 combat-resume DRY. FoW core is WP-05 (editor run still open). Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14; match-integrated construction + Crystal economy is CP-15; crystal rebalance / tower projectiles / wall shield / repair is CP-16 (editor pass open); HUD overhaul is CP-17 (editor pass open); Hunter structure melee + floating numbers is CP-18 (editor pass open); Hunter XP + portrait XP ring is CP-19; level-up rewards CP-21; Seek + build hotkeys CP-23; map scale + Item Shop CP-24; safe leftover/DRY cleanup landed (this pass).

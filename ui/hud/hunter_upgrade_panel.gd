@@ -20,6 +20,12 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	var local_id := GameManager.local_peer_id()
+	if int(GameManager.players.get(local_id, {}).get("role", GameManager.ANY_ROLE)) \
+			!= RoleConfig.Role.HUNTER:
+		visible = false
+		_display_signature = ""
+		return
 	var hunter := _local_hunter()
 	visible = hunter != null and hunter.pending_upgrade_choice_level > 0
 	if not visible:
@@ -68,10 +74,7 @@ func _local_hunter() -> Unit:
 	if int(GameManager.players.get(local_id, {}).get("role", GameManager.ANY_ROLE)) \
 			!= RoleConfig.Role.HUNTER:
 		return null
-	for node in get_tree().get_nodes_in_group("units"):
-		if node is Unit and (node as Unit).peer_id == local_id:
-			return node as Unit
-	return null
+	return SelectionQueries.unit_for_peer(get_tree(), local_id, false)
 
 
 func _on_choice_pressed(index: int) -> void:

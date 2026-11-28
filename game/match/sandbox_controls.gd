@@ -83,7 +83,7 @@ func _play(peer_id: int) -> void:
 	var unit := _unit_for(peer_id)
 	if unit == null or not unit.is_alive():
 		return
-	var manager := get_tree().get_first_node_in_group("selection_manager") as SelectionManager
+	var manager := SelectionQueries.manager(get_tree())
 	if manager != null:
 		## Selecting the unit makes it the active character (SelectionManager).
 		manager.select_entity(unit)

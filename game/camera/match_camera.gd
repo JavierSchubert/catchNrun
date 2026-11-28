@@ -155,7 +155,7 @@ func _runner_build_mode_active() -> bool:
 	var tree := get_tree()
 	if tree == null:
 		return false
-	var manager := tree.get_first_node_in_group("selection_manager") as SelectionManager
+	var manager := SelectionQueries.manager(tree)
 	if manager == null:
 		return false
 	var local_id := GameManager.local_peer_id()

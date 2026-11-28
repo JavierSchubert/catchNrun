@@ -50,21 +50,23 @@ func _gui_input(event: InputEvent) -> void:
 	if not click.pressed:
 		return
 	var world := minimap_to_world(click.position)
+	var tree := get_tree()
 	match click.button_index:
 		MOUSE_BUTTON_RIGHT:
 			var chain_modifier_held := SelectionManager.is_chain_modifier_held(click)
 			if chain_modifier_held:
-				_issue_chain_append_to(world)
+				SelectionQueries.issue_chain_append(tree, world)
 			else:
-				_issue_move_to(world)
+				SelectionQueries.issue_move(tree, world)
 			accept_event()
 		MOUSE_BUTTON_LEFT:
-			if _attack_move_armed():
+			var selection := SelectionQueries.manager(tree)
+			if selection != null and selection.attack_move_armed:
 				var chain_modifier_held := SelectionManager.is_chain_modifier_held(click)
 				if chain_modifier_held:
-					_issue_attack_chain_append_to(world)
+					SelectionQueries.issue_attack_chain_append(tree, world)
 				else:
-					_issue_attack_move_to(world)
+					SelectionQueries.issue_attack_move(tree, world)
 			else:
 				_recenter_camera(world)
 			accept_event()
@@ -107,67 +109,6 @@ func _recenter_camera(world: Vector2) -> void:
 		camera.call("center_on", world)
 	else:
 		camera.global_position = world
-
-
-func _attack_move_armed() -> bool:
-	var manager := _selection_manager()
-	return manager != null and bool(manager.attack_move_armed)
-
-
-func _issue_move_to(world: Vector2) -> void:
-	var manager := _selection_manager()
-	if manager != null and manager.attack_move_armed:
-		manager.attack_move_armed = false
-	var unit := _selected_controllable()
-	if unit == null:
-		return
-	if unit.has_method("issue_move"):
-		unit.call("issue_move", world)
-
-
-func _issue_chain_append_to(world: Vector2) -> void:
-	var manager := _selection_manager()
-	if manager != null and manager.attack_move_armed:
-		manager.attack_move_armed = false
-	var unit := _selected_controllable()
-	if unit == null:
-		return
-	if unit.has_method("issue_chain_append"):
-		unit.call("issue_chain_append", world)
-
-
-func _issue_attack_move_to(world: Vector2) -> void:
-	var manager := _selection_manager()
-	if manager != null:
-		manager.attack_move_armed = false
-	var unit := _selected_controllable()
-	if unit == null:
-		return
-	if unit.has_method("issue_attack_move"):
-		unit.call("issue_attack_move", world)
-
-
-func _issue_attack_chain_append_to(world: Vector2) -> void:
-	## Keep attack-move armed so more Shift+A clicks can append.
-	var unit := _selected_controllable()
-	if unit == null:
-		return
-	if unit.has_method("issue_attack_chain_append"):
-		unit.call("issue_attack_chain_append", world)
-
-
-func _selected_controllable() -> Node:
-	var manager := _selection_manager()
-	if manager == null or not manager.is_controllable_selected():
-		return null
-	return manager.selected
-
-
-func _selection_manager() -> SelectionManager:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	return tree.get_first_node_in_group("selection_manager") as SelectionManager
 
 
 func _apply_frame_style() -> void:

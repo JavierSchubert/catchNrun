@@ -648,7 +648,7 @@ func _on_died() -> void:
 func _notify_selection_cleared() -> void:
 	if not is_inside_tree():
 		return
-	var manager := get_tree().get_first_node_in_group("selection_manager") as SelectionManager
+	var manager := SelectionQueries.manager(get_tree())
 	if manager != null and manager.has_method("notify_entity_removed"):
 		manager.call("notify_entity_removed", self)
 

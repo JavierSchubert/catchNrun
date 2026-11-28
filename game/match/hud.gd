@@ -43,6 +43,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	_refresh()
+	## Layout only when role / upgrade visibility / size signature changes.
 	_layout_chrome(false)
 
 
@@ -88,7 +89,7 @@ func _refresh() -> void:
 func _refresh_selection_panel() -> void:
 	if _selection_panel == null:
 		return
-	var manager := get_tree().get_first_node_in_group("selection_manager") as SelectionManager
+	var manager := SelectionQueries.manager(get_tree())
 	if manager == null:
 		_selection_panel.bind_selection(null, false)
 		return
@@ -249,10 +250,8 @@ func _local_unit_text() -> String:
 	var player_name := str(entry.get("name", "Player"))
 	if GameManager.is_eliminated(id):
 		return "%s — %s eliminated (observing)" % [player_name, role_name]
-	for node in get_tree().get_nodes_in_group("units"):
-		if node.name != str(id) or not node is Unit:
-			continue
-		var unit := node as Unit
+	var unit := SelectionQueries.unit_for_peer(get_tree(), id, false)
+	if unit != null:
 		var maximum := unit.stats.final_value(StatBlock.Stat.MAX_HEALTH)
 		return "%s — %s | HP %.0f / %.0f" % [player_name, role_name, unit.health.current, maximum]
 	if role_id == RoleConfig.Role.HUNTER and GameManager.phase == GameManager.Phase.RUNNER_PREPARATION:

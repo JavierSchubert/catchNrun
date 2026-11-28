@@ -3,7 +3,7 @@ extends RefCounted
 ## Shared XP curve + fill math for units and the selection-panel portrait ring.
 ##
 ## Level N→N+1 needs `BASE_XP * GROWTH^(N-1)` XP. Each level costs more than the last.
-## Level-up rewards are intentionally empty for now (document / tune later).
+## Level-up rewards are applied by HunterUpgradeProgression + Unit (CP-21), not here.
 
 const BASE_XP := 100.0
 const GROWTH := 1.35

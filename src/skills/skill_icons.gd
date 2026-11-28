@@ -102,8 +102,13 @@ static func _point_in_triangle(p: Vector2, a: Vector2, b: Vector2, c: Vector2) -
 	return u >= 0.0 and v >= 0.0 and (u + v) <= 1.0
 
 
-static func _fallback_icon() -> ImageTexture:
+static func _fallback_icon() -> Texture2D:
+	const FALLBACK_ID := "_fallback"
+	if _cache.has(FALLBACK_ID):
+		return _cache[FALLBACK_ID] as Texture2D
 	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0, 0, 0, 0))
 	image.fill_rect(Rect2i(8, 8, SIZE - 16, SIZE - 16), Color(0.55, 0.55, 0.6, 1.0))
-	return ImageTexture.create_from_image(image)
+	var texture := ImageTexture.create_from_image(image)
+	_cache[FALLBACK_ID] = texture
+	return texture

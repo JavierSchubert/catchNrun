@@ -628,10 +628,7 @@ func _construction_manager() -> ConstructionManager:
 
 
 func _selection_manager() -> SelectionManager:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	return tree.get_first_node_in_group("selection_manager") as SelectionManager
+	return SelectionQueries.manager(get_tree())
 
 
 func _local_peer_id() -> int:

@@ -26,6 +26,8 @@ const BUILDING_TEXTURES := {
 }
 
 static var _crystal_cache: Texture2D
+static var _fallback_cache: Texture2D
+static var _fallback_crystal_cache: Texture2D
 
 
 static func key_for_kind(kind: BuildingDef.Kind) -> String:
@@ -80,7 +82,9 @@ static func crystal_icon() -> Texture2D:
 	return _crystal_cache
 
 
-static func _fallback_crystal_icon() -> ImageTexture:
+static func _fallback_crystal_icon() -> Texture2D:
+	if _fallback_crystal_cache != null:
+		return _fallback_crystal_cache
 	var image := Image.create(CRYSTAL_ICON_SIZE, CRYSTAL_ICON_SIZE, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0, 0, 0, 0))
 	var center := CRYSTAL_ICON_SIZE / 2
@@ -91,11 +95,15 @@ static func _fallback_crystal_icon() -> ImageTexture:
 		if half_width <= 0:
 			continue
 		image.fill_rect(Rect2i(center - half_width, y, half_width * 2, 1), Color(0.3, 0.85, 0.95, 1.0))
-	return ImageTexture.create_from_image(image)
+	_fallback_crystal_cache = ImageTexture.create_from_image(image)
+	return _fallback_crystal_cache
 
 
-static func _fallback_icon() -> ImageTexture:
+static func _fallback_icon() -> Texture2D:
+	if _fallback_cache != null:
+		return _fallback_cache
 	var image := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0, 0, 0, 0))
 	image.fill_rect(Rect2i(4, 4, SIZE - 8, SIZE - 8), Color(0.6, 0.6, 0.6, 1.0))
-	return ImageTexture.create_from_image(image)
+	_fallback_cache = ImageTexture.create_from_image(image)
+	return _fallback_cache

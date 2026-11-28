@@ -28,7 +28,7 @@ func _ready() -> void:
 	_buy_tab.pressed.connect(func() -> void: _showing_inventory = false; _refresh(true))
 	_inv_tab.pressed.connect(func() -> void: _showing_inventory = true; _refresh(true))
 	_leave_button.pressed.connect(close_shop)
-	set_process(true)
+	set_process(false)
 	set_process_unhandled_input(true)
 
 
@@ -38,12 +38,14 @@ func is_open() -> bool:
 
 func open_shop() -> void:
 	visible = true
+	set_process(true)
 	_showing_inventory = false
 	_refresh(true)
 
 
 func close_shop() -> void:
 	visible = false
+	set_process(false)
 	_last_crystals = -1.0
 	_last_inventory_sig = ""
 
@@ -181,14 +183,7 @@ func _sell(index: int) -> void:
 
 
 func _local_unit() -> Unit:
-	var tree := get_tree()
-	if tree == null:
-		return null
-	var local_id := GameManager.local_peer_id()
-	for node in tree.get_nodes_in_group("units"):
-		if node is Unit and (node as Unit).peer_id == local_id and (node as Unit).is_alive():
-			return node as Unit
-	return null
+	return SelectionQueries.unit_for_peer(get_tree(), GameManager.local_peer_id(), true)
 
 
 func _clear_children(host: Node) -> void:
