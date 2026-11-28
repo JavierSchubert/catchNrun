@@ -27,6 +27,7 @@ func _ready() -> void:
 	_test_legacy_building_ignores_damage_and_repair()
 	_test_repair_validation()
 	_test_shared_skill_icons()
+	_test_seek_delivery_ignores_unknown_peer()
 	_test_repair_channel_heals_until_full()
 	_test_repair_walks_into_range()
 	_test_other_commands_cancel_repair()
@@ -217,6 +218,15 @@ func _test_shared_skill_icons() -> void:
 		SkillIcons.icon_for(SeekSkill.DEF.id) != null,
 		"Hunter Seek has a shared skill icon"
 	)
+
+
+func _test_seek_delivery_ignores_unknown_peer() -> void:
+	var hunter := _hunter("UnconnectedHunter", 1000, Vector2.ZERO)
+	_check(not hunter._has_connected_seek_owner(), "Seek skips owners absent from connected peers")
+	hunter._deliver_seek_started(SeekSkill.DEF.duration, SeekSkill.DEF.cooldown)
+	hunter._deliver_seek_targets(Vector2.ZERO, [])
+	hunter._deliver_seek_ended()
+	hunter.get_parent().queue_free()
 
 
 func _test_repair_channel_heals_until_full() -> void:

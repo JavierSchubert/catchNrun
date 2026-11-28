@@ -79,7 +79,7 @@ cost(level) = base_cost * cost_growth^(level - 1)
 Upgrade-specific rules:
 
 - **Wall** — from level 15 (`shield_unlock_level`) the wall carries a recharging shield in front of its HP: 900 at level 15, ×1.18 per level above it. The shield absorbs damage first, waits 6 s after the last hit, then refills 5 % of its maximum per second. Repair (Runner skill) restores HP only.
-- **Tower** — every upgrade grants one stat pick out of four paths: Damage (+30 % ranged damage), Attack Speed (+20 %), Crit (+8 % chance and +0.15 multiplier, flat), Range (+15 %). Percentage picks on the same path sum rather than compound.
+- **Tower** — every upgrade grants one stat pick out of four paths: Damage (+10 % ranged damage), Attack Speed (+10 %), Crit (+5 percentage points chance and +0.10 multiplier, flat), Range (+10 %). Percentage picks on the same path sum rather than compound.
 
 Balance values must not be embedded into UI logic.
 

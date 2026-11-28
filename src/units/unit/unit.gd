@@ -1196,7 +1196,7 @@ func _deliver_seek_started(duration: float, cooldown: float) -> void:
 	if peer_id == GameManager.local_peer_id():
 		SeekPresentation.begin(duration, cooldown)
 		return
-	if multiplayer.multiplayer_peer == null:
+	if not _has_connected_seek_owner():
 		return
 	_rpc_seek_started.rpc_id(peer_id, duration, cooldown)
 
@@ -1205,7 +1205,7 @@ func _deliver_seek_targets(from: Vector2, positions: Array[Vector2]) -> void:
 	if peer_id == GameManager.local_peer_id():
 		SeekPresentation.update_targets(from, positions)
 		return
-	if multiplayer.multiplayer_peer == null:
+	if not _has_connected_seek_owner():
 		return
 	var packed := PackedVector2Array()
 	for point in positions:
@@ -1217,9 +1217,13 @@ func _deliver_seek_ended() -> void:
 	if peer_id == GameManager.local_peer_id():
 		SeekPresentation.end_active()
 		return
-	if multiplayer.multiplayer_peer == null:
+	if not _has_connected_seek_owner():
 		return
 	_rpc_seek_ended.rpc_id(peer_id)
+
+
+func _has_connected_seek_owner() -> bool:
+	return multiplayer.multiplayer_peer != null and multiplayer.get_peers().has(peer_id)
 
 
 @rpc("authority", "reliable")

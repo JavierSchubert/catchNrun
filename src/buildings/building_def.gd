@@ -65,13 +65,13 @@ enum TowerPath { RANGED_DAMAGE, ATTACK_SPEED, CRIT, ATTACK_RANGE }
 
 ## Tower stat-path upgrades. Each level the owner picks one TowerPath and the pick adds the
 ## matching increment. Damage / attack speed / range are percentages of the base value and
-## they SUM (three damage picks are +90%, not 1.3^3); crit chance and crit damage are flat
+## they SUM (three damage picks are +30%, not 1.1^3); crit chance and crit damage are flat
 ## additions because their base crit chance is 0 and a percentage of zero grants nothing.
-@export var tower_damage_per_pick := 0.30
-@export var tower_attack_speed_per_pick := 0.20
-@export var tower_crit_chance_per_pick := 0.08
-@export var tower_crit_damage_per_pick := 0.15
-@export var tower_range_per_pick := 0.15
+@export var tower_damage_per_pick := 0.10
+@export var tower_attack_speed_per_pick := 0.10
+@export var tower_crit_chance_per_pick := 0.05
+@export var tower_crit_damage_per_pick := 0.10
+@export var tower_range_per_pick := 0.10
 @export var tower_projectile_speed := 650.0 ## Pixels per second of the fired projectile.
 
 
