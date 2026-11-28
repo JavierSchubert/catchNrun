@@ -52,6 +52,9 @@ var _bot_chase_peer_id := -1
 var _bot_chase_building_path := NodePath()
 ## Accumulates tiny regen heals so floating numbers do not spam every physics frame.
 var _regen_fx_accum := 0.0
+## Seconds since this unit last lost health (out-of-combat regen gate).
+var _since_damage := 0.0
+var _last_health_for_regen := 0.0
 var _bot_repath_in := 0.0
 
 @onready var sprite: Sprite2D = $Sprite
@@ -73,6 +76,10 @@ var _chain_visual: MoveChainVisual
 ## Host-only. Own structure this Runner is walking to / channelling `repair` on.
 var _repair_target: Building = null
 var _repair_repath_in := 0.0
+## Host-only Hunter Seek timers (see SeekSkill / SeekPresentation).
+var _seek_cooldown_left := 0.0
+var _seek_active_left := 0.0
+var _seek_sync_accum := 0.0
 var _applied_max_health := 0.0
 var _health_initialized := false
 var _hunter_upgrade_modifiers: Array[StatModifier] = []
@@ -103,12 +110,16 @@ func _ready() -> void:
 	attack.acquisition_range = config.acquisition_range
 	_apply_derived_stats()
 	health.died.connect(_on_died)
+	health.health_changed.connect(_on_health_changed_for_regen)
 	if health_bar != null:
 		## Player characters always show their HP strip; structures hide theirs when full.
 		health_bar.show_when_full = true
 		health.health_changed.connect(health_bar.update_for_health)
 	health.setup(stats.final_value(StatBlock.Stat.MAX_HEALTH))
 	_health_initialized = true
+	_last_health_for_regen = health.current
+	## Start "out of combat" so opening regen is not gated until the first hit.
+	_since_damage = config.regen_delay_after_damage if config != null else 0.0
 	sync_health = health.current
 	if health_bar != null:
 		health_bar.update_for_health(health.current, stats.final_value(StatBlock.Stat.MAX_HEALTH))
@@ -275,6 +286,33 @@ func request_hunter_upgrade(choice_index: int) -> void:
 		_server_choose_hunter_upgrade(choice_index)
 	else:
 		rpc_id(1, "_submit_hunter_upgrade_choice", choice_index)
+
+
+## Hunter Seek: self-cast directional reveal on the minimap (SeekSkill).
+func request_seek() -> void:
+	if role() != RoleConfig.Role.HUNTER or not is_inside_tree():
+		return
+	if _is_net_server():
+		_server_cast_seek()
+	else:
+		rpc_id(1, "_submit_seek")
+
+
+func seek_cooldown_left() -> float:
+	## Prefer local presentation timer for the casting peer's UI.
+	if peer_id == _local_unique_id() and SeekPresentation.cooldown_left > 0.0:
+		return SeekPresentation.cooldown_left
+	return _seek_cooldown_left
+
+
+func seek_active_left() -> float:
+	if peer_id == _local_unique_id() and SeekPresentation.active_left > 0.0:
+		return SeekPresentation.active_left
+	return _seek_active_left
+
+
+func seek_is_ready() -> bool:
+	return seek_cooldown_left() <= 0.0 and SeekSkill.can_cast(self)
 
 
 @rpc("any_peer", "reliable")
@@ -459,6 +497,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not is_alive() or not _movement_allowed():
 		return
+	if event is InputEventKey and _handle_seek_hotkey(event as InputEventKey):
+		return
 	if not _can_issue_commands():
 		return
 	if not event is InputEventMouseButton:
@@ -512,6 +552,8 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_tick_attack_flash(delta)
+	if peer_id == _local_unique_id() and role() == RoleConfig.Role.HUNTER:
+		SeekPresentation.tick(delta)
 
 	if peer_id == _local_unique_id() and not LaunchOptions.bot_role.is_empty():
 		_bot_tick()
@@ -523,6 +565,7 @@ func _physics_process(delta: float) -> void:
 			attack.clear_target()
 			_move_chain.clear()
 			_repair_target = null
+			_seek_active_left = 0.0
 		else:
 			_server_combat_tick(delta)
 			if not movement.has_order():
@@ -621,6 +664,7 @@ func _server_combat_tick(delta: float) -> void:
 	if config.role != RoleConfig.Role.HUNTER:
 		server_repair_tick(delta)
 		return
+	_server_tick_seek(delta)
 	if GameManager.phase != GameManager.Phase.HUNTER_ACTIVE:
 		return
 	if stats.final_value(StatBlock.Stat.MELEE_DAMAGE) <= 0.0:
@@ -745,10 +789,23 @@ func _perform_melee_on_building(target: Building) -> void:
 			_spawn_floating_number_on(self, healed, FloatingNumber.Kind.LIFESTEAL)
 
 
+func _on_health_changed_for_regen(current: float, _maximum: float) -> void:
+	## Any HP loss restarts the out-of-combat delay (heals do not).
+	if current < _last_health_for_regen:
+		_since_damage = 0.0
+		_regen_fx_accum = 0.0
+	_last_health_for_regen = current
+
+
 func _regen(delta: float) -> void:
 	var regen := stats.final_value(StatBlock.Stat.HEALTH_REGENERATION)
 	if regen <= 0.0 or not health.is_alive():
 		return
+	var delay := config.regen_delay_after_damage if config != null else 0.0
+	if delay > 0.0:
+		if _since_damage < delay:
+			_since_damage = minf(_since_damage + delta, delay)
+			return
 	var maximum := stats.final_value(StatBlock.Stat.MAX_HEALTH)
 	var before := health.current
 	health.heal(regen * delta, maximum)
@@ -1075,6 +1132,119 @@ func _server_attack_building(target: Building) -> void:
 	attack.set_explicit_target(target)
 	if not attack.in_attack_range(global_position, target):
 		movement.order_move(global_position, _combat_approach_point(target))
+
+
+func _handle_seek_hotkey(key: InputEventKey) -> bool:
+	if key.echo or not key.pressed:
+		return false
+	if key.keycode != KEY_Q and key.physical_keycode != KEY_Q:
+		return false
+	if role() != RoleConfig.Role.HUNTER:
+		return false
+	if not _can_issue_commands():
+		return false
+	if not seek_is_ready():
+		get_viewport().set_input_as_handled()
+		return true
+	request_seek()
+	get_viewport().set_input_as_handled()
+	return true
+
+
+func _server_cast_seek() -> void:
+	if not _is_net_server():
+		return
+	if not SeekSkill.can_cast(self):
+		return
+	if _seek_cooldown_left > 0.0:
+		return
+	_seek_active_left = SeekSkill.DEF.duration
+	_seek_cooldown_left = SeekSkill.DEF.cooldown
+	_seek_sync_accum = 0.0
+	_deliver_seek_started(SeekSkill.DEF.duration, SeekSkill.DEF.cooldown)
+	_push_seek_targets()
+	GameLog.info(
+		"SKILL",
+		"%s cast Seek (%.0fs)" % [
+			name_label.text if name_label else str(peer_id),
+			SeekSkill.DEF.duration,
+		]
+	)
+
+
+func _server_tick_seek(delta: float) -> void:
+	if _seek_cooldown_left > 0.0:
+		_seek_cooldown_left = maxf(_seek_cooldown_left - delta, 0.0)
+	if _seek_active_left <= 0.0:
+		return
+	_seek_active_left = maxf(_seek_active_left - delta, 0.0)
+	_seek_sync_accum += delta
+	if _seek_sync_accum >= 0.1 or _seek_active_left <= 0.0:
+		_seek_sync_accum = 0.0
+		if _seek_active_left > 0.0:
+			_push_seek_targets()
+		else:
+			_deliver_seek_ended()
+
+
+func _push_seek_targets() -> void:
+	var positions := SeekSkill.gather_target_positions(self)
+	_deliver_seek_targets(global_position, positions)
+
+
+func _deliver_seek_started(duration: float, cooldown: float) -> void:
+	if peer_id == GameManager.local_peer_id():
+		SeekPresentation.begin(duration, cooldown)
+		return
+	if multiplayer.multiplayer_peer == null:
+		return
+	_rpc_seek_started.rpc_id(peer_id, duration, cooldown)
+
+
+func _deliver_seek_targets(from: Vector2, positions: Array[Vector2]) -> void:
+	if peer_id == GameManager.local_peer_id():
+		SeekPresentation.update_targets(from, positions)
+		return
+	if multiplayer.multiplayer_peer == null:
+		return
+	var packed := PackedVector2Array()
+	for point in positions:
+		packed.append(point)
+	_rpc_seek_targets.rpc_id(peer_id, from, packed)
+
+
+func _deliver_seek_ended() -> void:
+	if peer_id == GameManager.local_peer_id():
+		SeekPresentation.end_active()
+		return
+	if multiplayer.multiplayer_peer == null:
+		return
+	_rpc_seek_ended.rpc_id(peer_id)
+
+
+@rpc("authority", "reliable")
+func _rpc_seek_started(duration: float, cooldown: float) -> void:
+	SeekPresentation.begin(duration, cooldown)
+
+
+@rpc("authority", "unreliable")
+func _rpc_seek_targets(from: Vector2, positions: PackedVector2Array) -> void:
+	var list: Array[Vector2] = []
+	for point in positions:
+		list.append(point)
+	SeekPresentation.update_targets(from, list)
+
+
+@rpc("authority", "reliable")
+func _rpc_seek_ended() -> void:
+	SeekPresentation.end_active()
+
+
+@rpc("any_peer", "reliable")
+func _submit_seek() -> void:
+	if not _is_net_server() or GameManager.sender_id(multiplayer) != peer_id:
+		return
+	_server_cast_seek()
 
 
 func _request_repair(structure: Building) -> void:

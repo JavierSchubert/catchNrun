@@ -88,7 +88,7 @@ The initial character stat system supports the following stats.
 | Stat | Category | Example Base Value | Description |
 | --- | --- | ---: | --- |
 | `max_health` | Resource | 100 | Maximum amount of health |
-| `health_regeneration` | Resource | 2.0 | Health restored per second |
+| `health_regeneration` | Resource | 2.0 | Health restored per second (Hunter: only after `RoleConfig.regen_delay_after_damage` with no HP loss) |
 | `defense` | Survivability | 20 | Used to reduce incoming damage |
 | `movement_speed` | Movement | 5.0 | Character movement speed |
 | `melee_damage` | Damage | 10 | Damage dealt by melee attacks |
@@ -119,7 +119,7 @@ xp_to_next(level) = 100 * 1.35^(level - 1)
 ```
 
 - **Hunter:** gains **1 XP per point of applied melee damage** (units and buildings). Filling the portrait XP ring levels up; overflow XP carries into the next level.
-- **Starting Hunter balance (CP-22):** `22.5` melee damage at `1.25` attacks/sec (`0.8s` interval), down from `25` at `1.333` attacks/sec. This reduces opening sustained damage by about `16%`; Hunter health and movement are unchanged.
+- **Starting Hunter balance (CP-22 / follow-up):** `22.5` melee damage at `1.25` attacks/sec (`0.8s` interval), down from `25` at `1.333` attacks/sec. This reduces opening sustained damage by about `16%`. Hunter uses the standard `health_regeneration = 2.0` HP/s, but only after **`regen_delay_after_damage = 5.0` seconds** without taking damage (`hunter_config.tres`) — same idea as wall shield recharge, in real seconds (not ticks). Movement is unchanged.
 - **Hunter rewards:** each gained level queues three different stat choices. The host rolls each choice's stat, rarity, and bonus; the Hunter chooses one in the bottom-right HUD panel. Overflow levels remain queued and show one offer at a time.
 - **Rarity:** Basic (blue), Advanced (green), Rare (violet), and Legendary (gold) scale the base stat ranges by `1.0×`, `1.5×`, `2.25×`, and `3.5×`. Luck shifts the default rarity weights from `60/27/10/3` toward `43/27/20/10` at maximum Luck.
 - **Luck:** starts at `0.10` for Hunters, is displayed in the upgrade prompt, and can itself be upgraded. It affects future offers only.

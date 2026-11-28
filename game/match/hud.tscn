@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://b5un4h7dglmme"]
+[gd_scene load_steps=8 format=3 uid="uid://b5un4h7dglmme"]
 
 [ext_resource type="Script" uid="uid://dcw1xxn706g7c" path="res://game/match/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" uid="uid://deivbpbqgk4u3" path="res://ui/hud/minimap/minimap.tscn" id="2_minimap"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://dcechj3pvu0hw" path="res://ui/hud/building_panel/building_panel.tscn" id="4_building"]
 [ext_resource type="PackedScene" path="res://ui/hud/resource_bar/resource_bar.tscn" id="5_resource"]
 [ext_resource type="PackedScene" path="res://ui/hud/hunter_upgrade_panel.tscn" id="6_hunter_upgrades"]
+[ext_resource type="PackedScene" path="res://ui/hud/hunter_seek_panel.tscn" id="7_hunter_seek"]
 
 [node name="HUD" type="CanvasLayer" unique_id=502979574]
 script = ExtResource("1_hud")
@@ -86,6 +87,21 @@ anchor_bottom = 1.0
 offset_left = -396.0
 offset_top = -496.0
 offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="HunterSeekPanel" parent="Root" instance=ExtResource("7_hunter_seek")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 300.0
+offset_top = -144.0
+offset_right = 416.0
 offset_bottom = -16.0
 grow_horizontal = 0
 grow_vertical = 0

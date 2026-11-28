@@ -9,6 +9,11 @@ extends Control
 
 const BUILD_KEYS := ["wall", "tower", "crystal_mine"]
 const SHORT_NAMES := {"wall": "Wall", "tower": "Tower", "crystal_mine": "Mine"}
+const BUILD_HOTKEYS := {
+	KEY_W: "wall",
+	KEY_T: "tower",
+	KEY_C: "crystal_mine",
+}
 
 ## Icon shown on each tower pick button, indexed by BuildingDef.TowerPath.
 const PICK_ICON_STATS := [
@@ -121,6 +126,9 @@ func _refresh_mode() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		if _handle_build_hotkey(event as InputEventKey):
+			return
 	if not is_armed():
 		return
 	if event is InputEventKey:
@@ -146,6 +154,24 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
+func _handle_build_hotkey(key: InputEventKey) -> bool:
+	if key.echo or not key.pressed:
+		return false
+	var code := key.keycode if key.keycode != KEY_NONE else key.physical_keycode
+	if code == KEY_D and HudMode.can_manage_building(_mode):
+		_on_destroy_pressed()
+		get_viewport().set_input_as_handled()
+		return true
+	if not HudMode.can_build(_mode):
+		return false
+	if not BUILD_HOTKEYS.has(code):
+		return false
+	var build_key: String = BUILD_HOTKEYS[code]
+	_on_build_button_pressed(build_key)
+	get_viewport().set_input_as_handled()
+	return true
+
+
 func _on_build_button_pressed(key: String) -> void:
 	if not HudMode.can_build(_mode):
 		_disarm()
@@ -159,28 +185,35 @@ func _on_upgrade_pressed() -> void:
 	if not HudMode.can_manage_building(_mode):
 		return
 	var manager := _construction_manager()
-	if manager != null and not _pending_building_name.is_empty():
-		manager.request_upgrade(_pending_building_name)
+	if manager == null:
+		return
+	for building in _managed_buildings():
+		if building.can_upgrade() and not building.is_tower():
+			manager.request_upgrade(building.name)
 
 
 func _on_pick_pressed(path: int) -> void:
 	if not HudMode.can_manage_building(_mode):
 		return
 	var manager := _construction_manager()
-	if manager != null and not _pending_building_name.is_empty():
-		manager.request_upgrade(_pending_building_name, path)
+	if manager == null:
+		return
+	for building in _managed_buildings():
+		if building.can_upgrade() and building.is_tower():
+			manager.request_upgrade(building.name, path)
 
 
 func _on_destroy_pressed() -> void:
 	if not HudMode.can_manage_building(_mode):
 		return
-	var building_name := _pending_building_name
-	if building_name.is_empty():
-		return
 	var manager := _construction_manager()
 	if manager == null:
 		return
-	manager.request_destroy(building_name)
+	var names: Array[String] = []
+	for building in _managed_buildings():
+		names.append(building.name)
+	for building_name in names:
+		manager.request_destroy(building_name)
 	_pending_building_name = ""
 	_selected_section.visible = false
 
@@ -200,11 +233,12 @@ func _refresh_build_buttons() -> void:
 			button.button_pressed = false
 			button.disabled = true
 		if HudMode.can_manage_building(_mode):
-			_info_label.text = "Manage selected structure — Upgrade or Destroy"
+			_info_label.text = "Manage selected structure — Upgrade or Destroy [D]"
 		else:
 			_info_label.text = "Select your Runner to build"
 		return
 	var crystals := GameManager.crystals_for(_local_peer_id())
+	var construction := _construction_manager()
 	for key in BUILD_KEYS:
 		var def := ConstructionManager.def_for(key)
 		var button: Button = _build_buttons[key]
@@ -214,17 +248,26 @@ func _refresh_build_buttons() -> void:
 			button.disabled = true
 			continue
 		var short_name: String = SHORT_NAMES.get(key, def.display_name)
+		var hotkey := _hotkey_label_for(key)
 		var cost := int(def.cost_for_level(1))
-		button.text = "%s\n%d" % [short_name, cost]
-		button.tooltip_text = "%s — %d Crystals" % [def.display_name, cost]
-		button.disabled = crystals < cost
+		button.text = "%s [%s]\n%d" % [short_name, hotkey, cost]
+		button.tooltip_text = "%s [%s] — %d Crystals" % [def.display_name, hotkey, cost]
+		var blocked_by_mine_cap := key == "crystal_mine" and construction != null \
+				and construction.owns_crystal_mine(_local_peer_id())
+		if blocked_by_mine_cap:
+			button.disabled = true
+			button.tooltip_text = "Only one Crystal Mine allowed per player"
+			if _armed_key == "crystal_mine":
+				_disarm()
+		else:
+			button.disabled = crystals < cost
 	if is_armed():
 		var def := ConstructionManager.def_for(_armed_key)
 		_info_label.text = "Placing %s — LMB place, Shift+LMB chain, RMB/Esc cancel" % (
 			def.display_name if def else _armed_key
 		)
 	else:
-		_info_label.text = "Select a structure to build"
+		_info_label.text = "Select a structure to build — W Wall, T Tower, C Mine"
 
 
 func _update_ghost() -> void:
@@ -263,9 +306,13 @@ func _refresh_selected_building() -> void:
 		_selected_section.visible = false
 		_pending_building_name = ""
 		return
-	var manager := _selection_manager()
-	var building := manager.selected as Building
-	if building == null or building.def == null:
+	var buildings := _managed_buildings()
+	if buildings.is_empty():
+		_selected_section.visible = false
+		_pending_building_name = ""
+		return
+	var building := buildings[0]
+	if building.def == null:
 		_selected_section.visible = false
 		_pending_building_name = ""
 		return
@@ -273,10 +320,27 @@ func _refresh_selected_building() -> void:
 	_pending_building_name = building.name
 	var def := building.def
 	var level_suffix := " (building...)" if building.is_under_construction() and building.level < 2 else ""
-	_selected_name.text = "%s — Lv %d / %d%s" % [def.display_name, building.level, def.max_level, level_suffix]
+	if buildings.size() > 1:
+		_selected_name.text = "%s ×%d — Lv %d / %d%s" % [
+			def.display_name,
+			buildings.size(),
+			building.level,
+			def.max_level,
+			level_suffix,
+		]
+	else:
+		_selected_name.text = "%s — Lv %d / %d%s" % [
+			def.display_name,
+			building.level,
+			def.max_level,
+			level_suffix,
+		]
 	_selected_icon.texture = BuildingIcons.icon_for_def(def, building.level)
 	_bind_building_stat_rows(building)
 	_refresh_upgrade_area(building)
+	var group_count := buildings.size()
+	_destroy_button.text = "Destroy [D]" if group_count <= 1 else "Destroy all [D]"
+	_destroy_button.tooltip_text = "Destroy selected structure(s) (D)"
 
 
 func _bind_building_stat_rows(building: Building) -> void:
@@ -366,10 +430,36 @@ func _refresh_upgrade_area(building: Building) -> void:
 	_upgrade_button.icon = _upgrade_icon_for(def.kind)
 	if building.state == Building.State.UPGRADING:
 		_upgrade_button.text = "Upgrading to Lv %d…" % (building.level + 1)
+	elif _managed_buildings().size() > 1:
+		_upgrade_button.text = "Upgrade all (%d)" % int(cost)
 	else:
 		_upgrade_button.text = "Upgrade (%d)" % int(cost)
 	_upgrade_button.tooltip_text = _upgrade_tooltip_for(def.kind, int(cost))
 	_upgrade_button.disabled = not building.can_upgrade() or not affordable
+
+
+func _hotkey_label_for(key: String) -> String:
+	match key:
+		"wall":
+			return "W"
+		"tower":
+			return "T"
+		"crystal_mine":
+			return "C"
+	return ""
+
+
+func _managed_buildings() -> Array[Building]:
+	var manager := _selection_manager()
+	if manager == null:
+		return []
+	var buildings := manager.selected_buildings()
+	var owned: Array[Building] = []
+	var local_id := _local_peer_id()
+	for building in buildings:
+		if building.def != null and building.owner_peer_id == local_id:
+			owned.append(building)
+	return owned
 
 
 func _upgrade_icon_for(kind: BuildingDef.Kind) -> Texture2D:

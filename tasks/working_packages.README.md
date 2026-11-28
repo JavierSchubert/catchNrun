@@ -103,9 +103,12 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 - [x] Centralized economy config resource (`src/economy/economy_config.gd` + per-structure `BuildingDef`)
 - [x] Crystal economy automated tests (`tests/construction/building_economy_test.gd`)
 
+### Done (Hunter damage income — see CP-16 / CP-23)
+
+- [x] Hunter crystals from damage dealt (`hunter_crystals_per_damage` via `GameManager.award_damage_crystals`)
+
 ### Open (Hunter side — not requested yet)
 
-- [ ] Hunter crystals from damage dealt (`hunter_crystals_per_damage`)
 - [ ] Hunter passive income from Hunter Shop / base (lower than developed mines)
 - [ ] Hunter Shop purchases applying `StatModifier`s
 
@@ -696,7 +699,8 @@ Milestone A — Fight and finish
 
 Milestone B — Build and earn
   WP-02 Construction: grid foundation ✅ (CP-11); match-integrated build UI + Wall / Tower / Crystal Mine ✅ (CP-15)
-  WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income ✅ (WP-16 D); Hunter Shop still open
+  WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income ✅ (WP-16 D / CP-23); Hunter Shop still open
+  CP-23 — Hunter Seek + build hotkeys W/T/C/D + type multi-select + one mine ✅ (code-reviewed; offline Python)
   WP-16 — economy rebalance + crystal HUD ✅ A/B; tower projectiles ✅ C (reviewed);
          wall shield + runner repair + hunter damage income ✅ D (reviewed);
          docs ✅ E; editor / match run ❌ E. Nothing run in Godot yet.

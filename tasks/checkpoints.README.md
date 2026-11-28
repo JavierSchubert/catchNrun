@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-28** (CP-22 Hunter opening balance adjustment).
+Last reviewed: **2026-11-28** (CP-23 Hunter Seek + Runner build hotkeys / multi-select).
 
 ---
 
@@ -46,6 +46,7 @@ Last reviewed: **2026-11-28** (CP-22 Hunter opening balance adjustment).
 | 2026-11-26 | **CP-20** HUD / combat presentation polish | **Code-reviewed only — not yet run in Godot.** Sandbox Stats panel (crit / LS / damage / regen / reset); Shift-chain build placement; larger health bars / selection + build UI; HP bars hide when full except player units (`HealthBar.show_when_full`); blue crystal mine floating numbers (`FloatingNumber.Kind.CRYSTAL`); plain RMB move outranks auto-attack (cancel polish) |
 | 2026-11-26 | **CP-21** Hunter level-up rewards and Luck | Hunter gains one queued reward offer per XP level, including overflow levels; host rolls three distinct stat options with randomized ranges and Basic/Advanced/Rare/Legendary rarity multipliers; Luck shifts rarity odds and is upgradeable and visible in the stat strip; host validates the Hunter's selection and replicates chosen bonuses; max-health rewards also restore the same amount of health; bottom-right three-card HUD uses blue/green/violet/gold rarity-tinted cards; stats and checkpoint docs updated; focused roll tests added. Godot executable was unavailable for runtime tests. |
 | 2026-11-28 | **CP-22** Hunter opening balance adjustment | Reduced starting Hunter melee damage from 25 to 22.5 and attack speed from 1.333 to 1.25 attacks/sec (interval 0.75s to 0.8s), lowering opening sustained damage by about 16%; movement, health, and level-up progression are unchanged. Stats documentation updated. |
+| 2026-11-28 | **CP-23** Hunter Seek + Runner build hotkeys / multi-select | **Code-reviewed only — not yet run in Godot.** Hunter Seek skill (30s CD / 10s minimap direction arrows, Q + skill button); Runner build hotkeys W/T/C (context-sensitive C vs camera); Destroy `D`; double-click type-select own buildings + mass upgrade/destroy; one Crystal Mine per player; confirmed Hunter damage→crystals already wired (WP-03 checkbox); docs + `tools/test/test_cp23_seek_build.py`. |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -415,6 +416,30 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 
 ---
 
+## CP-23 — Hunter Seek + Runner build hotkeys / multi-select
+
+**Verification:** code-reviewed only; nothing has run in Godot. Offline Python: `tools/test/test_cp23_seek_build.py`.
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Seek SkillDef (SELF, cooldown 30, duration 10) | Done | `src/skills/skill_def.gd`, `src/skills/defs/seek_def.tres`, `src/skills/seek_skill.gd` |
+| Host cast + target push; local SeekPresentation | Done | `Unit.request_seek` / `_server_cast_seek` / `_rpc_seek_*`; `src/skills/seek_presentation.gd` |
+| Minimap direction arrows during Seek | Done | `ui/hud/minimap/minimap_dots.gd` `_draw_seek_arrows` |
+| Seek UI button + `Q` hotkey | Done | `ui/hud/hunter_seek_panel.*`; wired in `game/match/hud.tscn` |
+| Build hotkeys W / T / C; Destroy `D` | Done | `ui/hud/building_panel/building_panel.gd` |
+| Context-sensitive `C` (mine vs camera) | Done | `match_camera.gd` `_runner_build_mode_active` |
+| Double-click select all own buildings of kind | Done | `SelectionManager.selected_group` / `_own_buildings_of_kind` |
+| Mass upgrade / destroy for group | Done | BuildingPanel `_managed_buildings` |
+| One Crystal Mine per player | Done | `ConstructionManager.owns_crystal_mine` + UI disable |
+| Hunter damage → crystals verified | Done | Already CP-16; WP-03 checkbox closed |
+| Spec updates | Done | `controls.README.md`, `construction.README.md`, `minimap.README.md`, WP-03 |
+| Offline Python checks | Done | `tools/test/test_cp23_seek_build.py` |
+| Match / editor verification | Not done | Needs Godot playtest |
+
+**Doc owners:** `controls.README.md` §1.4–§1.6, `construction.README.md` §2–§3, `minimap.README.md` §2.2.1, `economy.README.md` §3.1
+
+---
+
 ## CP-06 — Sandbox, bots, tests
 
 | Item | Status | Evidence |
@@ -431,7 +456,7 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 | Hunter bot chase / attack behavior | Done | `Unit._hunter_bot_chase` (Runner bots still circle); buildings as targets (CP-18) |
 | Multiplayer smoke test | Done | `scripts/test/smoke_test.ps1` |
 | Session / stats / move / melee / selection test runners | Done | `scripts/test/*.ps1` |
-| Offline HUD / XP Python checks | Done | `tools/test/test_hud_wp17.py`, `test_wp18_combat_fx.py`, `test_wp14_xp.py` |
+| Offline HUD / XP / CP-23 Python checks | Done | `tools/test/test_hud_wp17.py`, `test_wp18_combat_fx.py`, `test_wp14_xp.py`, `test_cp23_seek_build.py` |
 | Lobby + role-selection scene test | Done | `tests/session/lobby_and_selection_test.gd` |
 | Full god-mode checklist (structures, crystals, fog, damage) | Partial | Networking-focused only |
 
@@ -446,7 +471,8 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 | `autoloads/` (+ `SettingsManager`, `SoundManager`) | Active |
 | `src/units`, `src/navigation`, `src/stats`, `src/progression`, `src/match`, `src/logging`, `src/combat`, `src/components/health`, `src/selection`, `src/construction`, `src/buildings`, `src/fx`, `src/hud` | Active implementation |
 | `game/match`, `game/maps`, `game/sandbox`, `game/camera` | Active |
-| `ui/lobby`, `ui/role_selection`, `ui/styles/`, `ui/widgets/` (+ `ui_kit`), `ui/hud/{health_bar,selection_panel,minimap,building_panel,resource_bar}` | Active (`portrait_xp_ring.gd` under selection_panel) |
+| `ui/lobby`, `ui/role_selection`, `ui/styles/`, `ui/widgets/` (+ `ui_kit`), `ui/hud/{health_bar,selection_panel,minimap,building_panel,resource_bar,hunter_seek_panel}` | Active (`portrait_xp_ring.gd` under selection_panel; Seek panel CP-23) |
+| `src/skills/` (repair + seek) | Active |
 | `default_bus_layout.tres` (Master → Music / SFX) | Wired in `project.godot` |
 | `tests/{bots,session,stats,navigation,combat,construction,skills,fx}`, `scripts/test/`, `tools/test/` | Active |
 | Web preset in `export_presets.cfg` | Present; export path / CI still open |
@@ -498,4 +524,4 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 
 Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, attack-move, shift-click move/attack chains, hunter-bot hunting, elimination/observer, free camera (edge-scroll + MMB drag), editor-previewable HUD shells (CP-13), and persistent UI/audio settings are also in.
 
-Still open in `working_packages.README.md`: Hunter Shop, fog of war (minimap FoW), cursors, SelectionPanel context-action buttons, and **WP-14 level-up stat rewards**. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14; match-integrated construction + Crystal economy is CP-15; crystal rebalance / tower projectiles / wall shield / repair is CP-16 (editor pass open); HUD overhaul (HudMode, building selection, Runner A-destroy) is CP-17 (editor pass open); Hunter structure melee polish + floating numbers is CP-18 (editor pass open); Hunter XP + portrait XP ring is CP-19 (level-up rewards still open; editor pass open); HUD / combat presentation polish is CP-20 (editor pass open).
+Still open in `working_packages.README.md`: Hunter Shop, fog of war (minimap FoW), cursors, SelectionPanel context-action buttons. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14; match-integrated construction + Crystal economy is CP-15; crystal rebalance / tower projectiles / wall shield / repair is CP-16 (editor pass open); HUD overhaul (HudMode, building selection, Runner A-destroy) is CP-17 (editor pass open); Hunter structure melee polish + floating numbers is CP-18 (editor pass open); Hunter XP + portrait XP ring is CP-19; HUD / combat presentation polish is CP-20; Hunter Seek + Runner build hotkeys / multi-select / one-mine limit is CP-23 (editor pass open).
