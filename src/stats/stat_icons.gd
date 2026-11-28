@@ -23,6 +23,8 @@ const ICON_PATHS := {
 	StatBlock.Stat.LIFESTEAL_CHANCE: "res://assets/sprites/stats/clean/lifesteal_chance.png",
 	StatBlock.Stat.MOVEMENT_SPEED: "res://assets/sprites/stats/clean/movement_speed.png",
 	StatBlock.Stat.CRITICAL_CHANCE: "res://assets/sprites/stats/clean/crit_chance.png",
+	StatBlock.Stat.CRITICAL_DAMAGE_MULTIPLIER: "res://assets/sprites/stats/clean/crit_chance.png",
+	StatBlock.Stat.LIFESTEAL_AMOUNT: "res://assets/sprites/stats/clean/lifesteal_chance.png",
 	StatBlock.Stat.RANGED_DAMAGE: "res://assets/sprites/stats/attack_range.png",
 	StatBlock.Stat.MAGIC_DAMAGE: "res://assets/sprites/stats/magic.png",
 	StatBlock.Stat.ATTACK_RANGE: "res://assets/sprites/stats/attack_range.png",

@@ -70,6 +70,10 @@ Own-group green takes priority over the Hunter red when the local player is the 
 
 **Own buildings are OWN tier** in `SelectionResolver` (`Building.is_own(local)`), same priority band as the local controllable unit when resolving overlapping or box candidates.
 
+#### Double-click type select (own buildings)
+
+Double-clicking one of the local player's own structures selects every owned structure of the same kind (`BuildingDef.Kind`). All selected buildings show selection circles; the BuildingPanel Upgrade / Destroy / tower-pick actions apply to the whole group. Press **U** to upgrade (for Towers, then press **1–4** to choose a stat path); press **D** to destroy. Single-click and drag-box selection remain single-entity.
+
 #### Drag-box selection
 
 Holding left mouse button and dragging draws a transparent rectangle selection box. On release, entities whose hitboxes intersect the box become selection candidates. Exactly one entity is chosen from those candidates using the priority rules below.
@@ -255,15 +259,41 @@ After the target is no longer valid, the character continues toward the original
 
 ### 1.4. Camera Center
 
-Pressing `C` centers the camera on the local player's own unit.
+Pressing `C` centers the camera on the local player's own unit — **except** while a Runner has their controllable unit selected in build mode (`HudMode.UNIT_BUILD`), where `C` arms Crystal Mine placement instead (see §1.6).
 
-This always targets the local controllable character, even when another entity is currently selected for viewing. Selection does not change what `C` centers on.
+This always targets the local controllable character, even when another entity is currently selected for viewing. Selection does not change what `C` centers on (when it is acting as camera center).
 
 Left-click on the **minimap** also recenters the camera on the corresponding world position (see `minimap.README.md` §2.3).
 
 Eliminations and other roster updates must **not** auto-recenter the camera. A free camera stays where the player left it until `C`, a minimap click, or match start.
 
-### 1.5. Debug panels (`G`)
+### 1.5. Hunter Seek (`Q`)
+
+While the local Hunter is selected and controllable, `Q` (or the Seek skill button next to the selection panel) casts **Seek**: for 10 seconds the minimap shows direction arrows from the Hunter toward every other living player unit. Cooldown is 30 seconds. Host-authoritative; arrows bypass fog for that window only and do not leave unit ghosts.
+
+### 1.5.1. Item Shop (RMB)
+
+Right-clicking the central **Item Shop** while in interaction range opens the shop UI (Hunter and Runner). Leave / Esc / RMB closes it. Hunter upgrades are bought with LMB on affordable cards (cost green/red); inventory slots sell for a full Crystal refund.
+
+### 1.6. Runner build / manage hotkeys
+
+While the local Runner has their unit selected (`UNIT_BUILD`):
+
+| Key | Action |
+| --- | --- |
+| `W` | Arm / toggle Wall placement |
+| `T` | Arm / toggle Tower placement |
+| `C` | Arm / toggle Crystal Mine placement |
+
+While an owned structure is selected (`BUILDING_MANAGE`):
+
+| Key | Action |
+| --- | --- |
+| `D` | Destroy the selected structure(s) |
+
+Double-clicking an owned structure selects **all** of the player's buildings of that kind (StarCraft-style type select). Upgrade / Destroy / tower picks then apply to the whole group.
+
+### 1.7. Debug panels (`G`)
 
 Only when the debug sandbox panels are enabled: `G` minimizes all of them (action bar, tests, game log), or expands them again when all are minimized. Each panel also has its own Minimize button. See `ui_audio.README.md` §6.
 

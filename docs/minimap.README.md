@@ -39,6 +39,10 @@ Own and other units use the same pixel size. Selection circles may still use tea
 
 The minimap draws a light outline of the current camera viewport so the player can see where they are looking relative to the map.
 
+### 2.2.1. Hunter Seek arrows
+
+While the Hunter's **Seek** skill is active (10 s), the casting Hunter's minimap draws blue direction arrows from the Hunter toward every other living player unit. Positions are host-pushed for that window and intentionally bypass fog; they do not draw unit dots through fog and leave no last-known unit ghosts. See `controls.README.md` §1.5 and `src/skills/seek_skill.gd`.
+
 ### 2.3. Minimap clicks
 
 | Input | Result |

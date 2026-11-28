@@ -6,7 +6,8 @@ extends Control
 ## never detects hidden entities on its own. Without a VisionSystem (isolated tests) or with fog
 ## disabled, everything is drawn live and no fog is shown.
 ##
-## Draw order (bottom to top): fog, structures, last-known structure ghosts, units, camera frustum.
+## Draw order (bottom to top): fog, structures, last-known structure ghosts, units,
+## Seek direction arrows (Hunter skill), camera frustum.
 
 const DOT_SIZE := 4.0
 const VIEW_RECT_COLOR := Color(1.0, 1.0, 1.0, 0.55)
@@ -21,6 +22,9 @@ const STRUCTURE_MIN_SIZE := 5.0
 const STRUCTURE_OUTLINE_COLOR := Color(0.0, 0.0, 0.0, 0.7)
 ## Last-known (hidden) structures are drawn faded so they read as remembered, not live.
 const GHOST_ALPHA := 0.6
+## Hunter Seek arrows: shaft + tip size on the minimap.
+const SEEK_ARROW_WIDTH := 2.0
+const SEEK_ARROW_TIP := 7.0
 
 var _vision: VisionSystem
 var _fog_image: Image
@@ -53,6 +57,7 @@ func _draw() -> void:
 	_draw_structures(minimap, tree, vision, local_id)
 	_draw_last_known_structures(minimap, vision)
 	_draw_units(minimap, tree, vision, local_id)
+	_draw_seek_arrows(minimap)
 	_draw_camera_view(minimap)
 
 
@@ -226,6 +231,27 @@ func _draw_units(
 		var point := minimap.world_to_minimap(unit.global_position)
 		var color := unit.minimap_marker_color(local_id)
 		draw_rect(Rect2(point - Vector2(half, half), Vector2(DOT_SIZE, DOT_SIZE)), color, true)
+
+
+# --- Hunter Seek arrows -----------------------------------------------------------------------
+
+
+func _draw_seek_arrows(minimap: MatchMinimap) -> void:
+	if not SeekPresentation.active or SeekPresentation.targets.is_empty():
+		return
+	var from := minimap.world_to_minimap(SeekPresentation.origin)
+	var color := SelectionCircle.COLOR_RUNNER_TEAM
+	for target in SeekPresentation.targets:
+		var to := minimap.world_to_minimap(target)
+		var delta := to - from
+		if delta.length_squared() < 4.0:
+			continue
+		draw_line(from, to, color, SEEK_ARROW_WIDTH)
+		var dir := delta.normalized()
+		var tip := to
+		var left := tip - dir.rotated(0.4) * SEEK_ARROW_TIP
+		var right := tip - dir.rotated(-0.4) * SEEK_ARROW_TIP
+		draw_colored_polygon(PackedVector2Array([tip, left, right]), color)
 
 
 # --- Camera -----------------------------------------------------------------------------------

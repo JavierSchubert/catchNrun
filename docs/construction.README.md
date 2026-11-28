@@ -18,11 +18,11 @@ Selecting a structure to build enters placement mode.
 
 **Build UI gating (`HudMode`, WP-17):** placement buttons arm only while the local controllable unit is selected (`UNIT_BUILD`). Upgrade / Destroy / tower picks appear only while an owned structure is selected (`BUILDING_MANAGE`). The two modes are mutually exclusive — never both at once. Rules live in `src/hud/hud_mode.gd`; the bottom-right panel is `ui/hud/building_panel/` (`is_armed` + `"building_ui"` group).
 
-Placement is **grid-based**. Footprint size in cells defines the structure hitbox. Collision layers, snap rules, and blocker checks are specified in `building.README.md`.
+Placement is **grid-based**. Footprint size in cells defines the structure hitbox. Live match cell size is **48 px** (`ConstructionManager.CELL_SIZE`). Collision layers, snap rules, and blocker checks are specified in `building.README.md`.
 
 ```text
 Select Structure (UNIT_BUILD — local unit selected)
--> Enter Placement Mode
+-> Enter Placement Mode (buttons or hotkeys W / T / C)
 -> Show grid-snapped Placement Preview
 -> LMB places one structure and exits; Shift/Ctrl+LMB places and **stays armed** (chain build, same modifiers as move chains)
 -> Validate footprint (bounds + blocker layers)
@@ -39,7 +39,10 @@ Placement validation must at least consider:
 - Build-grid bounds.
 - Footprint cell coverage (size of the entity in cells).
 - Collisions with obstacles, units, buildings, and destructibles (`building.README.md` §4–§5).
+- **At most one Crystal Mine per player** (`ConstructionManager.owns_crystal_mine`).
 - Other gameplay-specific restrictions (spacing, ownership) as the map design develops.
+
+Hotkeys while `UNIT_BUILD`: `W` Wall, `T` Tower, `C` Crystal Mine. While `BUILDING_MANAGE`: `D` Destroy (all selected). Double-click an owned building to select all of that kind and upgrade / destroy them together.
 
 ## 3. Crystal Mine
 
@@ -52,6 +55,7 @@ They:
 - Can be attacked by the Hunter.
 - Can be destroyed.
 - Can be upgraded.
+- Are limited to **one per player** (placement blocked and host-rejected if the owner already has a mine).
 
 Crystal generation and upgrade economics are defined in `economy.README.md`.
 

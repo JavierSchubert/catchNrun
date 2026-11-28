@@ -12,7 +12,7 @@ const WALL_DEF: BuildingDef = preload("res://src/buildings/defs/wall_def.tres")
 const TOWER_DEF: BuildingDef = preload("res://src/buildings/defs/tower_def.tres")
 const MINE_DEF: BuildingDef = preload("res://src/buildings/defs/crystal_mine_def.tres")
 
-const CELL_SIZE := 32.0
+const CELL_SIZE := 48.0
 
 var grid := BuildGrid.new(
 	CELL_SIZE,
@@ -58,8 +58,27 @@ func can_place_preview(building_key: String, anchor_cell: Vector2i) -> bool:
 	var def := def_for(building_key)
 	if def == null:
 		return false
+	if building_key == "crystal_mine" and owns_crystal_mine(_local_peer_id()):
+		return false
 	var space := get_viewport().world_2d.direct_space_state
 	return validator.can_place(anchor_cell, def.footprint, space)
+
+
+## One Crystal Mine per Runner. Counts any owned mine that is still in the tree
+## (including under construction / upgrading).
+func owns_crystal_mine(peer_id: int) -> bool:
+	var tree := get_tree()
+	if tree == null:
+		return false
+	for node in tree.get_nodes_in_group("buildings"):
+		if not node is Building:
+			continue
+		var building := node as Building
+		if building.owner_peer_id != peer_id or building.def == null:
+			continue
+		if building.def.kind == BuildingDef.Kind.CRYSTAL_MINE:
+			return true
+	return false
 
 
 func request_build(building_key: String, anchor_cell: Vector2i) -> void:
@@ -81,6 +100,9 @@ func _server_build(peer_id: int, building_key: String, anchor_cell: Vector2i) ->
 		return
 	var def := def_for(building_key)
 	if def == null:
+		return
+	if building_key == "crystal_mine" and owns_crystal_mine(peer_id):
+		GameLog.info("CONSTRUCTION", "peer %d blocked — already owns a Crystal Mine" % peer_id)
 		return
 	var space := get_viewport().world_2d.direct_space_state
 	if not validator.can_place(anchor_cell, def.footprint, space):

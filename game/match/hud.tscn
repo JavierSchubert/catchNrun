@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://b5un4h7dglmme"]
+[gd_scene load_steps=9 format=3 uid="uid://b5un4h7dglmme"]
 
 [ext_resource type="Script" uid="uid://dcw1xxn706g7c" path="res://game/match/hud.gd" id="1_hud"]
 [ext_resource type="PackedScene" uid="uid://deivbpbqgk4u3" path="res://ui/hud/minimap/minimap.tscn" id="2_minimap"]
@@ -6,6 +6,8 @@
 [ext_resource type="PackedScene" uid="uid://dcechj3pvu0hw" path="res://ui/hud/building_panel/building_panel.tscn" id="4_building"]
 [ext_resource type="PackedScene" path="res://ui/hud/resource_bar/resource_bar.tscn" id="5_resource"]
 [ext_resource type="PackedScene" path="res://ui/hud/hunter_upgrade_panel.tscn" id="6_hunter_upgrades"]
+[ext_resource type="PackedScene" path="res://ui/hud/hunter_seek_panel.tscn" id="7_hunter_seek"]
+[ext_resource type="PackedScene" path="res://ui/hud/item_shop_panel/item_shop_panel.tscn" id="8_item_shop"]
 
 [node name="HUD" type="CanvasLayer" unique_id=502979574]
 script = ExtResource("1_hud")
@@ -27,7 +29,7 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_left = 280.0
 offset_top = 72.0
-offset_right = -280.0
+offset_right = -448.0
 offset_bottom = 128.0
 grow_horizontal = 2
 theme_override_colors/font_color = Color(0.82, 0.86, 0.9, 0.92)
@@ -42,9 +44,9 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -130.0
+offset_left = -140.0
 offset_top = 16.0
-offset_right = 130.0
+offset_right = 140.0
 offset_bottom = 64.0
 grow_horizontal = 2
 
@@ -68,9 +70,9 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -290.0
+offset_left = -260.0
 offset_top = -216.0
-offset_right = 290.0
+offset_right = 260.0
 offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 0
@@ -83,9 +85,24 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -396.0
-offset_top = -496.0
+offset_left = -436.0
+offset_top = -616.0
 offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="HunterSeekPanel" parent="Root" instance=ExtResource("7_hunter_seek")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = 272.0
+offset_top = -166.0
+offset_right = 408.0
 offset_bottom = -16.0
 grow_horizontal = 0
 grow_vertical = 0
@@ -99,8 +116,17 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -446.0
-offset_top = -266.0
+offset_top = -478.0
 offset_right = -16.0
-offset_bottom = -16.0
+offset_bottom = -228.0
 grow_horizontal = 0
 grow_vertical = 0
+
+[node name="ItemShopPanel" parent="Root" instance=ExtResource("8_item_shop")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2

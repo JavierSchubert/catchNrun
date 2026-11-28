@@ -9,7 +9,7 @@ script = ExtResource("1_6s0vu")
 
 [node name="LavaPlaceholder" type="Sprite2D" parent="." unique_id=201847362]
 z_index = -10
-scale = Vector2(5, 5)
+scale = Vector2(3.33333, 3.5)
 texture = ExtResource("5_lava")
 
 [node name="FloorLayer" type="TileMapLayer" parent="." unique_id=256840506]

@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://ui/hud/widgets/stat_icon_row.gd" id="1_script"]
 
 [node name="StatIconRow" type="HBoxContainer"]
-custom_minimum_size = Vector2(0, 34)
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_constants/separation = 6
 mouse_filter = 2
@@ -11,7 +11,7 @@ script = ExtResource("1_script")
 
 [node name="Icon" type="TextureRect" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(32, 32)
+custom_minimum_size = Vector2(36, 36)
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -23,6 +23,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
+theme_override_font_sizes/font_size = 18
 mouse_filter = 2
 bbcode_enabled = true
 fit_content = true

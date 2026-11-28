@@ -9,6 +9,9 @@ const DRAG_THRESHOLD_PX := 8.0
 const CLICKABLE_GROUP := "clickable"
 
 var selected: Node = null
+## Multi-select group for own buildings of one kind (double-click). Includes `selected`
+## when set; empty when nothing is selected. Units stay single-select.
+var selected_group: Array[Node] = []
 var hovered: Node = null
 ## Armed by pressing A when a local attacker is selected; next LMB issues attack-move.
 var attack_move_armed := false
@@ -17,6 +20,8 @@ var _press_screen := Vector2.ZERO
 var _press_world := Vector2.ZERO
 var _pressing := false
 var _dragging := false
+## True when the LMB press that is about to release was a double-click.
+var _pending_double_click := false
 var _drag_box: DragSelectBox
 var _rng := RandomNumberGenerator.new()
 
@@ -73,9 +78,19 @@ func _process(_delta: float) -> void:
 func _drop_unseen_selection() -> void:
 	if hovered != null and is_instance_valid(hovered) and not SelectionResolver.is_visible_to_local(hovered):
 		_set_hovered(null)
-	if selected != null and is_instance_valid(selected) \
-			and not SelectionResolver.is_visible_to_local(selected):
-		clear_selection()
+	var kept: Array[Node] = []
+	for node in selected_group:
+		if node != null and is_instance_valid(node) and SelectionResolver.is_visible_to_local(node):
+			kept.append(node)
+	if kept.size() == selected_group.size() and selected != null and is_instance_valid(selected) \
+			and SelectionResolver.is_visible_to_local(selected):
+		return
+	if kept.is_empty():
+		if selected != null and is_instance_valid(selected) \
+				and not SelectionResolver.is_visible_to_local(selected):
+			clear_selection()
+		return
+	_set_selected(kept[0], kept)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -117,9 +132,18 @@ func notify_entity_removed(entity: Node) -> void:
 		return
 	if hovered == entity:
 		_set_hovered(null)
+	var was_in_group := selected_group.has(entity)
+	if was_in_group:
+		selected_group.erase(entity)
 	if selected == entity:
-		_set_selected(null)
-		_auto_select_local_unit()
+		if selected_group.is_empty():
+			_set_selected(null)
+			_auto_select_local_unit()
+		else:
+			_set_selected(selected_group[0], selected_group)
+	elif was_in_group:
+		_refresh_circle_states()
+		selection_changed.emit(selected)
 
 
 func _handle_attack_move_key(key: InputEventKey) -> void:
@@ -154,6 +178,7 @@ func _handle_mouse_button(click: InputEventMouseButton) -> void:
 			return
 		_pressing = true
 		_dragging = false
+		_pending_double_click = click.double_click
 		_press_screen = click.position
 		_press_world = get_global_mouse_position()
 		get_viewport().set_input_as_handled()
@@ -161,13 +186,15 @@ func _handle_mouse_button(click: InputEventMouseButton) -> void:
 	if not _pressing:
 		return
 	_pressing = false
+	var was_double := _pending_double_click
+	_pending_double_click = false
 	if _dragging:
 		_dragging = false
 		var box := _drag_box.end()
 		_apply_box_selection(box)
 		get_viewport().set_input_as_handled()
 		return
-	_apply_point_selection(_press_world)
+	_apply_point_selection(_press_world, was_double)
 	get_viewport().set_input_as_handled()
 
 
@@ -266,12 +293,17 @@ func _maybe_start_drag(motion: InputEventMouseMotion) -> void:
 	get_viewport().set_input_as_handled()
 
 
-func _apply_point_selection(world_pos: Vector2) -> void:
+func _apply_point_selection(world_pos: Vector2, double_click := false) -> void:
 	var hits := _entities_at_point(world_pos)
 	if hits.is_empty():
 		clear_selection()
 		return
 	var picked := SelectionResolver.pick(hits, _local_peer_id(), _rng)
+	if double_click and picked is Building:
+		var group := _own_buildings_of_kind(picked as Building)
+		if group.size() > 1:
+			_set_selected(picked, group)
+			return
 	_set_selected(picked)
 
 
@@ -285,6 +317,31 @@ func _apply_box_selection(box: Rect2) -> void:
 		return
 	var picked := SelectionResolver.pick(hits, _local_peer_id(), _rng)
 	_set_selected(picked)
+
+
+## Own buildings matching the clicked building's kind (StarCraft-style type select).
+func _own_buildings_of_kind(primary: Building) -> Array[Node]:
+	var group: Array[Node] = []
+	if primary == null or primary.def == null:
+		return group
+	var local_id := _local_peer_id()
+	var kind := primary.def.kind
+	for node in get_tree().get_nodes_in_group("buildings"):
+		if not node is Building:
+			continue
+		var building := node as Building
+		if building.def == null or building.owner_peer_id != local_id:
+			continue
+		if building.def.kind != kind:
+			continue
+		if not _is_selectable(building):
+			continue
+		group.append(building)
+	## Keep the double-clicked building first so it stays the primary selection.
+	if group.has(primary):
+		group.erase(primary)
+		group.insert(0, primary)
+	return group
 
 
 func _update_hover() -> void:
@@ -311,13 +368,30 @@ func _set_hovered(entity: Node) -> void:
 		hovered.call("set_selection_hover", true)
 
 
-func _set_selected(entity: Node) -> void:
-	if selected != null and is_instance_valid(selected) and selected.has_method("set_selection_selected"):
-		selected.call("set_selection_selected", false)
+func _set_selected(entity: Node, group: Array = []) -> void:
+	var previous := selected_group.duplicate()
+	if selected != null and is_instance_valid(selected) and not previous.has(selected):
+		previous.append(selected)
 	_follow_sandbox_character(entity)
 	selected = entity
-	if selected != null and selected.has_method("set_selection_selected"):
-		selected.call("set_selection_selected", true)
+	selected_group.clear()
+	if entity != null:
+		if group.is_empty():
+			selected_group.append(entity)
+		else:
+			for node in group:
+				if node != null and is_instance_valid(node) and not selected_group.has(node):
+					selected_group.append(node)
+	for node in previous:
+		if node == null or not is_instance_valid(node):
+			continue
+		if selected_group.has(node):
+			continue
+		if node.has_method("set_selection_selected"):
+			node.call("set_selection_selected", false)
+	for node in selected_group:
+		if node.has_method("set_selection_selected"):
+			node.call("set_selection_selected", true)
 	_disarm_attack_move()
 	_refresh_circle_states()
 	selection_changed.emit(selected)
@@ -342,11 +416,23 @@ func _follow_sandbox_character(entity: Node) -> void:
 
 
 func _refresh_circle_states() -> void:
-	if selected != null and is_instance_valid(selected) and selected.has_method("refresh_selection_visual"):
+	for node in selected_group:
+		if node != null and is_instance_valid(node) and node.has_method("refresh_selection_visual"):
+			node.call("refresh_selection_visual")
+	if selected != null and is_instance_valid(selected) and not selected_group.has(selected) \
+			and selected.has_method("refresh_selection_visual"):
 		selected.call("refresh_selection_visual")
-	if hovered != null and is_instance_valid(hovered) and hovered != selected \
-			and hovered.has_method("refresh_selection_visual"):
+	if hovered != null and is_instance_valid(hovered) and not selected_group.has(hovered) \
+			and hovered != selected and hovered.has_method("refresh_selection_visual"):
 		hovered.call("refresh_selection_visual")
+
+## Buildings currently in the multi-select group (own structures only).
+func selected_buildings() -> Array[Building]:
+	var buildings: Array[Building] = []
+	for node in selected_group:
+		if node is Building and is_instance_valid(node):
+			buildings.append(node as Building)
+	return buildings
 
 
 func _entities_at_point(world_pos: Vector2) -> Array:

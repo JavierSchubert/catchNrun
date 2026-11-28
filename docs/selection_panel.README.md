@@ -36,7 +36,7 @@ Selection Panel (fixed size)
 
 **Portrait chrome (WP-14):** matching-thickness grey outer and inner rings with a darker band between. Hunter XP fills that band **violet counterclockwise** from 12 o'clock; a full ring levels the Hunter up. Runners stay **level 1** with a **full violet** band. Buildings show structure level on the badge and leave the XP band empty. Level is only on the badge (not beside the health bar). Empty selection: grey double frame only (no fill, no badge).
 
-Stat values show the **final** number only: white at base, green above base, red below (`StatIcons.format_value`). Icons come from `assets/sprites/stats/clean/` via `StatIcons`. Building rows reuse the same grid with `StatIcons` and, for mine income, `BuildingIcons.crystal_icon()`.
+Stat values show the **final** number only: white at base, green above base, red below (`StatIcons.format_value`). Icons come from `assets/sprites/stats/clean/` via `StatIcons`. Hunter level-up choices use the same stat icons as player and building rows. Active abilities use `SkillIcons` across role HUDs; the Hunter's Seek button and the Runner's contextual Repair hint share that registry. Building rows reuse the same grid with `StatIcons` and, for mine income, `BuildingIcons.crystal_icon()`.
 
 Empty selection: grey panel + empty portrait ring only (no stats, no health bar).
 

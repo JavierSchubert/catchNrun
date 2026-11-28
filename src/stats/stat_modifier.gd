@@ -11,6 +11,8 @@ enum Scope { ONE_STAT, ALL_DAMAGE }
 @export var scope: Scope = Scope.ONE_STAT
 @export var stat: StatBlock.Stat = StatBlock.Stat.MELEE_DAMAGE
 @export var value := 0.0
+## Optional origin tag (e.g. `shop:shop_max_health`) for debugging / inventory rebuild.
+@export var source := ""
 
 
 func applies_to(target: StatBlock.Stat) -> bool:

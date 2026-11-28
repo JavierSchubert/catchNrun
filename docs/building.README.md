@@ -23,7 +23,7 @@ The playable map is overlaid with a uniform axis-aligned grid.
 
 | Property | Meaning |
 | --- | --- |
-| `cell_size` | Edge length of one cell in world pixels (configurable) |
+| `cell_size` | Edge length of one cell in world pixels (`ConstructionManager.CELL_SIZE` = **48** in live matches) |
 | `origin` | World position of the top-left corner of cell `(0, 0)` |
 | Cell coordinate | Integer `Vector2i(x, y)` |
 

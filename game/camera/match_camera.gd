@@ -44,6 +44,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if (event as InputEventKey).physical_keycode == KEY_C:
+			## While the Runner build panel is in UNIT_BUILD, C arms Crystal Mine instead.
+			if _runner_build_mode_active():
+				return
 			# Ignore current selection — always the local controllable unit.
 			_snap_to_local_unit()
 			get_viewport().set_input_as_handled()
@@ -146,6 +149,20 @@ func _local_unit() -> Node2D:
 				return null
 			return node as Node2D
 	return null
+
+
+func _runner_build_mode_active() -> bool:
+	var tree := get_tree()
+	if tree == null:
+		return false
+	var manager := tree.get_first_node_in_group("selection_manager") as SelectionManager
+	if manager == null:
+		return false
+	var local_id := GameManager.local_peer_id()
+	if not HudMode.is_active_runner(local_id):
+		return false
+	var mode := HudMode.resolve(manager.selected, local_id, true)
+	return HudMode.can_build(mode)
 
 
 func _clamp_to_bounds() -> void:

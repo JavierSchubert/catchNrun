@@ -1,0 +1,117 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://ui/hud/item_shop_panel/item_shop_panel.gd" id="1_script"]
+[ext_resource type="StyleBox" path="res://ui/hud/minimap/minimap_frame_style.tres" id="2_frame"]
+
+[node name="ItemShopPanel" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+visible = false
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.02, 0.03, 0.05, 0.55)
+
+[node name="Frame" type="Panel" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -260.0
+offset_right = 340.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = ExtResource("2_frame")
+
+[node name="Margin" type="MarginContainer" parent="Frame"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="Frame/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Frame/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Item Shop"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="Frame/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.78, 0.84, 1)
+theme_override_font_sizes/font_size = 12
+text = "Buy upgrades with Crystals"
+autowrap_mode = 3
+
+[node name="Tabs" type="HBoxContainer" parent="Frame/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="BuyTab" type="Button" parent="Frame/Margin/VBox/Tabs"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+button_pressed = true
+text = "Upgrades"
+
+[node name="InvTab" type="Button" parent="Frame/Margin/VBox/Tabs"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Inventory"
+
+[node name="Scroll" type="ScrollContainer" parent="Frame/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BuyGrid" type="GridContainer" parent="Frame/Margin/VBox/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 4
+
+[node name="InvGrid" type="GridContainer" parent="Frame/Margin/VBox/Scroll"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
+columns = 6
+
+[node name="LeaveButton" type="Button" parent="Frame/Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Leave"

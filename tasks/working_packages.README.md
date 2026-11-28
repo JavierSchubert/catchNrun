@@ -103,11 +103,19 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 - [x] Centralized economy config resource (`src/economy/economy_config.gd` + per-structure `BuildingDef`)
 - [x] Crystal economy automated tests (`tests/construction/building_economy_test.gd`)
 
-### Open (Hunter side — not requested yet)
+### Done (Hunter damage income — see CP-16 / CP-23)
 
-- [ ] Hunter crystals from damage dealt (`hunter_crystals_per_damage`)
+- [x] Hunter crystals from damage dealt (`hunter_crystals_per_damage` via `GameManager.award_damage_crystals`)
+
+### Done (Hunter Item Shop — see CP-24)
+
+- [x] Central Item Shop entity + RMB open (Hunter and Runner)
+- [x] Hunter Shop purchases applying `StatModifier`s (catalog buy + 100% Crystal refund sell)
+
+### Open (Hunter side — remaining)
+
 - [ ] Hunter passive income from Hunter Shop / base (lower than developed mines)
-- [ ] Hunter Shop purchases applying `StatModifier`s
+- [ ] Runner shop catalog (Runners can open shop; buy list empty in v1)
 
 ### Depends on
 
@@ -544,7 +552,6 @@ Static checks already done without Godot (2026-11-26): all `.gd` files parse wit
 - [ ] **`StatBlock.attack_range` duplicates `RoleConfig.attack_range`.** Units report `ATTACK_RANGE = 0.0` through their sheet while `RoleConfig` holds the real 70.0 / 64.0. Harmless today (the selection panel's stat grid is fixed and does not show it), a trap once anything enumerates it.
 - [ ] **`ATTACK_RANGE` and `RANGED_DAMAGE` render the same icon.** `assets/sprites/stats/attack_range2.png` exists if a distinct one is wanted.
 - [ ] **Hunter melee vs structures bypasses `CombatDamage`** (pre-existing since CP-15): `_perform_melee_on_building` rolls crit inline and structures have no defense. Harmless today; route it through `CombatDamage` if structures ever get defense.
-- [ ] **Crit pick keeps advertising "+8% Crit" past the cap.** `StatSheet` clamps crit chance to 1.0: 12 picks give 96 %, the 13th only +4 %, and from the 14th on only the +0.15 multiplier half still does anything. Cap the path, change the caption, or accept it.
 - [ ] **Repair numbers are placeholders chosen in D, not confirmed.** `repair_def.tres`: `value_per_second = 20`, `cast_range = 48` px beyond the structure's hit radius. For scale: a Lv 1 wall (250 HP) refills in ~12 s, a Lv 15 wall (~2.5k HP) in ~2 min. Repair is free (no Crystal cost), stacks across several Runners, and restores HP only — the shield recharges on its own.
 - [ ] **Hunter income counts shield damage — and that is farmable.** `apply_damage()` returns shield + health, and the 0.2 Crystals/damage is paid on that total; Hunter lifesteal also triggers on shield hits. A Lv 15 shield refills for free (45/s after 6 s), so a Hunter can earn ~180 Crystals per drain cycle without ever threatening the wall; repaired HP can be farmed the same way. If hitting a shield should pay less (or nothing), change it at the `award_damage_crystals` call in `_perform_melee_on_building`.
 
@@ -696,7 +703,8 @@ Milestone A — Fight and finish
 
 Milestone B — Build and earn
   WP-02 Construction: grid foundation ✅ (CP-11); match-integrated build UI + Wall / Tower / Crystal Mine ✅ (CP-15)
-  WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income ✅ (WP-16 D); Hunter Shop still open
+  WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income ✅ (WP-16 D / CP-23); Hunter Item Shop buy/sell ✅ (CP-24); passive shop income still open
+  CP-23 — Hunter Seek + build hotkeys W/T/C/D + type multi-select + one mine ✅ (code-reviewed; offline Python)
   WP-16 — economy rebalance + crystal HUD ✅ A/B; tower projectiles ✅ C (reviewed);
          wall shield + runner repair + hunter damage income ✅ D (reviewed);
          docs ✅ E; editor / match run ❌ E. Nothing run in Godot yet.
@@ -708,7 +716,7 @@ Milestone C — Command and HUD
          docs ✅ D; editor / match run ❌ E. Nothing run in Godot yet.
   Remaining: cursors / SelectionPanel context-action buttons (upgrades/destroy stay on BuildingPanel for now)
   WP-10 In-game chat
-  Hunter Shop as an extension of B
+  Hunter Item Shop buy/sell ✅ (CP-24); passive shop income still open
 
 Milestone D — Fog and map awareness
   WP-05 Vision doc + FoW + last-known structures + fogged minimap ✅ (headless `vision_test` written, not yet run);

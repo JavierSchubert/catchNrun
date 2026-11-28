@@ -240,16 +240,16 @@ func _test_tower_def_numbers_are_pinned() -> void:
 	_check(base != null, "tower_def.tres carries tower_base_stats")
 	if base == null:
 		return
-	_near(base.ranged_damage, 18.0, "tower base ranged damage")
+	_near(base.ranged_damage, 12.0, "tower base ranged damage")
 	_near(base.attack_speed, 1.0, "tower base attack speed")
 	_near(base.attack_range, 280.0, "tower base attack range")
 	_near(base.critical_chance, 0.0, "tower base crit chance")
 	_near(base.critical_damage_multiplier, 1.5, "tower base crit multiplier")
-	_near(def.tower_damage_per_pick, 0.30, "Damage pick increment")
-	_near(def.tower_attack_speed_per_pick, 0.20, "Attack Speed pick increment")
-	_near(def.tower_crit_chance_per_pick, 0.08, "Crit pick chance increment")
-	_near(def.tower_crit_damage_per_pick, 0.15, "Crit pick multiplier increment")
-	_near(def.tower_range_per_pick, 0.15, "Range pick increment")
+	_near(def.tower_damage_per_pick, 0.10, "Damage pick increment")
+	_near(def.tower_attack_speed_per_pick, 0.10, "Attack Speed pick increment")
+	_near(def.tower_crit_chance_per_pick, 0.05, "Crit pick chance increment")
+	_near(def.tower_crit_damage_per_pick, 0.10, "Crit pick multiplier increment")
+	_near(def.tower_range_per_pick, 0.10, "Range pick increment")
 	_near(def.tower_projectile_speed, 650.0, "tower projectile speed")
 
 
