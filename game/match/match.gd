@@ -6,9 +6,10 @@ extends Node2D
 @export var hunter_scene: PackedScene
 @export var runner_scene: PackedScene
 ## Players spawn on a ring around map center so they do not stack on top of each other.
-@export var spawn_ring_radius := 160.0
+@export var spawn_ring_radius := 220.0
 ## Sandbox only: Runner and Hunter spawn this far left / right of the map center.
 const SANDBOX_SPAWN_OFFSET := 450.0
+const ITEM_SHOP_SCENE := preload("res://src/buildings/item_shop/item_shop.tscn")
 
 var _spawned: Dictionary = {}
 
@@ -19,6 +20,7 @@ var _spawned: Dictionary = {}
 
 func _ready() -> void:
 	_hide_spawn_gizmos()
+	_spawn_item_shop()
 	spawner.spawn_function = _spawn_unit
 	GameManager.all_players_loaded.connect(_spawn_pending)
 	GameManager.phase_changed.connect(_on_phase_changed)
@@ -29,6 +31,22 @@ func _ready() -> void:
 		GameManager.report_scene_ready()
 	else:
 		GameManager.report_scene_ready.rpc_id(1)
+
+
+func _spawn_item_shop() -> void:
+	if get_tree().get_first_node_in_group("item_shop") != null:
+		return
+	var construction := get_node_or_null("ConstructionManager") as ConstructionManager
+	var shop := ITEM_SHOP_SCENE.instantiate() as ItemShop
+	if construction != null:
+		shop.grid = construction.grid
+		shop.anchor_cell = construction.grid.snap_anchor_cell(
+			PlateauMap.spawn_center(), ItemShop.FOOTPRINT
+		)
+	else:
+		shop.global_position = PlateauMap.spawn_center()
+	shop.name = "ItemShop"
+	add_child(shop)
 
 
 func _hide_spawn_gizmos() -> void:

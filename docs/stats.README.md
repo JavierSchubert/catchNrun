@@ -124,6 +124,7 @@ xp_to_next(level) = 100 * 1.35^(level - 1)
 - **Rarity:** Basic (blue), Advanced (green), Rare (violet), and Legendary (gold) scale the base stat ranges by `1.0×`, `1.5×`, `2.25×`, and `3.5×`. Luck shifts the default rarity weights from `60/27/10/3` toward `43/27/20/10` at maximum Luck.
 - **Luck:** starts at `0.10` for Hunters, is displayed in the upgrade prompt, and can itself be upgraded. It affects future offers only.
 - Max-health choices raise current health by the same amount, up to the new maximum. Movement speed, melee damage, and attack speed rewards are percentage modifiers; chance and other numeric rewards are flat additions.
+- **Item Shop (CP-24):** fixed Hunter catalog entries in `ShopCatalog` spend Crystals for additional `StatModifier`s (`source = shop:<item_id>`). Selling refunds Crystals and removes the matching modifiers. Separate from XP level-up offers.
 - **Runner:** stays at **level 1**; the selection-panel XP band is always fully violet (no XP gain).
 - HUD: violet fill is counterclockwise from 12 o'clock on the dark band between the grey portrait rings (`PortraitXpRing`).
 

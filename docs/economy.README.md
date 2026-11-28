@@ -143,33 +143,23 @@ Not implemented yet.
 
 ## 4. Hunter Shop and Spending
 
-The Hunter spends Crystals on items or upgrades that modify existing character stats.
+A neutral **Item Shop** sits at map center (`ItemShop`, art `shop_128.png`). Hunters and Runners open it with RMB in range. v1 sells **Hunter-only** stat upgrades for Crystals; Runners can open the UI but see an empty buy list.
 
-Potential upgrades include:
+Purchases apply `StatModifier`s via `ShopCatalog` (`src/shop/shop_catalog.gd`). Bought items appear in an inventory grid and can be sold back for a **full Crystal refund**.
 
-- Maximum Health.
-- Health Regeneration.
-- Defense.
-- Movement Speed.
-- Melee Damage.
-- Ranged Damage.
-- Magic Damage.
-- Critical Chance.
-- Critical Damage Multiplier.
-- Lifesteal Chance.
-- Lifesteal Amount.
+Crystal costs in the shop (and elsewhere) use the painted currency icon `crystal_currency_128.png` via `BuildingIcons.crystal_icon()`.
 
 Conceptually:
 
 ```text
-Hunter earns Crystals
--> Hunter Shop
--> Purchase Item / Upgrade
--> Apply Stat Modifier
--> Hunter becomes stronger
+RMB Item Shop (in range)
+-> Shop UI (Upgrades / Inventory)
+-> Buy: spend Crystals → StatModifier + inventory slot
+-> Sell: remove modifier → refund Crystals
+-> Leave / Esc / RMB closes
 ```
 
-The shop must use the Stats system instead of implementing separate stat calculations.
+The shop must use the Stats system instead of implementing separate stat calculations. XP level-up rewards remain separate.
 
 ## 5. Economy Configuration
 

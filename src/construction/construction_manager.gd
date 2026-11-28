@@ -12,7 +12,7 @@ const WALL_DEF: BuildingDef = preload("res://src/buildings/defs/wall_def.tres")
 const TOWER_DEF: BuildingDef = preload("res://src/buildings/defs/tower_def.tres")
 const MINE_DEF: BuildingDef = preload("res://src/buildings/defs/crystal_mine_def.tres")
 
-const CELL_SIZE := 32.0
+const CELL_SIZE := 48.0
 
 var grid := BuildGrid.new(
 	CELL_SIZE,

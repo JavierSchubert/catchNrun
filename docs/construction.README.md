@@ -18,7 +18,7 @@ Selecting a structure to build enters placement mode.
 
 **Build UI gating (`HudMode`, WP-17):** placement buttons arm only while the local controllable unit is selected (`UNIT_BUILD`). Upgrade / Destroy / tower picks appear only while an owned structure is selected (`BUILDING_MANAGE`). The two modes are mutually exclusive — never both at once. Rules live in `src/hud/hud_mode.gd`; the bottom-right panel is `ui/hud/building_panel/` (`is_armed` + `"building_ui"` group).
 
-Placement is **grid-based**. Footprint size in cells defines the structure hitbox. Collision layers, snap rules, and blocker checks are specified in `building.README.md`.
+Placement is **grid-based**. Footprint size in cells defines the structure hitbox. Live match cell size is **48 px** (`ConstructionManager.CELL_SIZE`). Collision layers, snap rules, and blocker checks are specified in `building.README.md`.
 
 ```text
 Select Structure (UNIT_BUILD — local unit selected)

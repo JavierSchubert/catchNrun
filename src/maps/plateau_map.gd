@@ -4,10 +4,11 @@ extends RefCounted
 ## FloorLayer and OverlayLayer remain available for future TileMap art.
 
 const TILE := 128.0
-const COLS := 60
-const ROWS := 40
+const COLS := 40
+const ROWS := 28
 ## Default ring used when placing players near map center (see Match.spawn_ring_radius).
-const SPAWN_RING_RADIUS := 160.0
+## Kept clear of the central Item Shop footprint.
+const SPAWN_RING_RADIUS := 220.0
 
 
 static func world_bounds() -> Rect2:
@@ -42,4 +43,5 @@ static func runner_spawn_positions() -> Array[Vector2]:
 
 
 static func hunter_spawn_position() -> Vector2:
-	return spawn_center()
+	## Off-center: the Item Shop occupies map center.
+	return spawn_center() + Vector2(0.0, -SPAWN_RING_RADIUS)

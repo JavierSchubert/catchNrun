@@ -4,7 +4,7 @@ Status of work that already exists in the repository, relative to `docs/` and th
 
 Use this file together with `working_packages.README.md` to compare done vs open work.
 
-Last reviewed: **2026-11-28** (CP-23 Hunter Seek + Runner build hotkeys / multi-select).
+Last reviewed: **2026-11-28** (CP-24 Map Scale, HP Bars, Crystal Icon + Central Item Shop).
 
 ---
 
@@ -47,7 +47,8 @@ Last reviewed: **2026-11-28** (CP-23 Hunter Seek + Runner build hotkeys / multi-
 | 2026-11-26 | **CP-21** Hunter level-up rewards and Luck | Hunter gains one queued reward offer per XP level, including overflow levels; host rolls three distinct stat options with randomized ranges and Basic/Advanced/Rare/Legendary rarity multipliers; Luck shifts rarity odds and is upgradeable and visible in the stat strip; host validates the Hunter's selection and replicates chosen bonuses; max-health rewards also restore the same amount of health; bottom-right three-card HUD uses blue/green/violet/gold rarity-tinted cards; stats and checkpoint docs updated; focused roll tests added. Godot executable was unavailable for runtime tests. |
 | 2026-11-28 | **CP-22** Hunter opening balance adjustment | Reduced starting Hunter melee damage from 25 to 22.5 and attack speed from 1.333 to 1.25 attacks/sec (interval 0.75s to 0.8s), lowering opening sustained damage by about 16%; movement, health, and level-up progression are unchanged. Stats documentation updated. |
 | 2026-11-28 | **CP-23** Hunter Seek + Runner build hotkeys / multi-select | **Code-reviewed only — not yet run in Godot.** Hunter Seek skill (30s CD / 10s minimap direction arrows, Q + skill button); Runner build hotkeys W/T/C (context-sensitive C vs camera); Destroy `D`; double-click type-select own buildings + mass upgrade/destroy; one Crystal Mine per player; confirmed Hunter damage→crystals already wired (WP-03 checkbox); docs + `tools/test/test_cp23_seek_build.py`. |
-| 2026-11-28 | **CP-24** Balance and skill HUD follow-up | Hunter regeneration increased to 3 HP/s with a 3s damage delay; Tower base damage reduced to 12 and upgrades to +10% damage/speed/range, +5 pp crit and +0.10 crit multiplier; Hunter level-up choices use shared stat icons, active Seek/Repair use shared skill icons; Seek RPCs skip disconnected peer IDs (including sandbox peer 1000). Regression checks and docs updated; Godot runtime tests unavailable. |
+| 2026-11-28 | CP-23 follow-up (regen / tower / icons) | Hunter out-of-combat regen delay; Tower base damage / upgrade tuning; shared stat/skill icons on level-up and Seek/Repair; Seek RPCs skip disconnected peers. |
+| 2026-11-28 | **CP-24** Map Scale, HP Bars, Crystal Icon + Central Item Shop | **Code-reviewed only — not yet run in Godot.** Map 40×28 tiles (5120×3584); `CELL_SIZE` 48; unit/building HP bars raised above sprites; `BuildingIcons.crystal_icon` uses `crystal_currency_128.png`; central `ItemShop` (3×3, `shop_128.png`) with RMB open, Hunter buy/sell catalog (`ShopCatalog` → `StatModifier`, 100% Crystal refund); HUD `ItemShopPanel`; hunter spawn off-center; docs + `tools/test/test_cp24_shop_scale.py`. |
 
 Older CP-01 … CP-07 rows without a date above were already present before this tracking file existed; the 2026-11-19 audit only recorded their status, not their original land date.
 
@@ -441,6 +442,31 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 
 ---
 
+## CP-24 — Map Scale, HP Bars, Crystal Icon + Central Item Shop
+
+**Verification:** code-reviewed only; nothing has run in Godot. Offline Python: `tools/test/test_cp24_shop_scale.py`.
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Unit HP/name offsets above sprite | Done | `unit.tscn` HealthBar −72/−44, NameLabel −98/−74 |
+| Building bars raised with larger footprints | Done | `building.tscn` HealthBar −88/−62 |
+| Map 40×28 tiles; `MAP_BOUNDS` sync | Done | `PlateauMap.COLS/ROWS`; `Unit.MAP_BOUNDS` 5120×3584; lava scale 3.333×3.5 |
+| Spawn ring 220; hunter off-center | Done | `SPAWN_RING_RADIUS`; `hunter_spawn_position` |
+| `CELL_SIZE` 48 | Done | `ConstructionManager.CELL_SIZE` |
+| Crystal currency asset icon | Done | `BuildingIcons.crystal_icon` → `crystal_currency_128.png` |
+| Central ItemShop entity (3×3, not attackable) | Done | `src/buildings/item_shop/`; spawned from `match.gd` |
+| RMB open in range; Leave / Esc / RMB close | Done | `unit.gd` + `ItemShopPanel` |
+| Hunter catalog buy → StatModifier + inventory | Done | `ShopCatalog`; `Unit.request_shop_buy` |
+| Sell = 100% Crystal refund | Done | `Unit._server_shop_sell` + `grant_crystals` |
+| Runner can open; buy list empty | Done | `ShopCatalog.items_for_role` |
+| Spec updates | Done | economy / controls / construction / building / stats / WP-03 |
+| Offline Python checks | Done | `tools/test/test_cp24_shop_scale.py` |
+| Match / editor verification | Not done | Needs Godot playtest |
+
+**Doc owners:** `economy.README.md` §4, `controls.README.md` §1.5.1, `construction.README.md`, `building.README.md`, `stats.README.md`
+
+---
+
 ## CP-06 — Sandbox, bots, tests
 
 | Item | Status | Evidence |
@@ -457,7 +483,7 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 | Hunter bot chase / attack behavior | Done | `Unit._hunter_bot_chase` (Runner bots still circle); buildings as targets (CP-18) |
 | Multiplayer smoke test | Done | `scripts/test/smoke_test.ps1` |
 | Session / stats / move / melee / selection test runners | Done | `scripts/test/*.ps1` |
-| Offline HUD / XP / CP-23 Python checks | Done | `tools/test/test_hud_wp17.py`, `test_wp18_combat_fx.py`, `test_wp14_xp.py`, `test_cp23_seek_build.py` |
+| Offline HUD / XP / CP-23 / CP-24 Python checks | Done | `tools/test/test_hud_wp17.py`, `test_wp18_combat_fx.py`, `test_wp14_xp.py`, `test_cp23_seek_build.py`, `test_cp24_shop_scale.py` |
 | Lobby + role-selection scene test | Done | `tests/session/lobby_and_selection_test.gd` |
 | Full god-mode checklist (structures, crystals, fog, damage) | Partial | Networking-focused only |
 
@@ -472,8 +498,8 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 | `autoloads/` (+ `SettingsManager`, `SoundManager`) | Active |
 | `src/units`, `src/navigation`, `src/stats`, `src/progression`, `src/match`, `src/logging`, `src/combat`, `src/components/health`, `src/selection`, `src/construction`, `src/buildings`, `src/fx`, `src/hud` | Active implementation |
 | `game/match`, `game/maps`, `game/sandbox`, `game/camera` | Active |
-| `ui/lobby`, `ui/role_selection`, `ui/styles/`, `ui/widgets/` (+ `ui_kit`), `ui/hud/{health_bar,selection_panel,minimap,building_panel,resource_bar,hunter_seek_panel}` | Active (`portrait_xp_ring.gd` under selection_panel; Seek panel CP-23) |
-| `src/skills/` (repair + seek) | Active |
+| `ui/lobby`, `ui/role_selection`, `ui/styles/`, `ui/widgets/` (+ `ui_kit`), `ui/hud/{health_bar,selection_panel,minimap,building_panel,resource_bar,hunter_seek_panel,item_shop_panel}` | Active (`portrait_xp_ring.gd` under selection_panel; Seek panel CP-23; Item Shop CP-24) |
+| `src/skills/` (repair + seek), `src/shop/` | Active |
 | `default_bus_layout.tres` (Master → Music / SFX) | Wired in `project.godot` |
 | `tests/{bots,session,stats,navigation,combat,construction,skills,fx}`, `scripts/test/`, `tools/test/` | Active |
 | Web preset in `export_presets.cfg` | Present; export path / CI still open |
@@ -525,4 +551,4 @@ The balance rows above (1,000,000 Crystals, `2^(level-1)`) and the "out of scope
 
 Per `docs/instructions.README.md` Definition of Done, the **session + multiplayer technical skeleton is largely complete**. Basic melee combat, attack-move, shift-click move/attack chains, hunter-bot hunting, elimination/observer, free camera (edge-scroll + MMB drag), editor-previewable HUD shells (CP-13), and persistent UI/audio settings are also in.
 
-Still open in `working_packages.README.md`: Hunter Shop, fog of war (minimap FoW), cursors, SelectionPanel context-action buttons. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14; match-integrated construction + Crystal economy is CP-15; crystal rebalance / tower projectiles / wall shield / repair is CP-16 (editor pass open); HUD overhaul (HudMode, building selection, Runner A-destroy) is CP-17 (editor pass open); Hunter structure melee polish + floating numbers is CP-18 (editor pass open); Hunter XP + portrait XP ring is CP-19; HUD / combat presentation polish is CP-20; Hunter Seek + Runner build hotkeys / multi-select / one-mine limit is CP-23 (editor pass open).
+Still open in `working_packages.README.md`: Hunter shop passive income, Runner shop catalog, fog of war (minimap FoW), cursors, SelectionPanel context-action buttons. Grid building foundation is CP-11; UI/audio/settings presentation is CP-12; editor-preview scenes are CP-13; attack/chain UX is CP-14; match-integrated construction + Crystal economy is CP-15; crystal rebalance / tower projectiles / wall shield / repair is CP-16 (editor pass open); HUD overhaul (HudMode, building selection, Runner A-destroy) is CP-17 (editor pass open); Hunter structure melee polish + floating numbers is CP-18 (editor pass open); Hunter XP + portrait XP ring is CP-19; HUD / combat presentation polish is CP-20; Hunter Seek + Runner build hotkeys / multi-select / one-mine limit is CP-23 (editor pass open); map scale + central Item Shop buy/sell is CP-24 (editor pass open).

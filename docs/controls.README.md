@@ -271,6 +271,10 @@ Eliminations and other roster updates must **not** auto-recenter the camera. A f
 
 While the local Hunter is selected and controllable, `Q` (or the Seek skill button next to the selection panel) casts **Seek**: for 10 seconds the minimap shows direction arrows from the Hunter toward every other living player unit. Cooldown is 30 seconds. Host-authoritative; arrows bypass fog for that window only and do not leave unit ghosts.
 
+### 1.5.1. Item Shop (RMB)
+
+Right-clicking the central **Item Shop** while in interaction range opens the shop UI (Hunter and Runner). Leave / Esc / RMB closes it. Hunter upgrades are bought with LMB on affordable cards (cost green/red); inventory slots sell for a full Crystal refund.
+
 ### 1.6. Runner build / manage hotkeys
 
 While the local Runner has their unit selected (`UNIT_BUILD`):

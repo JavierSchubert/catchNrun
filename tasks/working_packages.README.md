@@ -107,10 +107,15 @@ Use this file together with `checkpoints.README.md` to compare open topics again
 
 - [x] Hunter crystals from damage dealt (`hunter_crystals_per_damage` via `GameManager.award_damage_crystals`)
 
-### Open (Hunter side — not requested yet)
+### Done (Hunter Item Shop — see CP-24)
+
+- [x] Central Item Shop entity + RMB open (Hunter and Runner)
+- [x] Hunter Shop purchases applying `StatModifier`s (catalog buy + 100% Crystal refund sell)
+
+### Open (Hunter side — remaining)
 
 - [ ] Hunter passive income from Hunter Shop / base (lower than developed mines)
-- [ ] Hunter Shop purchases applying `StatModifier`s
+- [ ] Runner shop catalog (Runners can open shop; buy list empty in v1)
 
 ### Depends on
 
@@ -698,7 +703,7 @@ Milestone A — Fight and finish
 
 Milestone B — Build and earn
   WP-02 Construction: grid foundation ✅ (CP-11); match-integrated build UI + Wall / Tower / Crystal Mine ✅ (CP-15)
-  WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income ✅ (WP-16 D / CP-23); Hunter Shop still open
+  WP-03 Economy: Runner mine ticks + spend ✅ (CP-15); hunter damage income ✅ (WP-16 D / CP-23); Hunter Item Shop buy/sell ✅ (CP-24); passive shop income still open
   CP-23 — Hunter Seek + build hotkeys W/T/C/D + type multi-select + one mine ✅ (code-reviewed; offline Python)
   WP-16 — economy rebalance + crystal HUD ✅ A/B; tower projectiles ✅ C (reviewed);
          wall shield + runner repair + hunter damage income ✅ D (reviewed);
@@ -711,7 +716,7 @@ Milestone C — Command and HUD
          docs ✅ D; editor / match run ❌ E. Nothing run in Godot yet.
   Remaining: cursors / SelectionPanel context-action buttons (upgrades/destroy stay on BuildingPanel for now)
   WP-10 In-game chat
-  Hunter Shop as an extension of B
+  Hunter Item Shop buy/sell ✅ (CP-24); passive shop income still open
 
 Milestone D — Fog and map awareness
   WP-05 Vision doc + FoW + last-known structures + fogged minimap ✅ (headless `vision_test` written, not yet run);

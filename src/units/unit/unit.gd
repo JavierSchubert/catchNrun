@@ -8,8 +8,8 @@ extends CharacterBody2D
 
 const INTERPOLATION_SPEED := 12.0
 const SNAP_DISTANCE := 200.0
-## Matches PlateauMap.world_bounds() (60x40 tiles at 128px).
-const MAP_BOUNDS := Rect2(-3840.0, -2560.0, 7680.0, 5120.0)
+## Matches PlateauMap.world_bounds() (40x28 tiles at 128px = 5120x3584).
+const MAP_BOUNDS := Rect2(-2560.0, -1792.0, 5120.0, 3584.0)
 const MAP_INSET := 20.0
 const SPRITE_COUNT := 5
 const RUNNER_SPRITES := [
@@ -44,6 +44,8 @@ var pending_upgrade_choice_level := 0
 var pending_upgrade_choice_stats := PackedInt32Array()
 var pending_upgrade_choice_rarities := PackedInt32Array()
 var pending_upgrade_choice_values := PackedFloat32Array()
+## Host-owned list of purchased Item Shop entry ids (order = inventory slots).
+var shop_inventory := PackedStringArray()
 
 var _intent := Vector2.ZERO
 var _eliminated := false
@@ -85,6 +87,8 @@ var _health_initialized := false
 var _hunter_upgrade_modifiers: Array[StatModifier] = []
 var _applied_upgrade_flat := PackedFloat32Array()
 var _applied_upgrade_percent := PackedFloat32Array()
+var _shop_modifiers: Array[StatModifier] = []
+var _applied_shop_inventory := PackedStringArray()
 
 
 func _enter_tree() -> void:
@@ -106,6 +110,7 @@ func _ready() -> void:
 	stats.stats_changed.connect(_apply_derived_stats)
 	stats.set_base(_base_stats())
 	_apply_synced_hunter_upgrade_bonuses()
+	_apply_synced_shop_inventory()
 	attack.attack_range = config.attack_range
 	attack.acquisition_range = config.acquisition_range
 	_apply_derived_stats()
@@ -509,10 +514,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _build_mode_armed():
 		## The building UI owns RMB (cancel placement) while a structure is armed.
 		return
+	if _item_shop_ui_open():
+		## Shop panel owns RMB (close) while open.
+		return
 	var world_pos := get_global_mouse_position()
 	var chain_modifier_held := SelectionManager.is_chain_modifier_held(click)
 	if chain_modifier_held:
 		issue_chain_append(world_pos)
+		get_viewport().set_input_as_handled()
+		return
+	var shop := _item_shop_at(world_pos)
+	if shop != null and _in_shop_range(shop):
+		_open_item_shop()
 		get_viewport().set_input_as_handled()
 		return
 	var target := _clickable_enemy_at(world_pos)
@@ -580,6 +593,7 @@ func _physics_process(delta: float) -> void:
 		_follow_sync_position(delta)
 		_clamp_to_map()
 		_apply_synced_hunter_upgrade_bonuses()
+		_apply_synced_shop_inventory()
 		_apply_synced_health()
 
 
@@ -1132,6 +1146,143 @@ func _server_attack_building(target: Building) -> void:
 	attack.set_explicit_target(target)
 	if not attack.in_attack_range(global_position, target):
 		movement.order_move(global_position, _combat_approach_point(target))
+
+
+func request_shop_buy(item_id: String) -> void:
+	if not is_inside_tree() or item_id.is_empty():
+		return
+	if _is_net_server():
+		_server_shop_buy(item_id)
+	else:
+		rpc_id(1, "_submit_shop_buy", item_id)
+
+
+func request_shop_sell(inventory_index: int) -> void:
+	if not is_inside_tree() or inventory_index < 0:
+		return
+	if _is_net_server():
+		_server_shop_sell(inventory_index)
+	else:
+		rpc_id(1, "_submit_shop_sell", inventory_index)
+
+
+@rpc("any_peer", "reliable")
+func _submit_shop_buy(item_id: String) -> void:
+	if not _is_net_server() or GameManager.sender_id(multiplayer) != peer_id:
+		return
+	_server_shop_buy(item_id)
+
+
+@rpc("any_peer", "reliable")
+func _submit_shop_sell(inventory_index: int) -> void:
+	if not _is_net_server() or GameManager.sender_id(multiplayer) != peer_id:
+		return
+	_server_shop_sell(inventory_index)
+
+
+func _server_shop_buy(item_id: String) -> void:
+	if not _is_net_server() or not is_alive():
+		return
+	if role() != RoleConfig.Role.HUNTER:
+		return
+	var entry := ShopCatalog.item_by_id(item_id)
+	if entry.is_empty():
+		return
+	var cost := float(entry.get("cost", 0.0))
+	if not GameManager.try_spend_crystals(peer_id, cost):
+		return
+	shop_inventory.append(item_id)
+	var modifier := ShopCatalog.make_modifier(entry)
+	_shop_modifiers.append(modifier)
+	stats.add_modifier(modifier)
+	_applied_shop_inventory = shop_inventory.duplicate()
+	if int(entry.get("stat", -1)) == StatBlock.Stat.MAX_HEALTH:
+		var maximum := stats.final_value(StatBlock.Stat.MAX_HEALTH)
+		health.heal(float(entry.get("value", 0.0)), maximum)
+		sync_health = health.current
+	GameLog.info(
+		"SHOP",
+		"%s bought %s for %d" % [
+			name_label.text if name_label else str(peer_id),
+			ShopCatalog.format_bonus(entry),
+			int(cost),
+		]
+	)
+
+
+func _server_shop_sell(inventory_index: int) -> void:
+	if not _is_net_server() or not is_alive():
+		return
+	if inventory_index < 0 or inventory_index >= shop_inventory.size():
+		return
+	var item_id := str(shop_inventory[inventory_index])
+	var entry := ShopCatalog.item_by_id(item_id)
+	if entry.is_empty():
+		shop_inventory.remove_at(inventory_index)
+		_rebuild_shop_modifiers_from_inventory()
+		return
+	shop_inventory.remove_at(inventory_index)
+	_rebuild_shop_modifiers_from_inventory()
+	GameManager.grant_crystals(peer_id, float(entry.get("cost", 0.0)))
+	GameLog.info(
+		"SHOP",
+		"%s sold %s for %d" % [
+			name_label.text if name_label else str(peer_id),
+			ShopCatalog.format_bonus(entry),
+			int(float(entry.get("cost", 0.0))),
+		]
+	)
+
+
+func _rebuild_shop_modifiers_from_inventory() -> void:
+	for modifier in _shop_modifiers:
+		stats.remove_modifier(modifier)
+	_shop_modifiers.clear()
+	for item_id in shop_inventory:
+		var entry := ShopCatalog.item_by_id(str(item_id))
+		if entry.is_empty():
+			continue
+		var modifier := ShopCatalog.make_modifier(entry)
+		_shop_modifiers.append(modifier)
+		stats.add_modifier(modifier)
+	_applied_shop_inventory = shop_inventory.duplicate()
+
+
+func _apply_synced_shop_inventory() -> void:
+	if shop_inventory == _applied_shop_inventory:
+		return
+	_rebuild_shop_modifiers_from_inventory()
+
+
+func _item_shop_at(world_pos: Vector2) -> ItemShop:
+	var best: ItemShop = null
+	var best_distance := INF
+	for node in get_tree().get_nodes_in_group("item_shop"):
+		if not node is ItemShop:
+			continue
+		var shop := node as ItemShop
+		var distance := world_pos.distance_to(shop.global_position)
+		if distance <= shop.selection_hit_radius() and distance < best_distance:
+			best_distance = distance
+			best = shop
+	return best
+
+
+func _in_shop_range(shop: ItemShop) -> bool:
+	if shop == null:
+		return false
+	return global_position.distance_to(shop.global_position) <= ItemShop.interaction_reach()
+
+
+func _open_item_shop() -> void:
+	var ui := get_tree().get_first_node_in_group("item_shop_ui")
+	if ui != null and ui.has_method("open_shop"):
+		ui.call("open_shop")
+
+
+func _item_shop_ui_open() -> bool:
+	var ui := get_tree().get_first_node_in_group("item_shop_ui")
+	return ui != null and ui.has_method("is_open") and bool(ui.call("is_open"))
 
 
 func _handle_seek_hotkey(key: InputEventKey) -> bool:
