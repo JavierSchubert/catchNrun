@@ -1,6 +1,6 @@
 class_name HunterSeekPanel
 extends Control
-## Bottom-right skill slot for the local Hunter's Seek ability (Q / click).
+## Skill slot immediately right of the selection strip for the local Hunter Seek (Q / click).
 ## Visible only while the local controllable Hunter is selected.
 
 @onready var _button: Button = %SeekButton

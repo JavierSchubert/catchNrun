@@ -117,6 +117,16 @@ func is_armed() -> bool:
 
 func _on_minimize_pressed() -> void:
 	_is_minimized = not _is_minimized
+	_apply_minimize_layout()
+
+
+## Called by Match HUD after it repositions this panel so minimize state sticks.
+func notify_hud_layout() -> void:
+	_expanded_top_offset = offset_bottom - _expanded_minimum_height
+	_apply_minimize_layout()
+
+
+func _apply_minimize_layout() -> void:
 	_content.visible = not _is_minimized
 	if _is_minimized:
 		custom_minimum_size.y = 54.0
@@ -125,7 +135,7 @@ func _on_minimize_pressed() -> void:
 		_minimize_button.tooltip_text = "Expand building panel"
 	else:
 		custom_minimum_size.y = _expanded_minimum_height
-		offset_top = _expanded_top_offset
+		offset_top = offset_bottom - _expanded_minimum_height
 		_minimize_button.text = "Minimize"
 		_minimize_button.tooltip_text = "Minimize building panel"
 

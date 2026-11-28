@@ -1,15 +1,31 @@
 extends CanvasLayer
 ## Match HUD: phase status, selection panel, and minimap.
-## Layout lives in hud.tscn; this script only binds match data.
+## Bottom chrome is laid out at runtime so panels do not overlap across resolutions.
 
 const SANDBOX_CONTROLS := preload("res://game/match/sandbox_controls.gd")
+
+const MARGIN := 16.0
+const GAP := 12.0
+const MINIMAP_SIZE := Vector2(220.0, 146.0)
+const SEEK_SIZE := Vector2(136.0, 150.0)
+const SELECTION_SIZE := Vector2(520.0, 200.0)
+const BUILDING_SIZE := Vector2(420.0, 600.0)
+const UPGRADE_SIZE := Vector2(430.0, 250.0)
+const STATUS_TOP := 72.0
+const STATUS_HEIGHT := 56.0
+const RESOURCE_CLEARANCE := 280.0
 
 @onready var _root: Control = %Root
 @onready var _status: Label = %Status
 @onready var _selection_panel: SelectionPanel = %SelectionPanel
 @onready var _minimap: MatchMinimap = %Minimap
+@onready var _building_panel: Control = %BuildingPanel
+@onready var _hunter_seek_panel: Control = %HunterSeekPanel
+@onready var _hunter_upgrade_panel: Control = %HunterUpgradePanel
+@onready var _resource_bar: Control = %ResourceBar
 
 var _winner := ""
+var _layout_signature := ""
 
 
 func _ready() -> void:
@@ -19,11 +35,19 @@ func _ready() -> void:
 		_root.add_child(SANDBOX_CONTROLS.new())
 	GameManager.match_finished.connect(_on_match_finished)
 	GameManager.phase_changed.connect(_on_phase_changed)
+	if not get_viewport().size_changed.is_connected(_on_viewport_size_changed):
+		get_viewport().size_changed.connect(_on_viewport_size_changed)
+	_layout_chrome(true)
 	_refresh()
 
 
 func _process(_delta: float) -> void:
 	_refresh()
+	_layout_chrome(false)
+
+
+func _on_viewport_size_changed() -> void:
+	_layout_chrome(true)
 
 
 func _on_match_finished(winner_team: String) -> void:
@@ -33,6 +57,7 @@ func _on_match_finished(winner_team: String) -> void:
 func _on_phase_changed(phase: GameManager.Phase) -> void:
 	if phase == GameManager.Phase.LOBBY or phase == GameManager.Phase.ROLE_SELECTION:
 		_winner = ""
+	_layout_chrome(true)
 
 
 func _refresh() -> void:
@@ -68,6 +93,150 @@ func _refresh_selection_panel() -> void:
 		_selection_panel.bind_selection(null, false)
 		return
 	_selection_panel.bind_selection(manager.selected, manager.is_controllable_selected())
+
+
+func _layout_chrome(force: bool) -> void:
+	if _root == null:
+		return
+	var view := _root.get_viewport_rect().size
+	if view.x < 32.0 or view.y < 32.0:
+		return
+
+	var is_runner := _local_role() == RoleConfig.Role.RUNNER
+	var is_hunter := _local_role() == RoleConfig.Role.HUNTER
+	var upgrade_visible := _hunter_upgrade_panel != null and _hunter_upgrade_panel.visible
+	var signature := "%dx%d|%s|%s|%s" % [
+		int(view.x),
+		int(view.y),
+		str(is_runner),
+		str(is_hunter),
+		str(upgrade_visible),
+	]
+	if not force and signature == _layout_signature:
+		return
+	_layout_signature = signature
+
+	var reserve_seek := is_hunter
+	var reserve_building := is_runner
+	var bottom := view.y - MARGIN
+	var left_bound := MARGIN + MINIMAP_SIZE.x + GAP
+	var right_bound := view.x - MARGIN
+	if reserve_building:
+		right_bound -= BUILDING_SIZE.x + GAP
+
+	var middle := maxf(right_bound - left_bound, 0.0)
+	var seek_slot := SEEK_SIZE.x + GAP if reserve_seek else 0.0
+	## Fill the middle band without crossing Minimap / Building reserves.
+	var selection_width := clampf(middle - seek_slot, 0.0, SELECTION_SIZE.x)
+	var cluster := selection_width + seek_slot
+	var cluster_left := left_bound + maxf((middle - cluster) * 0.5, 0.0)
+	var bottom_inset := MARGIN
+
+	_place_anchored(
+		_minimap,
+		Control.PRESET_BOTTOM_LEFT,
+		MARGIN,
+		MARGIN + MINIMAP_SIZE.x,
+		bottom_inset + MINIMAP_SIZE.y,
+		bottom_inset,
+		MINIMAP_SIZE
+	)
+	_place_anchored(
+		_selection_panel,
+		Control.PRESET_BOTTOM_LEFT,
+		cluster_left,
+		cluster_left + selection_width,
+		bottom_inset + SELECTION_SIZE.y,
+		bottom_inset,
+		Vector2(selection_width, SELECTION_SIZE.y)
+	)
+	if _hunter_seek_panel != null:
+		var seek_left := cluster_left + selection_width + GAP
+		_place_anchored(
+			_hunter_seek_panel,
+			Control.PRESET_BOTTOM_LEFT,
+			seek_left,
+			seek_left + SEEK_SIZE.x,
+			bottom_inset + SEEK_SIZE.y,
+			bottom_inset,
+			SEEK_SIZE
+		)
+
+	if _building_panel != null:
+		_place_anchored(
+			_building_panel,
+			Control.PRESET_BOTTOM_RIGHT,
+			-(MARGIN + BUILDING_SIZE.x),
+			-MARGIN,
+			bottom_inset + BUILDING_SIZE.y,
+			bottom_inset,
+			BUILDING_SIZE
+		)
+		if _building_panel.has_method("notify_hud_layout"):
+			_building_panel.call("notify_hud_layout")
+
+	if _hunter_upgrade_panel != null:
+		## Above the bottom selection band so Seek / Selection stay clickable.
+		var upgrade_inset := bottom_inset + SELECTION_SIZE.y + GAP
+		_place_anchored(
+			_hunter_upgrade_panel,
+			Control.PRESET_BOTTOM_RIGHT,
+			-(MARGIN + UPGRADE_SIZE.x),
+			-MARGIN,
+			upgrade_inset + UPGRADE_SIZE.y,
+			upgrade_inset,
+			UPGRADE_SIZE
+		)
+
+	_layout_status(reserve_building, is_hunter or upgrade_visible)
+	if _resource_bar != null:
+		_resource_bar.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_resource_bar.offset_left = -RESOURCE_CLEARANCE * 0.5
+		_resource_bar.offset_right = RESOURCE_CLEARANCE * 0.5
+		_resource_bar.offset_top = 16.0
+		_resource_bar.offset_bottom = 64.0
+
+
+func _layout_status(clear_building: bool, clear_upgrade: bool) -> void:
+	if _status == null:
+		return
+	var left := RESOURCE_CLEARANCE
+	var right_clear := RESOURCE_CLEARANCE
+	if clear_building:
+		right_clear = maxf(right_clear, BUILDING_SIZE.x + MARGIN + GAP)
+	if clear_upgrade:
+		right_clear = maxf(right_clear, UPGRADE_SIZE.x + MARGIN + GAP)
+	_status.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_status.offset_left = left
+	_status.offset_right = -right_clear
+	_status.offset_top = STATUS_TOP
+	_status.offset_bottom = STATUS_TOP + STATUS_HEIGHT
+
+
+func _place_anchored(
+	control: Control,
+	preset: Control.LayoutPreset,
+	left: float,
+	right: float,
+	top: float,
+	bottom: float,
+	size: Vector2
+) -> void:
+	if control == null:
+		return
+	control.set_anchors_preset(preset)
+	control.offset_left = left
+	control.offset_right = right
+	control.offset_top = -top
+	control.offset_bottom = -bottom
+	control.custom_minimum_size = size
+
+
+func _local_role() -> int:
+	var id := GameManager.local_peer_id()
+	if not GameManager.players.has(id):
+		return GameManager.ANY_ROLE
+	return int(GameManager.players[id].get("role", GameManager.ANY_ROLE))
 
 
 func _local_unit_text() -> String:
