@@ -2,15 +2,15 @@
 
 [ext_resource type="Script" uid="uid://w6iidvkxsuav" path="res://game/maps/arena_plateau.gd" id="1_6s0vu"]
 [ext_resource type="Texture2D" uid="uid://ct0x37wc2d5ts" path="res://assets/sprites/ui/Spawn_mark.png" id="4_f5vpv"]
-[ext_resource type="Texture2D" path="res://assets/sprites/maps/lava.png" id="5_lava"]
+[ext_resource type="Texture2D" uid="uid://c3ccn5us7xedh" path="res://assets/sprites/maps/lava.png" id="5_lava"]
 
 [node name="ArenaPlateau" type="Node2D" unique_id=146640809]
 script = ExtResource("1_6s0vu")
 
 [node name="LavaPlaceholder" type="Sprite2D" parent="." unique_id=201847362]
 z_index = -10
-texture = ExtResource("5_lava")
 scale = Vector2(5, 5)
+texture = ExtResource("5_lava")
 
 [node name="FloorLayer" type="TileMapLayer" parent="." unique_id=256840506]
 
