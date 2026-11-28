@@ -119,8 +119,8 @@ func _on_minimize_pressed() -> void:
 	_is_minimized = not _is_minimized
 	_content.visible = not _is_minimized
 	if _is_minimized:
-		custom_minimum_size.y = 44.0
-		offset_top = offset_bottom - 44.0
+		custom_minimum_size.y = 54.0
+		offset_top = offset_bottom - 54.0
 		_minimize_button.text = "Expand"
 		_minimize_button.tooltip_text = "Expand building panel"
 	else:
@@ -298,7 +298,7 @@ func _refresh_build_buttons() -> void:
 			button.button_pressed = false
 			button.disabled = true
 		if HudMode.can_manage_building(_mode):
-			_info_label.text = "Manage selected structure — Upgrade [U], Destroy [D]"
+			_info_label.text = "Manage selected: U upgrade, D destroy"
 		else:
 			_info_label.text = "Select your Runner to build"
 		return

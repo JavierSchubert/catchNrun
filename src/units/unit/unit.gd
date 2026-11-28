@@ -1413,6 +1413,7 @@ func _refresh_label() -> void:
 		config.display_name,
 		suffix,
 	]
+	name_label.tooltip_text = name_label.text
 
 
 @rpc("any_peer", "reliable")

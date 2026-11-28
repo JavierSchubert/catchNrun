@@ -300,6 +300,10 @@ func _test_health_bar() -> void:
 	health.take_damage(25.0, 100.0)
 	_check(is_equal_approx(health_bar.progress_bar.value, 0.75), "health changes update the bar")
 	_check(health_bar.health_label.text == "75", "health changes update the visible amount")
+	_check(
+		health_bar.health_label.get_theme_font_size("font_size") >= 18,
+		"the health amount uses a readable font size"
+	)
 	var fill_style := health_bar.progress_bar.get_theme_stylebox("fill") as StyleBoxFlat
 	_check(fill_style != null and fill_style.bg_color.a > 0.0, "the health bar keeps its visible fill style")
 	health.free()
@@ -329,13 +333,19 @@ func _test_match_presentation() -> void:
 		_check(unit.get_node_or_null("HealthBar") is HealthBar, "%s includes a health bar" % scene_path)
 		var sprite := unit.get_node_or_null("Sprite") as Sprite2D
 		var health_bar := unit.get_node_or_null("HealthBar") as HealthBar
+		var name_label := unit.get_node_or_null("NameLabel") as Label
 		var collision := unit.get_node_or_null("CollisionShape2D") as CollisionShape2D
 		var collision_circle := collision.shape as CircleShape2D if collision != null else null
 		_check(
 			sprite != null and health_bar != null
-				and is_equal_approx(sprite.scale.x, 0.24)
-				and is_equal_approx(150.0 * sprite.scale.x, health_bar.custom_minimum_size.x * health_bar.scale.x),
-			"%s scales the sprite down and matches the health bar width" % scene_path
+				and is_equal_approx(sprite.scale.x, 0.24),
+			"%s scales the sprite down" % scene_path
+		)
+		_check(
+			name_label != null and health_bar != null
+				and name_label.offset_bottom < health_bar.offset_top
+				and health_bar.scale.is_equal_approx(Vector2.ONE),
+			"%s places the name above an unscaled health bar" % scene_path
 		)
 		_check(
 			sprite != null and collision_circle != null

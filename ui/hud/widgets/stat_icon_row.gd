@@ -4,7 +4,7 @@ extends HBoxContainer
 ## Compact icon + value row shared by the selection strip and building manage UI.
 ## Bind via `bind_stat` (StatSheet) or `bind_text` (manual label for structure HP etc.).
 
-const ICON_PX := 32
+const ICON_PX := 36
 
 @onready var _icon: TextureRect = %Icon
 @onready var _value: RichTextLabel = %Value

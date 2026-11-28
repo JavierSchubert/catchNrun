@@ -9,9 +9,3 @@ config = ExtResource("2_config")
 
 [node name="Sprite" parent="." index="1"]
 texture = ExtResource("3_sprite")
-
-[node name="HealthBar" parent="." index="3"]
-offset_left = -24.0
-offset_top = -36.0
-offset_right = 72.0
-offset_bottom = -16.0
